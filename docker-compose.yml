@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: seo_platform
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: seo_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # No local S3 emulation here on purpose — use a real low-traffic S3
+  # dev bucket for S3/SFTP testing so behavior matches production.
+
+volumes:
+  postgres_data:
+  redis_data:
