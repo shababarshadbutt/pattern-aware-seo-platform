@@ -1,9 +1,9 @@
 {
+  // Typecheck config: covers src, the tests, the test harness and
+  // drizzle.config.ts, so the type-aware ESLint pass can resolve every file in
+  // the package. rootDir/outDir live in tsconfig.build.json instead — a rootDir
+  // of `src` would reject drizzle.config.ts, which sits at the package root.
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "noEmit": true
-  },
-  "include": ["src/**/*"]
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/**/*", "drizzle.config.ts"]
 }
