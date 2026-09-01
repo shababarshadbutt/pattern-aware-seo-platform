@@ -9,6 +9,7 @@ build/
 out/
 coverage/
 .turbo/
+*.tsbuildinfo
 
 # --- Env / secrets (never commit real values) ---
 .env

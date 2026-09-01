@@ -1,0 +1,7 @@
+{
+  // Typecheck covers tests (tsconfig.json); the build deliberately does not
+  // ship them. One config for correctness, one for output.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false },
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"]
+}

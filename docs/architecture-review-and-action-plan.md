@@ -10,6 +10,8 @@ Deployment path: local development on the team's own Mac/Windows PCs first, then
 
 The full transcript is not reproduced here; this document captures what's worth acting on, plus the gaps a second pass surfaced.
 
+> **Phase 0 is complete as of 2026-09-01, and it corrects several claims in the next section.** The legacy repository (`../Sitemap_Migration`, branch `feature/aws-s3-sftp-deploy`) has now been read directly rather than secondhand. Three claims below turn out to be wrong, one is understated, two new problems were found, and the `PopulationProfile` open decision is resolved. The section immediately before "Action plan" records what the code actually does. **Read that section before acting on anything in "Issues and gaps in the review"** — the original text is kept intact deliberately, because which predictions held up is itself useful, but it is no longer accurate on its own.
+
 ## Issues and gaps in the review
 
 The review is strategically strong but several things in it don't hold up, or were left unspecified, on closer look.
@@ -32,13 +34,46 @@ The review is strategically strong but several things in it don't hold up, or we
 
 **The GET-fallback escalation isn't bounded.** HEAD-first with GET-on-suspicious is the right call, but nothing caps how much of the response body gets fetched for soft-404 detection (should be the first few KB, not the whole page), and nothing caps how much of a pattern's sample is allowed to escalate to GET before the pattern just gets flagged for manual review — otherwise a genuinely bad pattern defeats the "reduce HTTP traffic" goal the HEAD-first design exists for.
 
+## Phase 0 verification results (2026-09-01)
+
+Verified directly against `../Sitemap_Migration` on branch `feature/aws-s3-sftp-deploy` — 313 TypeScript files, 56 SQL migrations, a Next.js 14 frontend, real tests and benchmarks. Line references are to that tree.
+
+| Claim in "Issues and gaps" above | Verdict | Evidence |
+|---|---|---|
+| `ORDER BY random()` in the sampling path | **Confirmed** | `backend/src/jobs/samplePatternsJob.ts` lines 116, 133, 152 — three occurrences over `pattern_urls` |
+| "Confidence intervals are named but not defined" | **Wrong** | `estimateFromObservations` (`triageSampling.ts:505`) is a real stratified proportion estimator with a 95% interval, persisted as `ci_low`/`ci_high` in `verify_triage_runs.result` (migration `040`) |
+| "No finite-population correction" | **Wrong** | The FPC `(1 − n_h/N_h)` is implemented, per stratum, in that estimator's variance term |
+| Normal approximation degenerates near p≈0 | **Confirmed, and worse than stated** | At zero observed hits `p̂(1−p̂) = 0`, so variance is 0, the half-width is 0, and the interval collapses to `[0, 0]`. The system currently reports *certainty of zero errors* from a 1% sample. The single most damaging statistical defect. |
+| "Hash-threshold and reservoir sampling are conflated" | **Partly right** | Two different mechanisms coexist. Triage draws "first k by hash" (`stableHash`, FNV-1a, `triageSampling.ts:99`) — correct, reproducible, and expansion is genuinely a superset. But `extractPatternsJob.ts:427` runs an Algorithm-R reservoir on `Math.random()`, which is **not** reproducible. |
+| "GET body fetches are not size-capped" | **Wrong** | Capped and ranged: `SOFT_404_BODY_SAMPLE_BYTES = 64KB` sent with a `Range: bytes=0-…` header, `METHOD_FALLBACK_BODY_SAMPLE_BYTES = 8KB` (`sampleUrlCheck.ts:73-77`) |
+| "Nothing caps how much of a sample escalates to GET" | **Confirmed** | Per-request byte caps exist; there is no pattern-level escalation-share cap |
+| "No multi-tenant resource isolation" | **Confirmed, and deeper** | There is **no site or tenant entity at all** — every table keys on `session_id`, a one-shot migration run. Zero `site_id` and zero `PARTITION BY` across all 56 migrations. |
+| *(new)* Full URL population materialized in memory | **Blocker at scale** | `triageJob.ts:183`: `const allUrls = Array.from(population.keys())` builds the whole pattern population as a JS string array and passes it to `planTriageSample(rawUrls: string[])`. Fatal on a 40M-URL pattern. |
+| *(new)* The interval is computed and never displayed | **Confirmed** | `frontend/components/pattern-verify-panel.tsx:695` renders `~${formatNumber(estimate)}` — the point estimate only. The product's central claim is invisible in its own UI. |
+| No pattern-to-file index | **Confirmed by the code's own comment** | `patternPopulationPool.ts:16-19`: *"Enumeration reads every `<loc>` of every file in the session … the only way to do it, since nothing records a pattern-to-file index."* |
+| Per-host rate limiter is sound | **Confirmed, with a caveat** | `http/hostRateLimiter.ts` correctly separates concurrency from requests/sec and is host-global — but it is **process-global in memory**, so the effective rate silently multiplies by the container count on ECS. |
+
+**What is worth porting rather than rewriting.** The legacy code is better than the review credited, and several modules carry operational knowledge that would be expensive to re-derive: `sitemaps/parser.ts` (749 lines of streaming SAX with gzip, non-XML preamble recovery, redirect and nested-index handling, and an existing `LocCallback` streaming hook), `http/hostRateLimiter.ts`, `jobs/sampleUrlCheck.ts`, `sitemaps/structureClusters.ts`, `jobs/workerRuntime.ts`, and the user-agent constants in `config.ts` — which encode contradictory-but-real WAF findings measured against named hosts, and should be ported verbatim including their comments. The frontend is already Next.js 14 + Tailwind + shadcn/ui + Radix + TanStack Table + Recharts, i.e. exactly the stack recommended below, and its practice of extracting display decisions into unit-tested pure functions under `frontend/lib/` is worth carrying forward.
+
+### Resolved: is `PopulationProfile` new?
+
+**It is genuinely new**, and none of the three candidates duplicates it:
+
+- `sitemaps/structureClusters.ts` clusters `{param}` values into anchored families — a **classifier**. Reuse it as the stratifier.
+- `jobs/shapeStrata.ts` + `pattern_shape_rules` (migration `051`) group URLs by *valueShape* and store a distilled rewrite rule per shape — an **inference artifact for redirect fixing**, and migration `051` is emphatic that it is inference rather than measurement. It belongs to the fix workflow, which is now out of scope (see `decisions.md`, ADR-0007).
+- `verify_triage_runs` (migration `040`) is a per-run **estimate snapshot**.
+
+Nothing stores *"for pattern P: which files hold it, how many URLs, and which sample candidates."* It will be named for what it is — `pattern_population` / `pattern_file_population` — not `PopulationProfile`.
+
 ## Action plan
 
-### Phase 0 — Verify before building
+### Phase 0 — Verify before building — **COMPLETE (2026-09-01)**
 
-- Confirm the repo-specific claims above by reading the actual current code (`triageSampling.ts`, `patternPopulationPool.ts`, `workerRuntime.ts`, `samplePatternsJob.ts`, the Piscina pool setup) rather than taking the ChatGPT review's summary at face value.
-- Decide whether `PopulationProfile` is a new entity or a consolidation of `pattern_shape_rules` / `structureClusters` / `shapeStrata`.
-- If the repository becomes accessible to a Claude session (connected folder or upload), it can do this verification directly and refine the plan below with real file/line references.
+- ~~Confirm the repo-specific claims above by reading the actual current code~~ — done; results in the section above.
+- ~~Decide whether `PopulationProfile` is a new entity or a consolidation~~ — resolved above: new entity, renamed.
+- ~~If the repository becomes accessible to a Claude session, it can do this verification directly~~ — done; the legacy repo was read at `../Sitemap_Migration`.
+
+Decisions taken alongside this verification are recorded in `decisions.md` (ADR-0001 through ADR-0008). Scope is now **audit and intelligence only** — the fix-and-republish workflow stays in the legacy tool (ADR-0007) — and the legacy tool is frozen after cutover on audit.
 
 ### Phase 1 — Harden the sampling and population engine (critical)
 
@@ -77,13 +112,13 @@ The review is strategically strong but several things in it don't hold up, or we
 - Dashboards for sampling convergence rate, share of patterns stuck at LOW confidence, GET-escalation rate, and per-site request volume against budget.
 - A way to reconstruct exactly which inputs produced a given historical report, so a claim like "13.8M URLs estimated affected" is defensible after the fact.
 
-## Open decisions needed before Phase 0 sign-off
+## Open decisions — status after Phase 0
 
-- Is `PopulationProfile` new, or does it consolidate `pattern_shape_rules` / `structureClusters` / `shapeStrata`? (Needs a code read.)
-- What severity weights should the initial Impact Score use? (Needs SEO/business input, not just an engineering guess.)
-- What's the acceptable platform-wide HTTP request budget per day/month, and do any of the 650 target sites have contractual or robots.txt crawl-rate constraints that should cap it further?
-- Should the actual repository be connected to a Claude session so architecture claims can be verified directly against code rather than against a secondhand review?
-- Does "multi-user" for the AWS deployment mean the internal Asapsemi team (RBAC across roles), or will external clients ever log in? This changes the auth recommendation below and should be settled before Phase 3.
+- ~~Is `PopulationProfile` new, or does it consolidate `pattern_shape_rules` / `structureClusters` / `shapeStrata`?~~ **Resolved:** genuinely new, and renamed `pattern_population`. See the Phase 0 results above.
+- ~~Should the actual repository be connected to a Claude session so architecture claims can be verified directly?~~ **Resolved:** done. The legacy repo was read at `../Sitemap_Migration`.
+- ~~Does "multi-user" mean the internal Asapsemi team, or will external clients ever log in?~~ **Resolved:** internal RBAC (admin/analyst/viewer) via Auth.js now, but the schema carries an `organization` boundary from day one so external client logins can be added without reshaping tables. See ADR-0004.
+- **Still open — what severity weights should the initial Impact Score use?** Needs SEO/business input, not an engineering guess. **Owner: Shabab Arshad.** This is a hard entry condition for the Impact Score work (Phase 2): that milestone does not start without a first version of the table.
+- **Still open — what is the acceptable platform-wide HTTP request budget per day/month**, and do any of the 650 target sites have contractual or `robots.txt` crawl-rate constraints that should cap it further? Provisional defaults are now implemented in `packages/shared/src/config.ts` so Phase 2/3 work is not blocked — 5,000,000 requests/day platform-wide, 250,000 per site per audit, giving roughly a 33-day full-fleet cycle. Those are engineering estimates and must be re-derived from the first ten real site audits before the first full-fleet run.
 
 ## Recommended tech stack
 

@@ -1,5 +1,5 @@
 {
-  "name": "worker",
+  "name": "api",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,9 +12,7 @@
   },
   "dependencies": {
     "@pattern-aware/shared": "workspace:*",
-    "bullmq": "^5.28.0",
-    "ioredis": "^5.4.0",
-    "piscina": "^4.7.0"
+    "fastify": "^5.1.0"
   },
   "devDependencies": {
     "tsx": "^4.19.0"
