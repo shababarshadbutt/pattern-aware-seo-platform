@@ -1,0 +1,12 @@
+{
+  // Scripts are typechecked like everything else. They also need a project for
+  // the type-aware ESLint pass to resolve them at all — without this, adding a
+  // script silently drops it out of both checks.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["**/*.ts"]
+}

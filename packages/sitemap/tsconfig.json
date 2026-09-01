@@ -1,13 +1,11 @@
 {
+  // Typecheck config: covers src, its tests and the synthetic-corpus helper.
+  // rootDir/outDir live in tsconfig.build.json.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
     "noEmit": true,
-    // Off-by-one and undefined-access bugs in the sampling and sitemap packages
-    // silently corrupt a statistical result rather than crashing loudly, so
-    // these two are held to a stricter standard than the rest of the repo.
-    // See docs/CODING_STANDARDS.md 1.1.
+    // Off-by-one and undefined-access bugs here silently corrupt a statistical
+    // result rather than crashing loudly. See docs/CODING_STANDARDS.md 1.1.
     "noUncheckedIndexedAccess": true
   },
   "include": ["src/**/*"]

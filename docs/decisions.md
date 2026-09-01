@@ -394,3 +394,90 @@ The constraints are asserted directly in `constraints.test.ts`, by name rather
 than by error message, so a test also fails if some *other* constraint catches
 the row first — which would mean the guard under test is not the one doing the
 work.
+
+---
+
+## ADR-0012 — Group patterns with a prefix trie, not per-position counters
+
+**Status:** Accepted (implemented in M2)
+
+**Context.** The build plan says to port the legacy engine's pattern extraction.
+Doing so faithfully and then running it against a synthetic corpus modelled on
+the shapes real sitemaps contain produced this:
+
+```
+16,477  /part/{param}
+ 9,660  /{param}/{param}/{param}     <- three unrelated families merged
+ 2,946  /{param}                     <- /about, /contact, /terms, /privacy
+   917  /catalog/{param}/{param}/detail/{param}
+```
+
+A third of the site in a pattern that describes nothing. Note what does *not*
+happen: the run succeeds, the population count is exactly right, and no error is
+raised. Everything downstream — sampling, the confidence interval, the impact
+score — would then be computed about a group whose members have nothing in
+common, and the numbers would look entirely reasonable.
+
+Two independent causes, both inherent to the algorithm rather than to the port:
+
+1. **`PARAM_SEGMENT_MIN_OBSERVED_URLS = 3`.** The first three URLs through any
+   slot are almost always three different values, so the ratio test sees 100%
+   distinct and parameterises immediately. That is what merges the static pages.
+2. **One counter per path POSITION, shared by every URL on the site.**
+   Everything at position 0 is pooled regardless of what follows it, so a site
+   with a few hundred top-level sections tips that position over the threshold
+   and drags `/shop/...` and `/legacy/...` along with `/section-N/...`. Both the
+   incremental and batch legacy code paths do this.
+
+**Decision.** Replace position counters with a prefix trie, and decide
+parameterisation per node.
+
+- **The floor moves from 3 to 30**, matching the sampling minimum used
+  everywhere else in the project — below roughly thirty observations a
+  proportion says nothing, and that reasoning applies here too.
+- **Crowded siblings are collapsed by shape, not merely by count.** The corpus
+  root has 311 children; collapsing them wholesale just rebuilds the
+  mega-pattern one level down. So children are fingerprinted by the shape of
+  their own subtrees and only groups of genuinely interchangeable siblings
+  collapse. Three hundred children that all continue with `page/…` are one
+  variable slot; the `shop` beside them is not.
+- **The real decision is deferred to the end of the pass.** Mid-stream collapse
+  is a memory guard with a high threshold, nothing more. A fingerprint taken
+  while the trie is filling reflects how much of a subtree happened to have
+  arrived rather than its shape, and a wrong collapse is unrecoverable because
+  the merged children have lost their names.
+
+Same corpus, after:
+
+```
+16,477  /part/{param}
+ 2,992  /{param}/page/{param}
+ 2,340  /search
+ 1,224  /shop/bearings/{param}      (and four sibling categories)
+   618  /legacy/discontinued/{param}
+   211  /catalog/parts/{param}/detail/{param}   (and four siblings)
+   136  /about                       (and four sibling static pages)
+```
+
+Nineteen patterns, each one a real family.
+
+**Consequences.** This is the largest deviation from "port the legacy engine" in
+the project so far, and it is worth being plain about the trade. The legacy
+algorithm is in production across 650 sites, so its output is what the team has
+been reading; patterns will not be identical after this change, and on a site
+with many top-level sections they will differ a lot — for the better, but
+differently. A side-by-side on a real site before cutover is worth the time.
+
+The trie costs more memory than position counters, because literal nodes are
+held until they collapse. Fanout per node is bounded by the safety threshold and
+depth by path length, so it stays proportional to patterns rather than URLs, and
+the benchmark asserts that. Merging two tries re-runs the collapse decisions,
+which is what lets parallel workers and a resumed run agree with a single pass.
+
+Three bugs were found and fixed while building this, all by the synthetic
+corpus and all invisible to unit tests written against small inputs: a partial
+collapse routed surviving literal siblings into the variable branch and made
+them unreachable; a bottom-up rebuild never revisited the subtree it had just
+merged; and nodes created moments before a collapse fingerprinted as leaves and
+were stranded. Each produced plausible-looking output. That is the argument for
+keeping the corpus adversarial rather than tidy.
