@@ -14,7 +14,11 @@
     "@pattern-aware/shared": "workspace:*",
     "bullmq": "^5.28.0",
     "ioredis": "^5.4.0",
-    "piscina": "^4.7.0"
+    "piscina": "^4.7.0",
+    "@pattern-aware/pipeline": "workspace:^",
+    "@pattern-aware/database": "workspace:^",
+    "@pattern-aware/sitemap": "workspace:^",
+    "@pattern-aware/verification": "workspace:^"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

@@ -127,6 +127,18 @@ export const sitemapFile = pgTable(
     siteId: uuid("site_id").notNull(),
     sitemapRunId: uuid("sitemap_run_id").notNull(),
     url: text("url").notNull(),
+    /**
+     * The small integer the parser packs into every sample candidate.
+     *
+     * PERSISTED, NOT DERIVED. A candidate is `(hash, fileId, ordinal)`, so this
+     * number is the only link between a stored sample and the bytes it came
+     * from. Re-deriving it from the file list's order would work right up until
+     * a file is added, removed or reordered, at which point every existing
+     * candidate silently addresses a different file — and resolution would
+     * happily return URLs from it. Ordinal 0 is reserved for the entry document
+     * (the index itself, when there is one), so children always start at 1.
+     */
+    fileOrdinal: integer("file_ordinal").notNull(),
     filename: text("filename"),
     parseStatus: fileParseStatusEnum("parse_status")
       .notNull()
@@ -181,6 +193,12 @@ export const sitemapFile = pgTable(
     // Ingestion is idempotent on (run, url): re-running a crashed parse must not
     // duplicate files, which is what makes resume safe to retry.
     uniqueIndex("uq_sitemap_file_run_url").on(t.siteId, t.sitemapRunId, t.url),
+    // Two files in one run cannot share the integer that addresses their bytes.
+    uniqueIndex("uq_sitemap_file_run_ordinal").on(
+      t.siteId,
+      t.sitemapRunId,
+      t.fileOrdinal
+    ),
     // "Give me the next unparsed file for this run" — the resume query.
     index("idx_sitemap_file_run_parse_status").on(
       t.siteId,

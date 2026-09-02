@@ -64,18 +64,29 @@ export interface EscalationState {
 export type EscalationDecision =
   | { readonly kind: "allow"; readonly remaining: number }
   | {
-      readonly kind: "flag_for_review";
-      readonly reason: "GET_ESCALATION_CAP";
+      /**
+       * The allowance is spent: stop escalating.
+       *
+       * RENAMED from `flag_for_review`, which described the wrong consequence.
+       * A spent allowance means the optional soft-404 sniff is not sent — the
+       * URL still has a real status from its HEAD, so the pattern is still
+       * measured. Calling it a flag made every entirely-healthy pattern (whose
+       * every 200 wants a sniff) look like it needed a human, while an entirely
+       * dead pattern (410, nothing to sniff) came back clean. The consumer
+       * always did the right thing with this decision; only its name disagreed.
+       */
+      readonly kind: "suppress_escalation";
+      readonly reason: "ESCALATION_BUDGET_SPENT";
       readonly escalated: number;
       readonly allowed: number;
     }
   /**
    * Nothing was planned, so there is nothing to escalate.
    *
-   * Distinguished from `flag_for_review` deliberately. An empty plan yields an
-   * allowance of zero, which read as "the cap is already spent" and flagged the
-   * pattern — sending a human to review a pattern with no sample and no
-   * findings.
+   * Distinguished from `suppress_escalation` deliberately. An empty plan
+   * yields an allowance of zero, which read as "the cap is already spent" —
+   * indistinguishable from a real pattern whose budget ran out, when in fact
+   * there is nothing here to probe at all.
    */
   | { readonly kind: "nothing_to_probe" };
 
@@ -120,8 +131,8 @@ export function decideEscalation(
 
   if (state.escalated >= allowed) {
     return {
-      kind: "flag_for_review",
-      reason: "GET_ESCALATION_CAP",
+      kind: "suppress_escalation",
+      reason: "ESCALATION_BUDGET_SPENT",
       escalated: state.escalated,
       allowed
     };

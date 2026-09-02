@@ -58,6 +58,17 @@ const configSchema = z.object({
   // --- ML service (Phase 4; unused until ml-service/ is active) ---
   ML_SERVICE_URL: urlString.optional(),
 
+  // --- Worker resource budgets ---
+  // The worker's own Postgres pool, budgeted apart from the API's. An ingest
+  // pass streaming a large site must not be able to exhaust the connections
+  // the API needs to answer a dashboard request — the "population scan starves
+  // the API" failure the architecture plan names explicitly.
+  WORKER_DB_POOL_SIZE: z.coerce.number().int().min(1).max(64).default(8),
+  // Where downloaded sitemap files live between pipeline stages. Local disk in
+  // development; an S3-backed store replaces it in M8 without the stages
+  // changing, since they take the store as an interface.
+  SITEMAP_STORE_ROOT: z.string().min(1).default(".sitemaps"),
+
   // --- Parse budgets: memory and concurrency ---
   // Piscina threads for the streaming SAX pass. Four is the legacy
   // POPULATION_MAX_WORKERS, chosen against heap arithmetic for a box also

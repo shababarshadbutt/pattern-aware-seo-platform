@@ -155,3 +155,30 @@ export async function latestPatternSample(
 
   return row;
 }
+
+/**
+ * One draw by its own id.
+ *
+ * The estimate stage is handed a `patternSampleId` on its job and must read
+ * exactly that draw — not the latest. A pattern that has since been expanded
+ * has two draws, and estimating the round-1 observations against the round-2
+ * denominator would produce a number that belongs to neither.
+ */
+export async function findPatternSampleById(
+  db: Database,
+  scope: SiteScope,
+  patternSampleId: string
+): Promise<PatternSampleRow | undefined> {
+  const [row] = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(patternSample)
+    .where(
+      and(
+        eq(patternSample.siteId, scope.siteId),
+        eq(patternSample.id, patternSampleId)
+      )
+    )
+    .limit(1);
+
+  return row;
+}

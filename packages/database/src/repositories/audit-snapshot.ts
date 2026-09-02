@@ -128,6 +128,23 @@ export class ImpossibleClaimError extends Error {
  * letting a raw SQLSTATE escape, so the failure names what actually went wrong
  * instead of arriving as an opaque driver error four layers up.
  */
+/**
+ * Coerce the numeric columns the driver hands back as strings.
+ *
+ * `impact_score` is `numeric`, and node-postgres returns numerics as strings
+ * rather than guessing at a precision-losing float. The row type promises a
+ * number, so the conversion happens here, once, instead of at each of the
+ * places that read it — one of which would eventually compare a string to a
+ * number and silently sort "9" above "10".
+ */
+function toRow(raw: RawSnapshotRow): AuditSnapshotRow {
+  return { ...raw, impactScore: Number(raw.impactScore) };
+}
+
+type RawSnapshotRow = Omit<AuditSnapshotRow, "impactScore"> & {
+  readonly impactScore: string;
+};
+
 export async function insertAuditSnapshot(
   db: Database,
   scope: SiteScope,
@@ -156,7 +173,9 @@ export async function insertAuditSnapshot(
         estimatorVersion: input.estimatorVersion,
         severityClass: input.severityClass,
         severityWeight: input.severityWeight.toFixed(3),
-        impactScore: input.impactScore,
+        // numeric, so a string: see the column comment and migration 0006. The
+        // score is fractional by construction and must not be rounded.
+        impactScore: input.impactScore.toFixed(3),
         ...(input.strata === undefined ? {} : { strata: input.strata })
       })
       .returning(COLUMNS);
@@ -165,7 +184,7 @@ export async function insertAuditSnapshot(
       throw new Error("audit_snapshot insert returned no row");
     }
 
-    return row;
+    return toRow(row);
   } catch (error) {
     if (isCheckViolation(error)) {
       throw new ImpossibleClaimError(pgConstraintName(error), error);
@@ -194,10 +213,14 @@ export async function listSnapshotsByImpact(
     conditions.push(eq(auditSnapshot.sitemapRunId, options.sitemapRunId));
   }
 
-  return internalDatabase(db)
+  const rows = await internalDatabase(db)
     .select(COLUMNS)
     .from(auditSnapshot)
     .where(and(...conditions))
+    // Ordered in SQL on the numeric column, so the ordering is numeric even
+    // though the values arrive as strings.
     .orderBy(desc(auditSnapshot.impactScore))
     .limit(options.limit ?? 100);
+
+  return rows.map(toRow);
 }

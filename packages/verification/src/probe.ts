@@ -152,6 +152,34 @@ interface BodyPrefix {
  * well-behaved server never transmits more than is read; this is the guard for
  * servers that ignore it.
  */
+/**
+ * Throw away a response body without raising.
+ *
+ * `destroy()` on undici's body is NOT quiet: it aborts the in-flight request,
+ * and the abort surfaces asynchronously as an `AbortError` on the stream. With
+ * no `error` listener attached that becomes an uncaught exception — one per
+ * discarded body, arriving after the probe has already returned successfully,
+ * so the probe looks fine and the process dies anyway.
+ *
+ * This did not show up in this package's own tests because they inject a
+ * `fetch` whose bodies are plain in-memory streams; it took a real socket to
+ * find, which is what the pipeline's end-to-end run against a local server
+ * does. The listener is attached BEFORE the destroy, because the error can be
+ * emitted synchronously during it.
+ *
+ * Discarding is still right: leaving the body to drain holds a connection —
+ * and a concurrency slot the rate limiter has already counted as free —
+ * streaming bytes nobody will read.
+ */
+function discardBody(body: Readable): void {
+  body.on("error", () => {
+    // Deliberately empty. The only error a discarded body can report is the
+    // abort this function just caused, and there is nothing to learn from it.
+  });
+
+  body.destroy();
+}
+
 async function readBodyPrefix(
   body: Readable,
   maxBytes: number
@@ -177,10 +205,7 @@ async function readBodyPrefix(
     bytesRead += buffer.length;
   }
 
-  // Destroyed rather than left to drain: without this the connection stays
-  // busy streaming a body nobody is reading, which holds a concurrency slot
-  // the rate limiter has already accounted for as free.
-  body.destroy();
+  discardBody(body);
 
   return {
     text: Buffer.concat(chunks).toString("utf8"),
@@ -311,7 +336,7 @@ async function probeWithProfile(
         headersTimeout: budget.timeoutMs,
         bodyTimeout: budget.timeoutMs
       });
-      head.body.destroy();
+      discardBody(head.body);
     } finally {
       headRelease();
     }

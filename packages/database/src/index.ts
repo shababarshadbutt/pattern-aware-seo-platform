@@ -48,6 +48,7 @@ export {
   type PatternStatus,
   type PatternStatusCount,
   type PatternUpsert,
+  setPatternStatus,
   upsertPatterns
 } from "./repositories/pattern.js";
 
@@ -60,6 +61,7 @@ export {
 } from "./repositories/pattern-population.js";
 export {
   findPatternSample,
+  findPatternSampleById,
   latestPatternSample,
   type PatternSampleRow,
   type RecordSampleInput,

@@ -26,6 +26,7 @@ export interface SitemapFileRow {
   readonly siteId: string;
   readonly sitemapRunId: string;
   readonly url: string;
+  readonly fileOrdinal: number;
   readonly filename: string | null;
   readonly parseStatus: FileParseStatus;
   readonly urlCount: number;
@@ -44,6 +45,7 @@ const COLUMNS = {
   siteId: sitemapFile.siteId,
   sitemapRunId: sitemapFile.sitemapRunId,
   url: sitemapFile.url,
+  fileOrdinal: sitemapFile.fileOrdinal,
   filename: sitemapFile.filename,
   parseStatus: sitemapFile.parseStatus,
   urlCount: sitemapFile.urlCount,
@@ -59,6 +61,8 @@ const COLUMNS = {
 
 export interface SitemapFileUpsert {
   readonly url: string;
+  /** The integer that addresses this file's bytes. See the schema comment. */
+  readonly fileOrdinal: number;
   readonly filename?: string | null;
   readonly isGzip?: boolean;
 }
@@ -87,6 +91,7 @@ export async function upsertSitemapFiles(
         siteId: scope.siteId,
         sitemapRunId,
         url: file.url,
+        fileOrdinal: file.fileOrdinal,
         filename: file.filename ?? null,
         isGzip: file.isGzip ?? false
       }))
@@ -113,7 +118,7 @@ export async function listSitemapFiles(
         eq(sitemapFile.sitemapRunId, sitemapRunId)
       )
     )
-    .orderBy(asc(sitemapFile.createdAt), asc(sitemapFile.url));
+    .orderBy(asc(sitemapFile.fileOrdinal));
 }
 
 /**
@@ -196,7 +201,7 @@ export async function nextUnparsedFile(
         eq(sitemapFile.parseStatus, "pending")
       )
     )
-    .orderBy(asc(sitemapFile.createdAt), asc(sitemapFile.url))
+    .orderBy(asc(sitemapFile.fileOrdinal))
     .limit(1);
 
   return row;

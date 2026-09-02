@@ -55,9 +55,28 @@ export interface VerifiedUrl {
 export type PatternVerdict =
   | { readonly kind: "measured" }
   | {
-      /** Too much of the sample needed a GET. A finding, not a failure. */
+      /**
+       * The host cannot be measured the cheap way. A finding for a person, not
+       * a failure.
+       *
+       * ONLY `HEAD_NOT_SUPPORTED`, and the absence of a cap reason here is
+       * deliberate — it used to be one, and that was wrong in a way only an
+       * end-to-end run showed.
+       *
+       * A healthy 200 wants a soft-404 sniff, so a pattern that is entirely
+       * healthy escalates on every URL and always spends its allowance, while a
+       * pattern that is entirely gone (410, nothing to sniff) never escalates
+       * at all. Flagging a spent allowance for review therefore inverted the
+       * signal precisely: every healthy pattern was flagged and a completely
+       * dead one came back clean. At fleet scale that makes the flag
+       * meaningless and buries the host-level problems it exists to surface.
+       *
+       * A suppressed sniff still yields a usable status from the HEAD, so those
+       * URLs are measured — what is reduced is soft-404 COVERAGE, which is now
+       * reported as a number (see `soft404Sniffed`) instead of as a verdict.
+       */
       readonly kind: "needs_review";
-      readonly reason: "GET_ESCALATION_CAP" | "HEAD_NOT_SUPPORTED";
+      readonly reason: "HEAD_NOT_SUPPORTED";
     }
   | {
       /** The host refused us. Never reported as a site defect. */
@@ -74,6 +93,18 @@ export interface VerifyPatternResult {
   readonly requestCount: number;
   /** `escalated / probed`, for `sampling_health`. */
   readonly escalationRate: number;
+  /**
+   * How many URLs actually got a soft-404 sniff.
+   *
+   * The honest measure of what the escalation cap cost: a 2xx whose sniff was
+   * suppressed has a real status but an unknown soft-404 outcome, and this is
+   * the count of the ones that were genuinely checked. Reported rather than
+   * flagged, because low coverage is a reason to sample harder (M3's expansion)
+   * rather than a reason to send a human to look at a healthy pattern.
+   */
+  readonly soft404Sniffed: number;
+  /** URLs whose sniff the cap prevented. `soft404Sniffed + this` = 2xx probed. */
+  readonly soft404Suppressed: number;
 }
 
 /** Thrown when a sample plan cannot bound the work it is describing. */
@@ -89,7 +120,7 @@ export async function verifyPattern(
    * VALIDATED, not trusted.
    *
    * `decideEscalation` answers `nothing_to_probe` for a zero-size plan, which
-   * is not `flag_for_review` — so a caller passing 0 alongside thirty real URLs
+   * is not `suppress_escalation` — so a caller passing 0 alongside thirty real URLs
    * disabled the cap completely and the run came back "measured" with sixty
    * requests sent and no signal at all. Silent success on bad input, and the
    * bad input is a plausible slip: `plannedSampleSize` is easy to leave at a
@@ -115,6 +146,8 @@ export async function verifyPattern(
   let probed = 0;
   let escalated = 0;
   let requestCount = 0;
+  let soft404Sniffed = 0;
+  let soft404Suppressed = 0;
   let verdict: PatternVerdict = { kind: "measured" };
 
   for (const url of input.urls) {
@@ -148,11 +181,7 @@ export async function verifyPattern(
       escalationBudget
     );
 
-    const suppressEscalation = decision.kind === "flag_for_review";
-
-    if (suppressEscalation && verdict.kind === "measured") {
-      verdict = { kind: "needs_review", reason: "GET_ESCALATION_CAP" };
-    }
+    const suppressEscalation = decision.kind === "suppress_escalation";
 
     const probe = await probeUrl(
       url,
@@ -174,6 +203,15 @@ export async function verifyPattern(
         ? {}
         : { isSoft404: probe.soft404.isSoft404 })
     });
+
+    if (probe.soft404 !== undefined) {
+      soft404Sniffed += 1;
+    } else if (suppressEscalation && isSniffable(probe.httpStatus)) {
+      // A 2xx that would have been sniffed had the budget allowed it. Counted
+      // separately from "not applicable", so coverage is a fraction of the
+      // URLs the sniff could ever have applied to.
+      soft404Suppressed += 1;
+    }
 
     results.push({
       probe,
@@ -230,8 +268,17 @@ export async function verifyPattern(
       probed,
       escalated,
       plannedSampleSize: input.plannedSampleSize
-    })
+    }),
+    soft404Sniffed,
+    soft404Suppressed
   };
+}
+
+/** Is this a status the soft-404 sniff would apply to at all? */
+function isSniffable(status: number | null | undefined): boolean {
+  return (
+    status !== null && status !== undefined && status >= 200 && status < 300
+  );
 }
 
 /**

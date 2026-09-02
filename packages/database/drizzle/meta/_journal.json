@@ -36,6 +36,20 @@
       "when": 1788356306886,
       "tag": "0004_sitemap_file_storage_and_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788357748633,
+      "tag": "0005_sitemap_file_ordinal",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788359123758,
+      "tag": "0006_impact_score_numeric",
+      "breakpoints": true
     }
   ]
 }

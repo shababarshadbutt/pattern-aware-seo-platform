@@ -1,0 +1,13 @@
+{
+  // Typecheck config: covers src and its tests. rootDir/outDir live in
+  // tsconfig.build.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // This package decides which URLs get probed and which claims get written.
+    // A wrong index here mis-addresses a sample rather than crashing, so it is
+    // held to the same standard as sampling, sitemap and verification.
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src/**/*"]
+}
