@@ -129,6 +129,28 @@ export function estimateStratified(
       );
     }
 
+    /**
+     * `hits` is validated HERE, before anything is aggregated.
+     *
+     * `wilsonInterval` enforces `0 <= hits <= sampled` itself, but the
+     * unsampled shortcut below returns before reaching it — so an impossible
+     * observation like `{ sampled: 0, hits: 1 }` would slip past, inflate
+     * `observedCount`, and produce an estimate whose parts do not add up. The
+     * database's `ck_audit_snapshot_counts_sane` would then reject the row far
+     * from the cause.
+     */
+    if (!Number.isFinite(observation.hits) || observation.hits < 0) {
+      throw new InvalidProportionError(
+        `Stratum ${observation.label} has ${observation.hits} hits, which is not a non-negative finite number`
+      );
+    }
+
+    if (observation.hits > observation.sampled) {
+      throw new InvalidProportionError(
+        `Stratum ${observation.label} recorded ${observation.hits} hits from ${observation.sampled} probes`
+      );
+    }
+
     populationCount += observation.population;
     sampleSize += observation.sampled;
     observedCount += observation.hits;

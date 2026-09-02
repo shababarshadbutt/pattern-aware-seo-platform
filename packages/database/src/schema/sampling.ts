@@ -81,9 +81,10 @@ export const patternSample = pgTable(
       foreignColumns: [pattern.siteId, pattern.id],
       name: "fk_pattern_sample_pattern"
     }),
+    // Composite: a draw cannot belong to one site and a run from another.
     foreignKey({
-      columns: [t.sitemapRunId],
-      foreignColumns: [sitemapRun.id],
+      columns: [t.siteId, t.sitemapRunId],
+      foreignColumns: [sitemapRun.siteId, sitemapRun.id],
       name: "fk_pattern_sample_sitemap_run"
     }),
     uniqueIndex("uq_pattern_sample_pattern_round").on(

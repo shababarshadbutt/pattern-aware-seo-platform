@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # `develop` is the integration branch, so a merge into it has to be
+    # verified in CI's own environment. Without it here, merging a green PR
+    # produced no run at all on the branch that actually accumulates the work —
+    # and "CI is green on develop" was unverifiable.
+    branches: [main, develop]
   pull_request:
 
 # A newer push to the same branch makes the in-flight run irrelevant.
