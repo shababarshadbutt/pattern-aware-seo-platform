@@ -157,6 +157,18 @@ importers:
         specifier: ^1.2.7
         version: 1.2.7
 
+  packages/verification:
+    dependencies:
+      '@pattern-aware/sampling':
+        specifier: workspace:^
+        version: link:../sampling
+      '@pattern-aware/shared':
+        specifier: workspace:^
+        version: link:../shared
+      undici:
+        specifier: ^8.10.1
+        version: 8.10.1
+
 packages:
 
   /@alloc/quick-lru@5.3.0:

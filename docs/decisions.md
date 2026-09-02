@@ -644,3 +644,93 @@ this class of bug hides. `estimatedRequestCost` is exported alongside it,
 because "one check" is not one request and treating it as one under-counts the
 platform request budget by exactly however much escalation is happening — which
 is highest on the sites already in trouble.
+
+---
+
+## ADR-0016 — HTTP verification lives in its own package, with the profile ladder outside the probe
+
+**Status:** Accepted (implemented in M5)
+
+**Context.** M4 shipped the escalation cap as pure policy. Wiring it to a real
+client raised two structural questions the legacy engine had already answered
+the hard way, and one it answered differently from how it started.
+
+**Decision.**
+
+**A new package, `packages/verification`.** Probing someone else's origin,
+pacing that traffic and deciding what a response means are distinct from
+anything already here, and the policy in `packages/sampling` must stay
+independently testable from the client enforcing it.
+
+**The rate limit is charged per REQUEST, not per check.** One check is not one
+request: a 2xx costs a HEAD plus a ranged soft-404 GET, a 3xx costs a HEAD plus
+a follow-up HEAD, and only a hard 404 costs one. Legacy metered per check and
+measured **49.17 req/s against a 25 req/s ceiling** — very nearly double,
+invisible at higher latency only because concurrency capped throughput first.
+Every outbound call here acquires a slot first, and `verifyPattern` reports
+requests sent separately from probes made, because the platform budget is
+denominated in requests.
+
+**The profile ladder belongs to the caller.** The probe is a dumb executor: it
+tries what it is given, in order, and stops at the first real measurement. Rung
+ordering belongs to a per-host strategy that knows which rung a host answered
+on; putting it in the probe as well would give two modules an opinion about
+escalation, which is how they drift. The two-attempt ceiling is enforced in the
+probe regardless, so no caller can widen it.
+
+**The default ladder is ONE rung, and host-strategy negotiation is deferred.**
+Escalating to a browser profile per URL is what legacy did before it learned
+better: a host that refuses everything makes a 1.3-million-URL population pay
+~2.6 million requests to learn one fact 1.3 million times, which at 25 req/s is
+days of wall clock for no information. Until a per-host strategy exists that
+negotiates once and remembers, a host refusing the honest profile is reported
+BLOCKED — true and cheap — rather than retried into the ground.
+
+That is a named gap rather than an oversight. Its cost: a site that would answer
+a browser profile is currently reported blocked, and nothing distinguishes
+"refuses everyone" from "refuses this profile". Closing it needs a host-profile
+table, a rung ladder and a Redis-backed hot copy, which is a milestone rather
+than a corner of this one.
+
+**Consequences.** The limiter is in-memory and process-global, so the effective
+rate multiplies by worker-container count. Correct for local development and a
+single worker; a Redis-backed limiter is required before running more, and is
+already scoped for multi-tenant hardening. Stated in the code rather than left
+to be discovered.
+
+Redirects are deliberately not followed. The destination comes from the first
+response's `Location` header, so following would spend a request for something
+already in hand — and would hide the hop count, which is the finding a redirect
+chain is weighted four times a single hop for (ADR-0014).
+
+---
+
+## ADR-0017 — The soft-404 body match requires "404" as a whole word
+
+**Status:** Accepted (implemented in M5)
+
+**Context.** Legacy matches every soft-404 signal against the body with a plain
+substring test, and one of those signals is the bare string `404`. On the sites
+this product audits, part numbers and SKUs are full of digits: a healthy product
+page for `SKU-40412`, or one listing `404` in a table of measurements, matches.
+
+Legacy already applies the opposite rule one layer over, in its URL heuristic —
+"conservative on the bare 404 signal (standalone token only) so an arbitrary
+part number containing digits is never flagged" — so the reasoning is its own,
+just never carried into the body matcher.
+
+**Decision.** `404` matches as a whole word; every other signal stays a
+substring match. The other phrases ("page not found", "no results") are long
+enough that an accidental match is not a realistic concern.
+
+**Consequences.** This matters more here than it did in legacy, which is why it
+is worth deviating for: a soft-404 now carries severity 0.9 (ADR-0014) and feeds
+the impact score directly. A false positive does not merely mislabel one URL —
+it inflates a published number and pushes a healthy pattern up the triage queue,
+which is the specific failure the whole evidence model exists to prevent.
+
+The short-body signal is kept as-is: a 200 under a kilobyte is treated as
+suspicious, because a near-empty product page is a not-found page that forgot to
+say so. Worth knowing when writing fixtures — a terse stub body is classified
+soft-404 on that signal alone, which is correct behaviour and briefly looked
+like a bug while writing these tests.
