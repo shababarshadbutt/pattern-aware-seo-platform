@@ -70,7 +70,7 @@ packages/
   shared/     Validated config, pino logging, domain error hierarchy
   database/   Drizzle schema, partitioning, SiteScope-gated repositories
   sitemap/    Streaming SAX parser + single-pass extraction
-  sampling/   Min-heap-by-hash; Wilson intervals with FPC     (M3)
+  sampling/   Min-heap-by-hash, Wilson intervals with FPC
   ml-client/  Client for the ml-service /predict endpoint     (Phase 4)
 ml-service/      Separate Python service: training + /predict
 infrastructure/  Terraform/CDK for AWS
@@ -113,6 +113,16 @@ SITEMAP_BENCH_URLS=10000000 pnpm --filter @pattern-aware/sitemap test
 
 The corpus is deliberately adversarial — it is what found three bugs that unit tests on small inputs did not. Keep it that way.
 
+## Sampling and confidence
+
+`packages/sampling` is pure and synchronous by design — every decision it makes is checkable against a hand-computed value with no database, network or sitemap involved. It is the part of the system where a wrong-but-plausible answer is most expensive and least likely to be caught by review.
+
+The legacy estimator uses a normal approximation, and with zero observed hits its variance is zero, so the interval collapses to `[0, 0]`: certainty that a 40,000-URL pattern has no errors, on thirty probes. Wilson does not degenerate there — thirty probes finding nothing yields a ceiling of about 4,539 URLs, and four hundred narrows it under 1% ([ADR-0001](docs/decisions.md)).
+
+Intervals come with a plain-language band, and the band's thresholds are the same ones the expansion trigger uses, so the engine can never call a pattern settled while the interface calls it uncertain. Expansion is driven by whether the interval is too wide to act on, not by a hardcoded hit rate.
+
+`ESTIMATOR_VERSION` is written to every `audit_snapshot`. Bump it whenever a change alters the numbers this package produces for inputs it already handled, or old and new rows become incomparable while looking identical.
+
 ## Status
 
-**M0, M1 and M2 complete** — the workspace builds and runs end to end, the schema and tenant boundary are in place, and sitemap ingestion parses ten million URLs in one bounded-memory pass. Next is M3: the statistical core (Wilson intervals with finite-population correction, stratification, adaptive expansion). See the action plan for what's built versus planned.
+**M0 through M3 complete** — the workspace builds and runs end to end, the schema and tenant boundary are in place, and sitemap ingestion parses ten million URLs in one bounded-memory pass, and the statistical core computes defensible intervals. Next is M4: HTTP verification. See the action plan for what's built versus planned.
