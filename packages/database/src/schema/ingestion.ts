@@ -134,6 +134,25 @@ export const sitemapFile = pgTable(
     urlCount: integer("url_count").notNull().default(0),
     byteSize: bigint("byte_size", { mode: "number" }),
     isGzip: boolean("is_gzip").notNull().default(false),
+    /**
+     * Where the pipeline's file store put this file's bytes.
+     *
+     * Recorded rather than recomputed because the store is an interface: local
+     * disk in development, S3 in deployment. A later stage reads what the
+     * download stage wrote instead of reconstructing a path from a convention
+     * that only one implementation happens to follow.
+     */
+    storageKey: text("storage_key"),
+    /**
+     * SHA-256 of the stored bytes, from the download that wrote them.
+     *
+     * Not the guard on candidate resolution — that re-hashes the resolved URL,
+     * which tests the thing actually depended on (this ordinal still holds this
+     * URL) rather than a proxy for it. This column answers a different and
+     * cheaper question: has the site's sitemap changed between runs? Two runs
+     * with the same digest need no re-parse at all.
+     */
+    contentDigest: text("content_digest"),
     parseError: text("parse_error"),
     parsedAt: timestamp("parsed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

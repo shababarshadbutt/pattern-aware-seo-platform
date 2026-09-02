@@ -25,6 +25,16 @@ export {
   partitionName
 } from "./partitions.js";
 export {
+  type AuditSnapshotInsert,
+  type AuditSnapshotRow,
+  type ConfidenceBandName,
+  type EvidenceTier,
+  ImpossibleClaimError,
+  insertAuditSnapshot,
+  listSnapshotsByImpact,
+  type SeverityClassName
+} from "./repositories/audit-snapshot.js";
+export {
   createOrganization,
   findOrganization,
   findOrganizationBySlug,
@@ -42,6 +52,35 @@ export {
 } from "./repositories/pattern.js";
 
 export {
+  listPatternFiles,
+  type PatternPopulationRow,
+  type PatternPopulationUpsert,
+  sumPatternPopulation,
+  upsertPatternPopulations
+} from "./repositories/pattern-population.js";
+export {
+  findPatternSample,
+  latestPatternSample,
+  type PatternSampleRow,
+  type RecordSampleInput,
+  recordPatternSample
+} from "./repositories/pattern-sample.js";
+export {
+  appendSampleObservations,
+  countObservations,
+  type HttpMethodUsed,
+  type ObservationTally,
+  type SampleObservationInsert,
+  tallyObservations
+} from "./repositories/sample-observation.js";
+export {
+  findRunSamplingHealth,
+  listSamplingHealth,
+  type SamplingHealthRow,
+  type SamplingHealthUpsert,
+  upsertSamplingHealth
+} from "./repositories/sampling-health.js";
+export {
   type CreateSiteInput,
   createSite,
   findSiteById,
@@ -50,6 +89,16 @@ export {
   type SiteRow,
   softDeleteSite
 } from "./repositories/site.js";
+export {
+  type FileParseStatus,
+  listSitemapFiles,
+  markFileDownloaded,
+  nextUnparsedFile,
+  type SitemapFileRow,
+  type SitemapFileUpsert,
+  setFileParseStatus,
+  upsertSitemapFiles
+} from "./repositories/sitemap-file.js";
 
 export {
   ACTIVE_RUN_STATUSES,

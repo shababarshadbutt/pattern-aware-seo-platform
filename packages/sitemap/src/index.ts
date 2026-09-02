@@ -35,6 +35,13 @@ export {
   type SitemapFileSource
 } from "./ingest/parse-file.js";
 export {
+  CandidateResolutionError,
+  type CandidateToResolve,
+  type ResolveCandidatesOptions,
+  type ResolvedCandidate,
+  resolveCandidates
+} from "./ingest/resolve-candidates.js";
+export {
   assessSize,
   type OversizeThresholds,
   type OversizeVerdict,
@@ -55,6 +62,13 @@ export {
   NonRecoverablePreambleError,
   PREAMBLE_PEEK_BYTES
 } from "./parser/preamble.js";
+export {
+  LocalDiskFileStore,
+  type SitemapFileStore,
+  type StoredFile,
+  type StoredFileKey,
+  StoredFileMissingError
+} from "./store/file-store.js";
 export {
   generateSyntheticCorpus,
   parseCorpusArgs,

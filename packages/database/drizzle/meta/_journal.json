@@ -29,6 +29,13 @@
       "when": 1788344145972,
       "tag": "0003_impact_score_and_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788356306886,
+      "tag": "0004_sitemap_file_storage_and_digest",
+      "breakpoints": true
     }
   ]
 }
