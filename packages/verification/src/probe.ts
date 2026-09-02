@@ -39,9 +39,12 @@ export interface ProbeOptions {
    *
    * This is how the per-host rate limit is charged per REQUEST rather than per
    * check — the distinction legacy measured at 49.17 req/s against a 25 req/s
-   * ceiling. A 2xx costs a HEAD plus a ranged GET and a 3xx costs a HEAD plus a
-   * follow-up HEAD, so metering the check lets the real rate reach nearly
-   * double. Returns a release function, called when the request completes.
+   * ceiling, because there a 2xx cost a HEAD plus a ranged GET and a 3xx cost a
+   * HEAD plus a follow-up HEAD.
+   *
+   * Here a 3xx costs one request (redirects are not followed), but a 2xx still
+   * costs two, so metering the check would still under-count. Returns a release
+   * function, called when the request completes.
    */
   readonly beforeRequest?: (url: string) => Promise<() => void>;
   /**

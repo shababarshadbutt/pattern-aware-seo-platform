@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { HostCircuitBreaker } from "./circuit-breaker.js";
 import type { ProbeOptions } from "./probe.js";
 import { HostRateLimiter } from "./rate-limiter.js";
-import { verifyPattern } from "./verify-pattern.js";
+import { InvalidSamplePlanError, verifyPattern } from "./verify-pattern.js";
 
 type Fetch = NonNullable<ProbeOptions["fetch"]>;
 
@@ -201,7 +201,9 @@ describe("verifyPattern", () => {
         { fetch }
       );
 
-      // Still bounded by the plan's six, and this chunk is under it.
+      // Bounded by the plan's six rather than by this chunk's own size, which
+      // is the property under test. Ten escalating URLs against an allowance
+      // of six correctly trips the cap, so the verdict is not asserted here.
       expect(result.escalated).toBeLessThanOrEqual(6);
     });
   });
@@ -372,5 +374,112 @@ describe("verifyPattern", () => {
     expect(methods).toHaveLength(0);
     expect(result.probed).toBe(0);
     expect(result.verdict).toEqual({ kind: "measured" });
+  });
+});
+
+/**
+ * Both of these were found by a manual review pass, in the absence of an
+ * automated one — Copilot Code Review stopped responding after PR #4 and does
+ * not accept a review request, so the pass that would otherwise have caught
+ * this class of thing was done by hand and these are what it turned up.
+ */
+describe("holes the manual review pass found", () => {
+  /**
+   * THE CAP WAS DEFEATABLE.
+   *
+   * Suppressing the sniff bounds a 2xx-heavy pattern because the sniff is
+   * optional — the HEAD already answered. A METHOD REJECTION is not optional:
+   * without the GET there is no usable status, and reporting the 405 would call
+   * a working page broken because of how we asked.
+   *
+   * So a host rejecting HEAD on every URL escalated on every probe and ignored
+   * the cap entirely. Measured before the fix: thirty escalations against an
+   * allowance of six, and sixty requests where the cap should have bounded it —
+   * while the verdict claimed the cap had tripped.
+   */
+  it("bounds a host that rejects HEAD on every URL", async () => {
+    const methods: string[] = [];
+    const fetch = (async (_url: unknown, opts: unknown) => {
+      const options = opts as { method?: string };
+
+      methods.push(options.method ?? "GET");
+
+      return {
+        statusCode: options.method === "HEAD" ? 405 : 200,
+        headers: {},
+        body: Readable.from([Buffer.from(HEALTHY_BODY)])
+      };
+    }) as unknown as Fetch;
+
+    const result = await verifyPattern(
+      { urls: urls(30), plannedSampleSize: 30 },
+      { fetch }
+    );
+
+    // Stopped rather than paying double for all thirty. Bounded to the
+    // allowance plus one, not thirty.
+    expect(result.escalated).toBeLessThanOrEqual(7);
+    expect(result.requestCount).toBeLessThan(20);
+    expect(result.verdict).toEqual({
+      kind: "needs_review",
+      reason: "HEAD_NOT_SUPPORTED"
+    });
+  });
+
+  /**
+   * SILENT SUCCESS ON BAD INPUT.
+   *
+   * `decideEscalation` answers `nothing_to_probe` for a zero-size plan, which
+   * is not `flag_for_review` — so a caller passing 0 alongside thirty real URLs
+   * disabled the cap completely and the run returned "measured" with sixty
+   * requests sent and no signal at all.
+   */
+  it("refuses a plan that cannot bound the work it describes", async () => {
+    const { fetch } = constantFetch(200);
+
+    await expect(
+      verifyPattern({ urls: urls(30), plannedSampleSize: 0 }, { fetch })
+    ).rejects.toThrow(InvalidSamplePlanError);
+
+    await expect(
+      verifyPattern({ urls: urls(30), plannedSampleSize: 10 }, { fetch })
+    ).rejects.toThrow(InvalidSamplePlanError);
+  });
+
+  /**
+   * A SILENT OVERRIDE between two individually-correct features.
+   *
+   * Passing both a caller hook and a rate limiter dropped the hook without a
+   * word — and that hook is how the platform-wide budget is charged, so fleet
+   * traffic would have been under-counted while the per-host limiter kept
+   * working and nothing looked wrong.
+   */
+  it("composes a caller hook with the rate limiter instead of dropping one", async () => {
+    const { fetch } = constantFetch(404);
+    const limiter = new HostRateLimiter({
+      requestsPerSecond: 1_000,
+      concurrency: 4,
+      now: () => 0,
+      sleep: async () => {}
+    });
+
+    let callerCharges = 0;
+
+    await verifyPattern(
+      { urls: urls(6), plannedSampleSize: 400 },
+      {
+        fetch,
+        rateLimiter: limiter,
+        beforeRequest: async () => {
+          callerCharges += 1;
+
+          return () => {};
+        }
+      }
+    );
+
+    // Both ran, and the limiter's slots were all released.
+    expect(callerCharges).toBe(6);
+    expect(limiter.inFlight("client.test")).toBe(0);
   });
 });
