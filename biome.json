@@ -1,0 +1,81 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/coverage",
+      "!apps/web/next-env.d.ts",
+      "!apps/web/app/globals.css"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "none",
+      "semicolons": "always",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": "error"
+      },
+      "style": {
+        "noDefaultExport": "error",
+        "noNonNullAssertion": "error",
+        "useConst": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "noCommonJs": "error",
+        "useNodejsImportProtocol": "error"
+      },
+      "complexity": {
+        "noForEach": "off"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": { "source": { "organizeImports": "on" } }
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/**", "**/bench/**"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
+    {
+      "includes": [
+        "apps/web/**/page.tsx",
+        "apps/web/**/layout.tsx",
+        "apps/web/**/route.ts",
+        "apps/web/**/error.tsx",
+        "apps/web/**/loading.tsx",
+        "apps/web/**/not-found.tsx",
+        "apps/web/**/template.tsx",
+        "apps/web/**/default.tsx",
+        "apps/web/**/opengraph-image.tsx",
+        "**/*.config.ts",
+        "**/*.config.mts",
+        "**/*.config.mjs",
+        "**/*.config.js"
+      ],
+      "linter": { "rules": { "style": { "noDefaultExport": "off" } } }
+    }
+  ]
+}

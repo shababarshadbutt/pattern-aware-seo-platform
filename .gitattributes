@@ -1,0 +1,30 @@
+# Force LF in the working tree on every platform.
+#
+# Biome formats with lineEnding "lf" (biome.json), and Git for Windows ships
+# with core.autocrlf=true — so without this, a fresh Windows clone checks every
+# file out as CRLF and `pnpm lint` fails before anyone has written a line. That
+# would break the M0 gate for exactly the developers the Docker Compose setup
+# exists to keep identical to their Mac colleagues.
+#
+# eol=lf overrides autocrlf for this repository, so the setting is a property of
+# the project rather than of whoever cloned it.
+* text=auto eol=lf
+
+# Windows batch files genuinely need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary — never normalize these.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.gz   binary
+*.zip  binary
+
+# Generated: collapse in GitHub review, but keep `git diff` working locally.
+pnpm-lock.yaml linguist-generated=true

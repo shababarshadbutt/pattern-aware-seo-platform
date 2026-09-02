@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+/*
+ * Token layer for the design system in ../../../DESIGN.md.
+ *
+ * DESIGN.md is the source of truth for every value here. If the two disagree,
+ * DESIGN.md wins and this file is the bug. Do not add a token that is not in
+ * that document, and do not hard-code a colour, radius, or type size in a
+ * component — the whole point of the spec is that "premium, distinctive, not
+ * generic SaaS" is a set of checkable decisions rather than a vibe that drifts
+ * back to Inter-and-purple-gradients under deadline pressure.
+ *
+ * The default Tailwind colour, radius, and font-size namespaces are RESET below
+ * rather than merely extended. That is deliberate and load-bearing: DESIGN.md
+ * section 9 bans purple/indigo/violet accents and corner radii above 10px, and
+ * section 5 says the radius ban is "enforced by simply not having a larger
+ * radius token available". Resetting the namespaces means `rounded-2xl` and
+ * `bg-indigo-500` do not exist to be typed by accident — the ban is structural,
+ * not a review checklist item.
+ */
+
+/* --- Palette, per DESIGN.md section 3. Dark is the default, not a toggle. --- */
+:root,
+:root[data-theme="dark"] {
+  --bg-base: #0a0b0d;
+  --bg-surface: #131417;
+  --bg-surface-raised: #1b1d21;
+  --border-subtle: #24262b;
+  --border-strong: #35373e;
+  --text-primary: #f2f3f5;
+  --text-secondary: #9ba0aa;
+  --text-tertiary: #6b707a;
+
+  /* Signal amber. One accent, used meaningfully: primary actions, focus rings,
+     active nav. Never a gradient. */
+  --accent: #d9a441;
+  --accent-foreground: #171208;
+
+  --status-healthy: #3fb67f;
+  /* "Needs attention" IS the caution signal, so warning reuses the accent. */
+  --status-warning: #d9a441;
+  --status-critical: #e5484d;
+  /* Insufficient sampling confidence — an absence of evidence, not bad news. */
+  --status-unknown: #6e7681;
+}
+
+:root[data-theme="light"] {
+  /* Warm off-white, not sterile pure white. */
+  --bg-base: #fafaf8;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --border-subtle: #e4e4e0;
+  --border-strong: #cfcfc9;
+  --text-primary: #16171a;
+  --text-secondary: #55585f;
+  --text-tertiary: #82858c;
+
+  /* Deepened for AA contrast on light. */
+  --accent: #a6720c;
+  --accent-foreground: #fffbef;
+
+  --status-healthy: #1a8f5a;
+  --status-warning: #a6720c;
+  --status-critical: #c4282e;
+  --status-unknown: #6e7681;
+}
+
+@theme inline {
+  /* --- Colour. Namespace reset first; see the note at the top of this file. --- */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-raised: var(--bg-surface-raised);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-healthy: var(--status-healthy);
+  --color-warning: var(--status-warning);
+  --color-critical: var(--status-critical);
+  --color-unknown: var(--status-unknown);
+
+  /* --- Radius, per section 5. Nothing larger than 10px exists. --- */
+  --radius-*: initial;
+  /* inputs, buttons, badges, table cells */
+  --radius-xs: 2px;
+  /* cards, panels, popovers, command palette */
+  --radius-sm: 6px;
+  /* modals only */
+  --radius-md: 10px;
+
+  /* --- Typography, per section 2. Two faces only: a UI sans and a data mono. --- */
+  --font-*: initial;
+  --font-ui: var(--font-switzer), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --text-*: initial;
+  --text-2xs: 11px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 36px;
+  --text-3xl: 40px;
+  --text-3xl--line-height: 48px;
+
+  /* --- Spacing, per section 4: 4px base unit. --- */
+  --spacing: 4px;
+}
+
+html {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-switzer), ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Numeric data always uses tabular figures so columns align without per-cell
+ * CSS. Section 9 lists non-tabular numerals in a data column as an
+ * anti-pattern, so this is applied at the element level rather than left to
+ * each table cell to remember.
+ */
+code,
+kbd,
+samp,
+pre,
+[data-numeric] {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Focus is always visible and always uses the accent. This is a keyboard-first
+ * product (section 6), so a barely-visible focus ring is a defect, not a style
+ * nitpick (section 8).
+ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
+ * Motion is fast and mechanical: 120-200ms, ease-out in, ease-in out. No
+ * spring, bounce, or elastic easing anywhere — section 8, and section 9 lists
+ * it as an anti-pattern.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,3 @@
+# Formatting and lint problems should never reach a PR — catching them in CI
+# after the fact wastes a review cycle. See docs/CODING_STANDARDS.md 1.11.
+pnpm exec lint-staged
