@@ -98,10 +98,18 @@ export const auditSnapshot = pgTable(
      * analyst's primary query, and computing it at read time means weighting
      * millions of rows on every page load. Frozen with the weight above, so the
      * ordering a report showed is the ordering it can still show later.
+     *
+     * NUMERIC, NOT BIGINT — corrected in migration 0006. The score is a count
+     * of URLs multiplied by a weight in (0, 1], so it is fractional by
+     * construction: three gone URLs at severity 0.9 is 2.7. As a bigint that
+     * insert simply failed, and the obvious patch — rounding — is worse than
+     * the bug. Rounding sends a 3-URL pattern at severity 0.15 to zero, which
+     * ranks a real finding as no finding at all, and small broken families are
+     * precisely what this system exists to stop losing in an average.
      */
-    impactScore: bigint("impact_score", { mode: "number" })
+    impactScore: numeric("impact_score", { precision: 20, scale: 3 })
       .notNull()
-      .default(0),
+      .default("0.000"),
     computedAt: timestamp("computed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

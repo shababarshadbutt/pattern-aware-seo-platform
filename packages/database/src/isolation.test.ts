@@ -197,8 +197,8 @@ describe("cross-tenant isolation", () => {
 
     await expect(
       db.execute(sql`
-        insert into sitemap_file (site_id, sitemap_run_id, url)
-        values (${acmeSite.siteId}, ${rivalRunId}, 'https://parts.acme-aviation.test/s.xml')
+        insert into sitemap_file (site_id, sitemap_run_id, url, file_ordinal)
+        values (${acmeSite.siteId}, ${rivalRunId}, 'https://parts.acme-aviation.test/s.xml', 1)
       `)
     ).rejects.toThrow();
   });
@@ -208,8 +208,8 @@ describe("cross-tenant isolation", () => {
 
     await expect(
       db.execute(sql`
-        insert into sitemap_file (site_id, sitemap_run_id, url)
-        values (${acmeSite.siteId}, ${acmeRunId}, 'https://parts.acme-aviation.test/ok.xml')
+        insert into sitemap_file (site_id, sitemap_run_id, url, file_ordinal)
+        values (${acmeSite.siteId}, ${acmeRunId}, 'https://parts.acme-aviation.test/ok.xml', 1)
       `)
     ).resolves.toBeDefined();
   });

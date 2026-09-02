@@ -82,9 +82,24 @@ importers:
 
   apps/worker:
     dependencies:
+      '@pattern-aware/database':
+        specifier: workspace:^
+        version: link:../../packages/database
+      '@pattern-aware/pipeline':
+        specifier: workspace:^
+        version: link:../../packages/pipeline
+      '@pattern-aware/sampling':
+        specifier: workspace:^
+        version: link:../../packages/sampling
       '@pattern-aware/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@pattern-aware/sitemap':
+        specifier: workspace:^
+        version: link:../../packages/sitemap
+      '@pattern-aware/verification':
+        specifier: workspace:^
+        version: link:../../packages/verification
       bullmq:
         specifier: ^5.28.0
         version: 5.81.4
@@ -122,6 +137,37 @@ importers:
         version: 4.23.13
 
   packages/ml-client: {}
+
+  packages/pipeline:
+    dependencies:
+      '@pattern-aware/database':
+        specifier: workspace:^
+        version: link:../database
+      '@pattern-aware/sampling':
+        specifier: workspace:^
+        version: link:../sampling
+      '@pattern-aware/shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@pattern-aware/sitemap':
+        specifier: workspace:^
+        version: link:../sitemap
+      '@pattern-aware/verification':
+        specifier: workspace:^
+        version: link:../verification
+      bullmq:
+        specifier: ^5.28.0
+        version: 5.81.4
+      zod:
+        specifier: ^4.5.4
+        version: 4.5.4
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      pg:
+        specifier: ^8.23.0
+        version: 8.23.0
 
   packages/sampling: {}
 
@@ -3495,12 +3541,10 @@ packages:
   /pg-cloudflare@1.4.0:
     resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /pg-connection-string@2.14.0:
     resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
-    dev: false
 
   /pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
@@ -3512,7 +3556,6 @@ packages:
       pg: '>=8.0'
     dependencies:
       pg: 8.23.0
-    dev: false
 
   /pg-protocol@1.16.0:
     resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
@@ -3543,13 +3586,11 @@ packages:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.4.0
-    dev: false
 
   /pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
     dependencies:
       split2: 4.2.0
-    dev: false
 
   /picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}

@@ -734,3 +734,184 @@ suspicious, because a near-empty product page is a not-found page that forgot to
 say so. Worth knowing when writing fixtures — a terse stub body is classified
 soft-404 on that signal alone, which is correct behaviour and briefly looked
 like a bug while writing these tests.
+
+## ADR-0018 — Sitemap files move between stages through a store interface
+
+**Status:** Accepted (implemented in M6)
+
+**Context.** The pipeline's stages are separate BullMQ jobs. The worker that
+downloads a sitemap file is not necessarily the one that parses it, and is very
+unlikely to be the one that resolves a sample candidate out of it later. A local
+path is therefore not a shared address.
+
+Three options were weighed. Pinning a run's stages to one worker is simplest but
+undercuts the per-stage queue design and breaks the moment ECS runs two tasks.
+Re-fetching on demand needs no storage at all but is actively unsafe:
+ordinal-based resolution requires byte-stable files, and a sitemap regenerated
+between parse and resolve maps ordinals to different URLs with nothing to signal
+it.
+
+**Decision.** Stages take a `SitemapFileStore` interface — `put`, `open`,
+`stat`, `removeRun` — with a local-disk implementation now and an S3 one in M8.
+No stage learns which it got. `sitemap_file` records `storage_key` and
+`content_digest` (migration 0004).
+
+Writes go to a temporary sibling and rename into place. Rename on one filesystem
+is atomic, so a process killed mid-download leaves nothing rather than a
+truncated file. Truncation is the dangerous outcome: a short sitemap still
+parses, so it would read as a legitimately smaller population and every count
+downstream would be quietly wrong. A missing file is the safer failure, and
+every stage already handles it.
+
+**Consequences.** One small abstraction, and the pipeline does not change when
+S3 lands. The digest is recorded but is deliberately not the guard on
+resolution — see ADR-0019.
+
+## ADR-0019 — Candidate resolution re-hashes the URL rather than verifying the file digest
+
+**Status:** Accepted (implemented in M6)
+
+**Context.** The sampler stores a 12-byte `(hash, fileId, ordinal)` triple
+instead of a URL string, which is what keeps a 5,000-pattern site's sample state
+in tens of megabytes. Verification needs real URLs, so the file is re-read and
+counted back to the ordinal. This is the seam where an error is invisible
+everywhere downstream: probe the wrong URL, and the observation is recorded
+against the right candidate with a wrong result. Nothing about that looks like a
+failure.
+
+**Decision.** Every resolved URL is re-hashed and compared against the hash the
+sampler stored; a mismatch is fatal. The stored file digest is *not* the guard.
+
+A digest proves the bytes are unchanged, which is only a proxy for what matters:
+that this ordinal still holds the URL that was hashed. Re-hashing tests that
+directly and per candidate. It is also strictly more useful — a sitemap
+regenerated with the same URLs in the same order is a digest mismatch but a
+correct resolution, while a shifted URL is caught either way. Resolution can
+therefore stop at the last wanted ordinal instead of reading a 10 MB file to
+verify a digest for twelve URLs.
+
+A file that ends before its sampled ordinals is also fatal. Resolving what it
+can and returning a short list would shrink the sample without shrinking `n`,
+inflating every interval computed from it while looking like an ordinary
+success.
+
+**Consequences.** The digest stays useful for a different and cheaper question —
+has this site's sitemap changed since the last run? — rather than being
+load-bearing here.
+
+Resolution records its failure and throws *after* the stream rather than from
+inside the callback. `streamLocs` rewrites any error into a preamble error when
+junk was stripped and parsing then failed, which is right for parse errors and
+would have silently turned a hash mismatch into a misleading "non-recoverable
+preamble" report. Confirmed by reverting to the naive version and watching the
+test fail with the wrong error type. Both features are individually correct;
+only their composition was wrong.
+
+## ADR-0020 — impact_score is numeric, not bigint
+
+**Status:** Accepted (implemented in M6, migration 0006)
+
+**Context.** `impact_score` shipped in M4 as `bigint`. The score is
+`point_estimate × severity_weight`, and severity is a weight in (0, 1], so the
+product is fractional by construction: three gone URLs at severity 0.9 is 2.7.
+Nothing had ever written an `audit_snapshot` row before the pipeline existed, so
+the mismatch surfaced the first time the estimate stage ran end to end, as
+`invalid input syntax for type bigint: "2.7"`.
+
+**Decision.** The column becomes `numeric(20, 3)`. The obvious alternative —
+rounding at the write — is worse than the bug: a 3-URL pattern at severity 0.15
+scores 0.45 and rounds to zero, ranking a real finding as no finding at all.
+Losing small findings in a rounding step is the same failure the whole
+per-pattern architecture exists to prevent, one layer down.
+
+**Consequences.** `numeric` arrives from node-postgres as a string, so the
+repository coerces it in one place on the way out rather than at each read — one
+of which would eventually compare a string to a number and sort "9" above "10".
+Ordering stays numeric because it happens in SQL on the column.
+
+## ADR-0021 — A spent escalation allowance reduces coverage; it does not flag for review
+
+**Status:** Accepted (supersedes part of ADR-0015; implemented in M6)
+
+**Context.** M4 defined the GET-escalation cap and M5 wired it in. When the
+allowance was spent, `decideEscalation` returned `flag_for_review` and
+`verifyPattern` set a `needs_review / GET_ESCALATION_CAP` verdict.
+
+The end-to-end run showed that this inverts the signal. A healthy 200 wants a
+soft-404 sniff, so a pattern that is *entirely healthy* escalates on every URL
+and always spends its allowance. A pattern that is *entirely gone* — 410, with
+nothing to sniff — never escalates at all. Measured on the fixture site:
+
+| pattern | health | escalated | old verdict |
+| --- | --- | --- | --- |
+| `/product/{param}` | 100% healthy | 6/30 (cap) | needs_review |
+| `/article/{param}` | 100% healthy | 6/30 (cap) | needs_review |
+| `/legacy/{param}` | 100% gone | 0 | measured |
+
+So every healthy pattern was flagged for a human and the one dead pattern came
+back clean. At 650 sites that makes the flag meaningless and buries the
+host-level problems it exists to surface — and the SLI "patterns requiring
+review" would read ~100% permanently.
+
+Both features are individually correct, and M5's own comment already argued the
+right answer: "a suppressed sniff still yields a usable status from the HEAD —
+what is lost is soft-404 detection on that URL, which is the honest trade for
+not doubling the request cost." Only the verdict disagreed with it.
+
+**Decision.** A spent allowance suppresses the optional sniff and the pattern
+stays `measured`. What the cap cost is reported as a number: `soft404Sniffed`
+and `soft404Suppressed` on the verify result. `needs_review` is reserved for
+`HEAD_NOT_SUPPORTED` — a host that cannot be measured the cheap way, which is a
+genuine finding for a person.
+
+`decideEscalation`'s decision was renamed from `flag_for_review /
+GET_ESCALATION_CAP` to `suppress_escalation / ESCALATION_BUDGET_SPENT`, because
+the old name described a consequence that no longer happens. Its consumer always
+did the right thing with the decision; only the name lied.
+
+The rejected alternative was raising `HTTP_MAX_GET_ESCALATION_FRACTION` toward
+1.0 so healthy patterns fit under it. That leaves the semantics alone but
+doubles the request cost of the common case — the exact spend the cap exists to
+prevent — and halves how many sites a fleet cycle buys.
+
+**Consequences.** Low soft-404 coverage is now an input to sampling harder
+(M3's expansion) rather than a reason to send a human to look at a healthy
+pattern. The verdict union lost `GET_ESCALATION_CAP`, which is a breaking change
+to `PatternVerdict`; M5's tests were updated with the reasoning recorded in
+them.
+
+## ADR-0022 — One BullMQ worker set per site, attached while a run is in flight
+
+**Status:** Accepted (implemented in M6)
+
+**Context.** Queue names are `{tier}:{siteId}:{stage}` so one site's job volume
+cannot starve another's. BullMQ has no wildcard consumer, so something must hold
+a `Worker` per queue — and five stages across 650 sites is 3,250 workers, which
+no single process can hold.
+
+**Decision.** The worker supervises a set of per-site pipelines and attaches only
+to sites with a run in flight. The request budget allows roughly twenty site
+audits a day, so that is about a hundred workers rather than three thousand.
+
+Stage concurrency defaults to one per site: ingest holds a pattern trie and
+per-pattern sample heaps for a whole site, and two concurrent ingests would
+double that against a memory budget sized for one. Verification's parallelism
+belongs to the per-host rate limiter, not to job concurrency — four concurrent
+verify jobs would not send requests faster, they would queue inside the limiter.
+
+The rate limiter and circuit breaker are constructed **once per process** and
+shared by every site. Both key on host, and their state only means anything
+shared: two sites behind the same CDN host must draw on the same per-host
+allowance, or the origin sees double the agreed rate.
+
+**Consequences.** A fleet that outgrows this needs a queue-per-tier with
+per-site fairness inside it (BullMQ's group support, or a scheduler); that is a
+decision to take with real numbers rather than pre-emptively, and the ceiling is
+stated in the code rather than left to be discovered.
+
+Fleet-wide auto-attach is deliberately **not** wired. It needs a read across
+every organization, and every repository read is scoped by construction
+(ADR-0004) — correctly, since that is what makes a cross-tenant query a compile
+error. Granting the worker a fleet-wide read is a real decision about the tenant
+boundary, not a convenience to add while wiring queues, so a run is attached
+explicitly for now.

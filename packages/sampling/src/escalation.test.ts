@@ -80,8 +80,8 @@ describe("decideEscalation", () => {
     );
 
     expect(decision).toEqual({
-      kind: "flag_for_review",
-      reason: "GET_ESCALATION_CAP",
+      kind: "suppress_escalation",
+      reason: "ESCALATION_BUDGET_SPENT",
       escalated: 80,
       allowed: 80
     });
@@ -93,11 +93,11 @@ describe("decideEscalation", () => {
       BUDGET
     );
 
-    expect(decision.kind).toBe("flag_for_review");
+    expect(decision.kind).toBe("suppress_escalation");
   });
 
   /**
-   * An empty plan is not a spent budget. Returning `flag_for_review` here sent
+   * An empty plan is not a spent budget. Returning `suppress_escalation` here sent
    * a human to look at a pattern with no sample and nothing to find.
    */
   it("says there is nothing to probe rather than flagging an empty plan", () => {
@@ -116,7 +116,7 @@ describe("decideEscalation", () => {
     );
 
     // 1% of 400 is 4, already exceeded.
-    expect(decision.kind).toBe("flag_for_review");
+    expect(decision.kind).toBe("suppress_escalation");
   });
 });
 

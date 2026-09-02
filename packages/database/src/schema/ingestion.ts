@@ -127,6 +127,18 @@ export const sitemapFile = pgTable(
     siteId: uuid("site_id").notNull(),
     sitemapRunId: uuid("sitemap_run_id").notNull(),
     url: text("url").notNull(),
+    /**
+     * The small integer the parser packs into every sample candidate.
+     *
+     * PERSISTED, NOT DERIVED. A candidate is `(hash, fileId, ordinal)`, so this
+     * number is the only link between a stored sample and the bytes it came
+     * from. Re-deriving it from the file list's order would work right up until
+     * a file is added, removed or reordered, at which point every existing
+     * candidate silently addresses a different file — and resolution would
+     * happily return URLs from it. Ordinal 0 is reserved for the entry document
+     * (the index itself, when there is one), so children always start at 1.
+     */
+    fileOrdinal: integer("file_ordinal").notNull(),
     filename: text("filename"),
     parseStatus: fileParseStatusEnum("parse_status")
       .notNull()
@@ -134,6 +146,25 @@ export const sitemapFile = pgTable(
     urlCount: integer("url_count").notNull().default(0),
     byteSize: bigint("byte_size", { mode: "number" }),
     isGzip: boolean("is_gzip").notNull().default(false),
+    /**
+     * Where the pipeline's file store put this file's bytes.
+     *
+     * Recorded rather than recomputed because the store is an interface: local
+     * disk in development, S3 in deployment. A later stage reads what the
+     * download stage wrote instead of reconstructing a path from a convention
+     * that only one implementation happens to follow.
+     */
+    storageKey: text("storage_key"),
+    /**
+     * SHA-256 of the stored bytes, from the download that wrote them.
+     *
+     * Not the guard on candidate resolution — that re-hashes the resolved URL,
+     * which tests the thing actually depended on (this ordinal still holds this
+     * URL) rather than a proxy for it. This column answers a different and
+     * cheaper question: has the site's sitemap changed between runs? Two runs
+     * with the same digest need no re-parse at all.
+     */
+    contentDigest: text("content_digest"),
     parseError: text("parse_error"),
     parsedAt: timestamp("parsed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -162,6 +193,12 @@ export const sitemapFile = pgTable(
     // Ingestion is idempotent on (run, url): re-running a crashed parse must not
     // duplicate files, which is what makes resume safe to retry.
     uniqueIndex("uq_sitemap_file_run_url").on(t.siteId, t.sitemapRunId, t.url),
+    // Two files in one run cannot share the integer that addresses their bytes.
+    uniqueIndex("uq_sitemap_file_run_ordinal").on(
+      t.siteId,
+      t.sitemapRunId,
+      t.fileOrdinal
+    ),
     // "Give me the next unparsed file for this run" — the resume query.
     index("idx_sitemap_file_run_parse_status").on(
       t.siteId,

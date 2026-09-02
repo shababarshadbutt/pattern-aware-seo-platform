@@ -190,3 +190,31 @@ export async function countPatternsByStatus(
     populationCount: Number(row.populationCount)
   }));
 }
+
+/**
+ * Move a pattern to a known health state.
+ *
+ * The reason is stored alongside, machine-readable, because three of the five
+ * statuses are absences of measurement rather than measurements: `blocked`,
+ * `needs_review` and `unsampled` all mean "no number here", and which one it is
+ * decides what the interface may show. A status without its reason would leave
+ * whoever reads it guessing which.
+ */
+export async function setPatternStatus(
+  db: Database,
+  scope: SiteScope,
+  patternId: string,
+  status: PatternStatus,
+  statusReason?: string
+): Promise<void> {
+  await internalDatabase(db)
+    .update(pattern)
+    .set({
+      status,
+      // Cleared on a clean measurement so a pattern that was blocked and later
+      // measured does not keep a reason that reads as a live warning.
+      statusReason: status === "measured" ? null : (statusReason ?? null),
+      updatedAt: sql`now()`
+    })
+    .where(and(eq(pattern.siteId, scope.siteId), eq(pattern.id, patternId)));
+}
