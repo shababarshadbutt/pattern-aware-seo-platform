@@ -5,12 +5,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  countPatternsByStatus,
   createOrganization,
   createSite,
   listPatternsByPopulation,
   listSitemapFiles,
   listSnapshotsByImpact,
   type SiteScope,
+  setFileParseStatus,
   startRun,
   sumPatternPopulation
 } from "@pattern-aware/database";
@@ -26,7 +28,7 @@ import type { PipelineDeps, PipelineStage } from "./index.js";
 import { runDiscover } from "./stages/discover.js";
 import { runEstimate } from "./stages/estimate.js";
 import { runFinalize } from "./stages/finalize.js";
-import { runIngest } from "./stages/ingest.js";
+import { IngestAlreadyAggregatedError, runIngest } from "./stages/ingest.js";
 import { runVerify } from "./stages/verify.js";
 import {
   createPipelineTestDatabase,
@@ -439,6 +441,75 @@ describe("the pipeline end to end", () => {
     } else {
       expect(result.reason).toBeUndefined();
     }
+  }, 120_000);
+
+  it("refuses a second ingest rather than doubling every population", async () => {
+    /**
+     * REGRESSION, from the manual review pass on this milestone.
+     *
+     * `upsertPatterns` is additive — written for a parse that flushes each
+     * file as it goes. This pass writes once at the end, so running it twice
+     * over the same corpus would add every count to itself and report a
+     * population twice the size of the site, with nothing to indicate it.
+     */
+    await expect(
+      runIngest(deps, scope, {
+        siteId: scope.siteId,
+        sitemapRunId: runId,
+        baseUrl: fixture.baseUrl,
+        expectedHost: "127.0.0.1"
+      })
+    ).rejects.toThrow(IngestAlreadyAggregatedError);
+
+    // And the populations are untouched by the refusal.
+    const patterns = await listPatternsByPopulation(deps.db, scope, runId, 10);
+    const byTemplate = new Map(patterns.map((p) => [p.template, p]));
+
+    expect(byTemplate.get("/product/{param}")?.populationCount).toBe(PRODUCTS);
+    expect(byTemplate.get("/legacy/{param}")?.populationCount).toBe(LEGACY);
+  }, 120_000);
+
+  it("re-parses files marked parsed when a previous pass never wrote aggregates", async () => {
+    /**
+     * THE OTHER HALF of the same defect, and the dangerous direction.
+     *
+     * A pass that died after marking files `parsed` but before writing
+     * aggregates would, on retry, skip those files: their URLs missing from
+     * the trie and from every count, the run finishing clean with a smaller
+     * population. Simulated here by starting a fresh run, marking its files
+     * parsed without ever aggregating, and confirming the next ingest reads
+     * the whole corpus anyway.
+     */
+    const secondRun = await startRun(deps.db, scope, { workerId: "e2e-2" });
+
+    await runDiscover(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: secondRun.id,
+      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`
+    });
+
+    const files = await listSitemapFiles(deps.db, scope, secondRun.id);
+
+    for (const file of files) {
+      await setFileParseStatus(deps.db, scope, file.id, "parsed", {
+        urlCount: 999
+      });
+    }
+
+    const result = await runIngest(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: secondRun.id,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
+    });
+
+    // Every URL counted, not zero — which is what skipping would have given.
+    expect(result.totalUrls).toBe(PRODUCTS + ARTICLES + LEGACY);
+    expect(result.patternCount).toBe(3);
+
+    const counts = await countPatternsByStatus(deps.db, scope, secondRun.id);
+
+    expect(counts.reduce((sum, entry) => sum + entry.count, 0)).toBe(3);
   }, 120_000);
 
   it("never made a request per URL in the population", () => {

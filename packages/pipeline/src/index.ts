@@ -55,6 +55,7 @@ export {
 export { type EstimateResult, runEstimate } from "./stages/estimate.js";
 export { type FinalizeResult, runFinalize } from "./stages/finalize.js";
 export {
+  IngestAlreadyAggregatedError,
   type IngestResult,
   NothingToIngestError,
   runIngest

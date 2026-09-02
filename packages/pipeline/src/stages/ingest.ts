@@ -57,6 +57,17 @@ export class NothingToIngestError extends Error {
   public override readonly name = "NothingToIngestError";
 }
 
+/**
+ * Raised when a run's aggregates already exist and would be double-counted.
+ *
+ * `upsertPatterns` adds to whatever is already recorded, so running the pass
+ * twice over the same corpus doubles every population. Refusing is right: the
+ * numbers are already there and correct, and a second pass has nothing to add.
+ */
+export class IngestAlreadyAggregatedError extends Error {
+  public override readonly name = "IngestAlreadyAggregatedError";
+}
+
 export async function runIngest(
   deps: PipelineDeps,
   scope: SiteScope,
@@ -78,6 +89,60 @@ export async function runIngest(
     );
   }
 
+  /**
+   * AGGREGATION IS ALL-OR-NOTHING FOR ONE PASS, and these two guards are what
+   * make that true. Getting it wrong is a silent population undercount.
+   *
+   * `upsertPatterns` is additive because it was written for a parse that
+   * flushes each file's contribution as it goes. This pass does not: the
+   * pattern trie is site-wide, so templates are only final once every file has
+   * been seen, and the aggregates are therefore written once at the end.
+   *
+   * That leaves a window. A pass that died after marking some files `parsed`
+   * but before writing aggregates would, on retry, SKIP those files — their
+   * URLs would be missing from the trie and from every count, and the run would
+   * finish looking perfectly clean with a smaller population. So:
+   *
+   *   - if aggregates already exist, this pass has nothing to add and adding
+   *     anyway would double every count: refuse;
+   *   - if files are marked parsed but aggregates do not exist, a previous
+   *     attempt died in that window: put them back to `pending` so this pass
+   *     reads the whole corpus.
+   *
+   * The cost is that a crashed ingest re-parses every file rather than
+   * resuming mid-list. The files are already downloaded — `storage_key` is
+   * set — so this is a re-read from the store, not a re-fetch from the client's
+   * server. File-granularity resume still holds for the expensive half.
+   */
+  const alreadyAggregated = await listPatternsByPopulation(
+    deps.db,
+    scope,
+    payload.sitemapRunId,
+    1
+  );
+
+  if (alreadyAggregated.length > 0) {
+    throw new IngestAlreadyAggregatedError(
+      `run ${payload.sitemapRunId} already has pattern aggregates; re-running ingest would add to them and double every population`
+    );
+  }
+
+  const staleParsed = files.filter((file) => file.parseStatus === "parsed");
+
+  if (staleParsed.length > 0) {
+    deps.logger.warn(
+      {
+        sitemapRunId: payload.sitemapRunId,
+        files: staleParsed.length
+      },
+      "files were marked parsed but the run has no aggregates; a previous pass died before writing them, so they are being re-parsed rather than skipped"
+    );
+
+    for (const file of staleParsed) {
+      await setFileParseStatus(deps.db, scope, file.id, "pending");
+    }
+  }
+
   const budget = deps.sampleBudget ?? DEFAULT_SAMPLE_BUDGET;
 
   /**
@@ -93,19 +158,22 @@ export async function runIngest(
 
   let filesParsed = 0;
   let filesFailed = 0;
+  const staleIds = new Set(staleParsed.map((file) => file.id));
 
-  for (const file of files) {
+  for (const raw of files) {
+    // The reset above changed rows this list was read before, so the status is
+    // corrected here rather than re-querying the whole list.
+    const file = staleIds.has(raw.id)
+      ? { ...raw, parseStatus: "pending" as const }
+      : raw;
+
     if (file.parseStatus === "parsed") {
       /**
-       * RESUME, at file granularity. An interrupted run picks up here, and the
-       * counts already written for this file are in `pattern`/`pattern_population`
-       * — which is why `upsertPatterns` is additive rather than overwriting.
-       *
-       * The pattern TRIE, however, is not resumed: this pass rebuilds it from
-       * the files it does read, so a resumed run re-derives templates from a
-       * subset. Templates are stable under a subset for the corpus tested, but
-       * this is the one place a resume is not byte-identical to a clean run,
-       * and it is called out rather than assumed away.
+       * Only reachable if the reset above did not apply, which it always does
+       * when aggregates are missing. Left as a guard rather than removed: a
+       * file counted here contributed nothing to this pass's accumulator, so
+       * counting it as parsed is only honest because its aggregates are known
+       * to be durable.
        */
       filesParsed += 1;
 
