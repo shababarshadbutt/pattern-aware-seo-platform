@@ -104,6 +104,9 @@ async function insertSnapshot(overrides: {
   ciLow?: number;
   ciHigh?: number;
   evidenceTier?: "counted" | "estimated" | "blocked";
+  severityClass?: string;
+  severityWeight?: string;
+  impactScore?: number;
 }): Promise<void> {
   const v = {
     observedCount: 1,
@@ -113,18 +116,31 @@ async function insertSnapshot(overrides: {
     ciLow: 200,
     ciHigh: 6_800,
     evidenceTier: "estimated" as const,
+    severityClass: "not_found",
+    severityWeight: "1.000",
     ...overrides
   };
+
+  /**
+   * Impact defaults to the estimate weighted at 1.0, AFTER overrides are
+   * applied. Pinning it to a literal meant that overriding `pointEstimate`
+   * left an impact score larger than the estimate it weights, so
+   * `ck_audit_snapshot_impact_sane` rejected the row before the constraint the
+   * test was actually aiming at ever got a chance.
+   */
+  const impactScore = overrides.impactScore ?? v.pointEstimate;
 
   await internalDatabase(harness.db).execute(sql`
     insert into audit_snapshot
       (site_id, pattern_id, pattern_sample_id, sitemap_run_id, http_status,
        evidence_tier, observed_count, sample_size, population_count,
-       point_estimate, ci_low, ci_high, confidence_band, estimator_version)
+       point_estimate, ci_low, ci_high, confidence_band, estimator_version,
+       severity_class, severity_weight, impact_score)
     values
       (${siteScope.siteId}, ${patternId}, ${sampleId}, ${runId}, 404,
        ${v.evidenceTier}, ${v.observedCount}, ${v.sampleSize}, ${v.populationCount},
-       ${v.pointEstimate}, ${v.ciLow}, ${v.ciHigh}, 'approximate', 'test-1')
+       ${v.pointEstimate}, ${v.ciLow}, ${v.ciHigh}, 'approximate', 'test-1',
+       ${v.severityClass}, ${v.severityWeight}, ${impactScore})
   `);
 }
 
@@ -214,6 +230,71 @@ describe("the evidence-tier contract", () => {
       insertSnapshot({ observedCount: 31, sampleSize: 30 }),
       "ck_audit_snapshot_counts_sane"
     );
+  });
+});
+
+describe("the impact score", () => {
+  /**
+   * THE guard that keeps a WAF from producing a P0.
+   *
+   * `blocked` means the host refused us, so there is no evidence of anything.
+   * A blocked claim carrying a non-zero impact score would put a
+   * crawler-blocking but perfectly healthy client at the top of the triage
+   * queue — the most misleading thing this product could do.
+   */
+  it("refuses impact on a blocked outcome", async () => {
+    // Deliberately an otherwise-ordinary estimated row: a `blocked` evidence
+    // TIER already forces point_estimate to zero, so it could not carry impact
+    // even without this guard. The guard exists for the case where the tier
+    // looks normal and only the severity class says the host refused us.
+    await expectRejectedBy(
+      insertSnapshot({ severityClass: "blocked", impactScore: 500 }),
+      "ck_audit_snapshot_refusal_has_no_impact"
+    );
+  });
+
+  it("refuses impact on an unclassifiable outcome", async () => {
+    await expectRejectedBy(
+      insertSnapshot({ severityClass: "unknown", impactScore: 500 }),
+      "ck_audit_snapshot_refusal_has_no_impact"
+    );
+  });
+
+  it("refuses impact on a healthy outcome", async () => {
+    await expectRejectedBy(
+      insertSnapshot({ severityClass: "ok", impactScore: 500 }),
+      "ck_audit_snapshot_refusal_has_no_impact"
+    );
+  });
+
+  // Impact is the estimate WEIGHTED, so it can never exceed it: a weight above
+  // one would be inventing affected URLs that were never estimated.
+  it("refuses an impact score above the estimate it weights", async () => {
+    await expectRejectedBy(
+      insertSnapshot({
+        pointEstimate: 1_000,
+        ciHigh: 6_800,
+        impactScore: 5_000
+      }),
+      "ck_audit_snapshot_impact_sane"
+    );
+  });
+
+  it("refuses a severity weight outside [0, 1]", async () => {
+    await expectRejectedBy(
+      insertSnapshot({ severityWeight: "1.500" }),
+      "ck_audit_snapshot_impact_sane"
+    );
+  });
+
+  it("accepts a properly weighted finding", async () => {
+    await expect(
+      insertSnapshot({
+        severityClass: "server_error",
+        severityWeight: "0.800",
+        impactScore: 1_066
+      })
+    ).resolves.toBeUndefined();
   });
 });
 

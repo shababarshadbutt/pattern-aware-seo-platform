@@ -19,6 +19,16 @@ export {
   DEFAULT_CONFIDENCE_THRESHOLDS,
   relativeIntervalWidth
 } from "./confidence-band.js";
+export {
+  DEFAULT_ESCALATION_BUDGET,
+  decideEscalation,
+  type EscalationBudget,
+  type EscalationDecision,
+  type EscalationState,
+  escalationAllowance,
+  escalationRate,
+  estimatedRequestCost
+} from "./escalation.js";
 export { ESTIMATOR_VERSION } from "./estimator-version.js";
 export {
   type ExpansionOptions,
@@ -28,6 +38,15 @@ export {
   planExpansion
 } from "./expansion.js";
 export {
+  compareByImpact,
+  type ImpactScore,
+  type ImpactScoreInput,
+  type ImpactScoreOptions,
+  type PatternImpact,
+  scoreImpact,
+  scorePatternImpact
+} from "./impact-score.js";
+export {
   allocateAcrossStrata,
   DEFAULT_SAMPLE_BUDGET,
   firstRoundSampleSize,
@@ -36,6 +55,16 @@ export {
   type SamplePlan,
   type StratumPlan
 } from "./sample-plan.js";
+export {
+  classifyOutcome,
+  isAbsenceOfEvidence,
+  MissingSeverityTableError,
+  type ProbeOutcome,
+  RATIFIED_SEVERITY_TABLE,
+  type SeverityClass,
+  type SeverityTable,
+  severityFor
+} from "./severity.js";
 export { compareSampleKeys, stableHash } from "./stable-hash.js";
 export {
   estimateStratified,
@@ -44,11 +73,7 @@ export {
   type StratumEstimate,
   type StratumObservation
 } from "./stratified-estimate.js";
-export {
-  groupByShape,
-  pathShape,
-  valueShape
-} from "./value-shape.js";
+export { groupByShape, pathShape, valueShape } from "./value-shape.js";
 export {
   DEFAULT_CONFIDENCE_LEVEL,
   type Interval,
