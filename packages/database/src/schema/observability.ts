@@ -15,7 +15,12 @@ import {
   uuid
 } from "drizzle-orm/pg-core";
 
-import { confidenceBandEnum, evidenceTierEnum } from "./enums.js";
+import {
+  confidenceBandEnum,
+  evidenceTierEnum,
+  findingSourceEnum,
+  severityClassEnum
+} from "./enums.js";
 import { sitemapRun } from "./ingestion.js";
 import { pattern } from "./pattern.js";
 import { patternSample } from "./sampling.js";
@@ -68,6 +73,35 @@ export const auditSnapshot = pgTable(
     estimatorVersion: text("estimator_version").notNull(),
     /** Per-stratum breakdown: label, population, sampled, hits, bounds. */
     strata: jsonb("strata"),
+    /** Which intelligence source produced this. See `finding_source`. */
+    findingSource: findingSourceEnum("finding_source")
+      .notNull()
+      .default("http_sample"),
+    severityClass: severityClassEnum("severity_class")
+      .notNull()
+      .default("unknown"),
+    /**
+     * The weight actually applied, frozen with the claim.
+     *
+     * Stored rather than looked up at read time because the weights are a
+     * business decision that will be revised, and a claim published under the
+     * old table has to stay reconstructible. Reading the current table would
+     * silently restate history.
+     */
+    severityWeight: numeric("severity_weight", { precision: 4, scale: 3 })
+      .notNull()
+      .default("0.000"),
+    /**
+     * `point_estimate × severity_weight`, persisted.
+     *
+     * Denormalised deliberately. Ranking the fleet's patterns by impact is the
+     * analyst's primary query, and computing it at read time means weighting
+     * millions of rows on every page load. Frozen with the weight above, so the
+     * ordering a report showed is the ordering it can still show later.
+     */
+    impactScore: bigint("impact_score", { mode: "number" })
+      .notNull()
+      .default(0),
     computedAt: timestamp("computed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -110,6 +144,10 @@ export const auditSnapshot = pgTable(
       t.siteId,
       t.pointEstimate.desc()
     ),
+    // The impact queue's ordering. Separate from the estimate index because
+    // severity reorders them: a small number of gone pages outranks a larger
+    // number of single redirects.
+    index("idx_audit_snapshot_site_impact").on(t.siteId, t.impactScore.desc()),
 
     check(
       "ck_audit_snapshot_counts_sane",
@@ -156,6 +194,32 @@ export const auditSnapshot = pgTable(
      * when the sample covered the whole population, and a `blocked` claim must
      * not smuggle in a non-zero number, because there was no measurement.
      */
+    check(
+      "ck_audit_snapshot_impact_sane",
+      sql`
+        impact_score >= 0
+        and severity_weight >= 0
+        and severity_weight <= 1
+        and impact_score <= point_estimate
+      `
+    ),
+
+    /**
+     * A refusal may never carry impact.
+     *
+     * `blocked` means the host would not let us look, and `unknown` means the
+     * outcome could not be classified. Either scored as damage would let a WAF
+     * or a network blip promote a healthy site to the top of the triage queue —
+     * the single most misleading thing this product could do.
+     */
+    check(
+      "ck_audit_snapshot_refusal_has_no_impact",
+      sql`
+        severity_class not in ('blocked', 'unknown', 'ok')
+        or (impact_score = 0 and severity_weight = 0)
+      `
+    ),
+
     check(
       "ck_audit_snapshot_evidence_tier_matches_coverage",
       sql`

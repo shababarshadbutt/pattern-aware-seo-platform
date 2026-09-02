@@ -111,3 +111,45 @@ export const sampleMethodEnum = pgEnum("sample_method", ["min_heap_by_hash"]);
  * produced the status is worth keeping.
  */
 export const httpMethodEnum = pgEnum("http_method", ["HEAD", "GET"]);
+
+/**
+ * Where a finding came from.
+ *
+ * One value today, and the action plan is explicit about why there are not
+ * more: extend this only with sources that will actually be populated soon,
+ * because an enum value nothing ever writes is indistinguishable from one
+ * nothing has written *yet*, and the difference matters when you are asking
+ * whether a source is working.
+ *
+ * Deliberately absent: the legacy engine's `operator`, `no_change` and
+ * `operator_pattern` are artifacts of its fix-and-republish workflow, which is
+ * out of scope here (ADR-0007). `gsc` arrives with Search Console integration
+ * in Phase 5. The column exists now so those additions are a migration of the
+ * enum rather than a reinterpretation of every existing row.
+ */
+export const findingSourceEnum = pgEnum("finding_source", ["http_sample"]);
+
+/**
+ * How bad an outcome is, as a class rather than a raw status code.
+ *
+ * Stored alongside the weight that was applied, because `audit_snapshot` is an
+ * immutable record of a published claim: the weights are a business decision
+ * (ADR-0014) and will be revised, and a historical claim has to stay
+ * reconstructible against the ones that actually produced it.
+ *
+ * `blocked` and `unknown` are in the list and both weigh zero. Neither is a
+ * defect — one is a host refusing us, the other an outcome we could not
+ * classify — and scoring either as damage would let a WAF turn a healthy client
+ * into a P0.
+ */
+export const severityClassEnum = pgEnum("severity_class", [
+  "gone",
+  "not_found",
+  "soft_not_found",
+  "server_error",
+  "redirect_chain",
+  "redirect_single",
+  "ok",
+  "blocked",
+  "unknown"
+]);

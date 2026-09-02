@@ -2,10 +2,12 @@ export {
   confidenceBandEnum,
   evidenceTierEnum,
   fileParseStatusEnum,
+  findingSourceEnum,
   httpMethodEnum,
   patternStatusEnum,
   runStatusEnum,
   sampleMethodEnum,
+  severityClassEnum,
   siteTierEnum
 } from "./enums.js";
 export { sitemapFile, sitemapRun } from "./ingestion.js";
