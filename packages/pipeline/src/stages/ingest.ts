@@ -17,7 +17,6 @@ import {
   firstRoundSampleSize,
   type SampleBudget
 } from "@pattern-aware/sampling";
-import { getConfig } from "@pattern-aware/shared";
 import { PatternAccumulator, parseSitemapStream } from "@pattern-aware/sitemap";
 
 import { assertScopeMatchesPayload, type PipelineDeps } from "../deps.js";
@@ -79,7 +78,7 @@ export async function runIngest(
     );
   }
 
-  const budget = sampleBudgetFrom();
+  const budget = deps.sampleBudget ?? DEFAULT_SAMPLE_BUDGET;
 
   /**
    * Capacity is the EXPANDED ceiling, not the first round's.
@@ -439,25 +438,4 @@ async function drawSamples(
   }
 
   return drawn;
-}
-
-/**
- * The sampling budget, from the config validated once at startup.
- *
- * Read through `getConfig` rather than from `process.env`, and assembled here
- * rather than at each call site so every stage samples to the same budget. The
- * `sampleRate` has no env override yet, so it comes from the package default.
- */
-function sampleBudgetFrom(): SampleBudget {
-  const config = getConfig();
-
-  return {
-    sampleRate: DEFAULT_SAMPLE_BUDGET.sampleRate,
-    minSample: config.SAMPLE_MIN_SIZE,
-    maxFirstRound: config.SAMPLE_MAX_FIRST_ROUND,
-    maxExpanded: config.SAMPLE_MAX_EXPANDED,
-    maxExpansionFactor: config.SAMPLE_MAX_EXPANSION_FACTOR,
-    maxPopulationFraction: config.SAMPLE_MAX_POPULATION_FRACTION,
-    minPerStratum: config.SAMPLE_MIN_PER_STRATUM
-  };
 }

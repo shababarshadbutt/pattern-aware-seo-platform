@@ -88,6 +88,9 @@ importers:
       '@pattern-aware/pipeline':
         specifier: workspace:^
         version: link:../../packages/pipeline
+      '@pattern-aware/sampling':
+        specifier: workspace:^
+        version: link:../../packages/sampling
       '@pattern-aware/shared':
         specifier: workspace:*
         version: link:../../packages/shared

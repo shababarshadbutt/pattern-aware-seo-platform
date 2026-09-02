@@ -2,6 +2,10 @@ import { Readable } from "node:stream";
 
 import { createDatabase } from "@pattern-aware/database";
 import type { SitemapResponse, SiteTier } from "@pattern-aware/pipeline";
+import {
+  DEFAULT_SAMPLE_BUDGET,
+  type SampleBudget
+} from "@pattern-aware/sampling";
 import { createLogger, getConfig } from "@pattern-aware/shared";
 import { LocalDiskFileStore } from "@pattern-aware/sitemap";
 import {
@@ -69,6 +73,26 @@ const circuitBreaker = new HostCircuitBreaker({
 
 const store = new LocalDiskFileStore(config.SITEMAP_STORE_ROOT);
 
+/**
+ * The sampling budget, assembled from config ONCE, here.
+ *
+ * Read at the process edge and handed to the stages rather than read inside
+ * them. A stage that called `getConfig()` itself would require the whole
+ * validated environment to be present just to learn a sample-size floor —
+ * which is how a handler that needs neither Redis nor a database ends up
+ * unable to run without both. `sampleRate` has no env override yet, so it
+ * comes from the package default.
+ */
+const sampleBudget: SampleBudget = {
+  sampleRate: DEFAULT_SAMPLE_BUDGET.sampleRate,
+  minSample: config.SAMPLE_MIN_SIZE,
+  maxFirstRound: config.SAMPLE_MAX_FIRST_ROUND,
+  maxExpanded: config.SAMPLE_MAX_EXPANDED,
+  maxExpansionFactor: config.SAMPLE_MAX_EXPANSION_FACTOR,
+  maxPopulationFraction: config.SAMPLE_MAX_POPULATION_FRACTION,
+  minPerStratum: config.SAMPLE_MIN_PER_STRATUM
+};
+
 /** Fetch a sitemap. The one place the pipeline reaches the open internet. */
 async function fetchSitemap(url: string): Promise<SitemapResponse> {
   const response = await fetch(url, {
@@ -127,7 +151,8 @@ export async function attachSite(input: {
     tier: input.tier,
     fetchSitemap,
     rateLimiter,
-    circuitBreaker
+    circuitBreaker,
+    sampleBudget
   });
 
   pipeline.start();

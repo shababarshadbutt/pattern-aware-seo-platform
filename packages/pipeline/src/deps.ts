@@ -1,4 +1,5 @@
 import type { Database, SiteScope } from "@pattern-aware/database";
+import type { SampleBudget } from "@pattern-aware/sampling";
 import type { Logger } from "@pattern-aware/shared";
 import type { SitemapFileStore } from "@pattern-aware/sitemap";
 import type {
@@ -59,6 +60,18 @@ export interface PipelineDeps {
   readonly circuitBreaker?: HostCircuitBreaker;
   /** Injected for tests; falls through to undici in deployment. */
   readonly probeFetch?: ProbeOptions["fetch"];
+  /**
+   * The sampling budget, INJECTED rather than read from global config.
+   *
+   * A stage that called `getConfig()` would drag the whole validated
+   * environment in with it — and `getConfig` validates every key, so reading a
+   * sample-size floor made the stage require `REDIS_URL` and `DATABASE_URL` to
+   * be present. That is how a pure handler stops being testable without a full
+   * environment, and it failed in CI while passing locally off a developer
+   * `.env`, which is the worst version of the problem. The worker assembles
+   * this from config once at startup, where reading config belongs.
+   */
+  readonly sampleBudget?: SampleBudget;
 }
 
 /**

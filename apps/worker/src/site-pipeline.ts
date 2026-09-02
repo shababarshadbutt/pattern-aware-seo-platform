@@ -12,6 +12,7 @@ import {
   runStage,
   type SiteTier
 } from "@pattern-aware/pipeline";
+import type { SampleBudget } from "@pattern-aware/sampling";
 import type { Logger } from "@pattern-aware/shared";
 import type { SitemapFileStore } from "@pattern-aware/sitemap";
 import type {
@@ -52,6 +53,7 @@ export interface SitePipelineOptions {
   readonly fetchSitemap: PipelineDeps["fetchSitemap"];
   readonly rateLimiter: HostRateLimiter;
   readonly circuitBreaker: HostCircuitBreaker;
+  readonly sampleBudget: SampleBudget;
   /** Jobs this process will run at once, across this site's stages. */
   readonly concurrency?: number;
 }
@@ -175,7 +177,8 @@ export class SitePipeline {
       fetchSitemap: this.#options.fetchSitemap,
       enqueue: this.#enqueue(),
       rateLimiter: this.#options.rateLimiter,
-      circuitBreaker: this.#options.circuitBreaker
+      circuitBreaker: this.#options.circuitBreaker,
+      sampleBudget: this.#options.sampleBudget
     };
   }
 
