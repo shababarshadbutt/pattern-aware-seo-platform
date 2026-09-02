@@ -19,5 +19,14 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@pattern-aware/sampling": "workspace:^",
+    "@pattern-aware/shared": "workspace:^",
+    "sax": "^1.6.1",
+    "undici": "^8.10.1"
+  },
+  "devDependencies": {
+    "@types/sax": "^1.2.7"
   }
 }

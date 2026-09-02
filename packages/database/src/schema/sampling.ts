@@ -174,14 +174,31 @@ export const sampleObservation = pgTable(
       foreignColumns: [site.id],
       name: "fk_sample_observation_site"
     }),
-    // One probe per URL per draw. Makes the writer idempotent under retry, which
-    // an append-only table otherwise has no defence against.
-    uniqueIndex("uq_sample_observation_sample_url_hash").on(
+    /**
+     * One probe per URL per draw. Makes the writer idempotent under retry,
+     * which an append-only table otherwise has no defence against.
+     *
+     * Keyed on the URL, NOT on `url_hash`. The hash is 32-bit and the
+     * populations are tens of millions, so collisions are constant — and among
+     * the ~1,200 smallest hashes a draw retains, several are expected. Two
+     * distinct URLs sharing a hash are two real observations; a unique index on
+     * the hash would reject the second and silently shrink the sample. This
+     * mistake was made in migration 0000 and corrected in 0001.
+     */
+    uniqueIndex("uq_sample_observation_sample_url").on(
+      t.siteId,
+      t.patternSampleId,
+      t.url
+    ),
+    index("idx_sample_observation_sample").on(t.siteId, t.patternSampleId),
+    // Verifying the superset property means asking "which observations fall
+    // below the previous draw's threshold hash?", which wants the hash indexed
+    // even though it is not unique.
+    index("idx_sample_observation_sample_url_hash").on(
       t.siteId,
       t.patternSampleId,
       t.urlHash
     ),
-    index("idx_sample_observation_sample").on(t.siteId, t.patternSampleId),
     // The Phase 4 feature query and the trend sparkline: this pattern's outcomes
     // over time.
     index("idx_sample_observation_pattern_observed").on(

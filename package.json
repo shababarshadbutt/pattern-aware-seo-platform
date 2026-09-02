@@ -2,6 +2,7 @@
   "name": "pattern-aware-seo-platform",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "packageManager": "pnpm@8.15.0",
   "engines": {
     "node": ">=22"
@@ -9,13 +10,14 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck && tsc -p scripts/tsconfig.json --noEmit",
     "test": "turbo run test",
     "lint": "biome check . && pnpm lint:promises",
     "lint:fix": "biome check --write .",
     "lint:promises": "eslint .",
     "format": "biome format --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "gen:sitemaps": "tsx scripts/generate-synthetic-sitemaps.ts"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,json,jsonc,css}": "biome check --write --no-errors-on-unmatched"
@@ -26,6 +28,7 @@
     "eslint": "^10.9.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
+    "tsx": "^4.19.0",
     "turbo": "^2.10.12",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.69.0",

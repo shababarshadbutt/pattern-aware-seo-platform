@@ -69,8 +69,8 @@ apps/
 packages/
   shared/     Validated config, pino logging, domain error hierarchy
   database/   Drizzle schema, partitioning, SiteScope-gated repositories
-  sitemap/    Streaming SAX parser + single-pass extraction   (M2)
-  sampling/   Min-heap-by-hash, Wilson intervals with FPC     (M3)
+  sitemap/    Streaming SAX parser + single-pass extraction
+  sampling/   Min-heap-by-hash; Wilson intervals with FPC     (M3)
   ml-client/  Client for the ml-service /predict endpoint     (Phase 4)
 ml-service/      Separate Python service: training + /predict
 infrastructure/  Terraform/CDK for AWS
@@ -98,6 +98,21 @@ Integration tests create and drop their own throwaway databases against a real P
 
 If a natively-installed Postgres already holds port 5432, set `POSTGRES_PORT` in `.env` (and match it in `DATABASE_URL`). The container is otherwise shadowed and connections fail on credentials against the wrong server.
 
+## Sitemap ingestion
+
+One streaming pass over a site produces all three things the sampler needs — per-pattern population counts, the pattern-to-file index, and the sample candidates. The legacy engine needs a separate full scan for each, and reads every `<loc>` of every file to build the second one because no pattern-to-file index exists.
+
+Memory is bounded by pattern count, not URL count: nothing holds a URL string past the moment it is hashed, and candidates are stored as 12-byte `(hash, file, ordinal)` triples ([ADR-0002](docs/decisions.md)). Measured on a synthetic 10M-URL corpus: **681 MB peak RSS against a 1,536 MB budget, 89 MB retained, 19 patterns, ~41,600 URLs/s.**
+
+Patterns are grouped with a prefix trie rather than the legacy per-position counters, which merged a third of that corpus into a single meaningless `/{param}/{param}/{param}` ([ADR-0012](docs/decisions.md) has the before-and-after).
+
+```bash
+pnpm gen:sitemaps --out .tmp/sitemaps --urls 10000000   # seeded, deterministic
+SITEMAP_BENCH_URLS=10000000 pnpm --filter @pattern-aware/sitemap test
+```
+
+The corpus is deliberately adversarial — it is what found three bugs that unit tests on small inputs did not. Keep it that way.
+
 ## Status
 
-**M0 and M1 complete** — the workspace builds, lints, typechecks, tests and runs end to end, and the schema, tenant boundary and partitioning are in place. Next is M2: single-pass streaming sitemap ingestion. See the action plan for what's built versus planned.
+**M0, M1 and M2 complete** — the workspace builds and runs end to end, the schema and tenant boundary are in place, and sitemap ingestion parses ten million URLs in one bounded-memory pass. Next is M3: the statistical core (Wilson intervals with finite-population correction, stratification, adaptive expansion). See the action plan for what's built versus planned.
