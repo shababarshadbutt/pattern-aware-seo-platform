@@ -1,0 +1,12 @@
+{
+  // Build config: emits only the library. Tests, the test harness and the
+  // drizzle-kit config are typechecked (tsconfig.json) but never shipped.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/test-harness.ts", "dist"]
+}

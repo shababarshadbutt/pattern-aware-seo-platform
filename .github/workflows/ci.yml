@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    # `develop` is the integration branch, so a merge into it has to be
+    # verified in CI's own environment. Without it here, merging a green PR
+    # produced no run at all on the branch that actually accumulates the work —
+    # and "CI is green on develop" was unverifiable.
+    branches: [main, develop]
+  pull_request:
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # A real Postgres, not a mock. The data layer's whole point is partitioning,
+    # composite foreign keys into partitioned parents, partial unique indexes and
+    # CHECK constraints — none of which a mocked query layer reproduces, so a
+    # suite that passed without this would be testing nothing that matters.
+    # See docs/CODING_STANDARDS.md section 1.10.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: seo_platform
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: seo_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://seo_platform:password@localhost:5432/seo_platform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Biome covers formatting and almost all lint rules; the second step is
+      # the narrow type-aware ESLint pass for no-floating-promises and
+      # no-misused-promises. See eslint.config.mjs for why it exists.
+      - name: Lint and format
+        run: pnpm exec biome ci .
+
+      - name: Lint (type-aware promise rules)
+        run: pnpm lint:promises
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Integration tests create and drop their own throwaway databases on this
+      # server, so the migration set is exercised from empty on every run.
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

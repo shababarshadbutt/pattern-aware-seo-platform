@@ -1,32 +1,64 @@
-import { Worker, type Job } from "bullmq";
-import IORedis from "ioredis";
+import { createLogger, getConfig } from "@pattern-aware/shared";
+import { type Job, Worker } from "bullmq";
+import { Redis } from "ioredis";
 
-const connection = new IORedis(process.env.REDIS_URL ?? "redis://localhost:6379", {
-  maxRetriesPerRequest: null,
+// Fail fast and loudly on bad configuration, before anything connects.
+const config = getConfig();
+const logger = createLogger({
+  service: "worker",
+  level: config.LOG_LEVEL,
+  pretty: config.NODE_ENV === "development"
 });
 
-// Placeholder queue — replace with the real pipeline as Phase 1 lands:
-// sitemap-discovery -> sitemap-download -> sitemap-parse -> pattern-extraction -> sampling -> ...
+// BullMQ requires this to be null rather than a retry count: a blocking command
+// that gives up mid-wait leaves the worker silently not consuming.
+const connection = new Redis(config.REDIS_URL, {
+  maxRetriesPerRequest: null
+});
+
+// Placeholder consumer. The real pipeline lands in M5:
+//   sitemap-discovery -> download -> parse -> pattern-extract
+//     -> sample-plan -> http-verify -> estimate
+//
+// Queue names there are namespaced per site and tier ("{tier}:{siteId}:{stage}")
+// rather than shared, so one site's job volume cannot starve another's. Do not
+// add a second queue on the flat name below.
 const worker = new Worker(
   "sitemap-discovery",
-  async (job: Job) => {
-    console.log(`processing job ${job.id} (${job.name})`, job.data);
-    return { ok: true };
+  (job: Job) => {
+    logger.info({ jobId: job.id, jobName: job.name }, "processing job");
+
+    return Promise.resolve({ ok: true });
   },
   { connection }
 );
 
 worker.on("completed", (job) => {
-  console.log(`job ${job.id} completed`);
+  logger.info({ jobId: job.id }, "job completed");
 });
 
-worker.on("failed", (job, err) => {
-  console.error(`job ${job?.id} failed:`, err.message);
+worker.on("failed", (job, error) => {
+  logger.error({ jobId: job?.id, err: error }, "job failed");
 });
 
-console.log("worker started, listening on queue: sitemap-discovery");
+logger.info({ queue: "sitemap-discovery" }, "worker started");
 
-process.on("SIGTERM", async () => {
-  await worker.close();
-  process.exit(0);
-});
+// Close the worker before the Redis connection so an in-flight job finishes and
+// releases its lock; killing the connection first would leave the job stalled
+// until BullMQ's lock expiry reclaims it.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, () => {
+    logger.info({ signal }, "shutdown signal received, closing worker");
+
+    worker
+      .close()
+      .then(async () => {
+        await connection.quit();
+        process.exit(0);
+      })
+      .catch((error: unknown) => {
+        logger.error({ err: error }, "worker failed to close cleanly");
+        process.exit(1);
+      });
+  });
+}

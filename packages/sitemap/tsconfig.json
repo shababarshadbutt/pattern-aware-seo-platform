@@ -1,0 +1,12 @@
+{
+  // Typecheck config: covers src, its tests and the synthetic-corpus helper.
+  // rootDir/outDir live in tsconfig.build.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Off-by-one and undefined-access bugs here silently corrupt a statistical
+    // result rather than crashing loudly. See docs/CODING_STANDARDS.md 1.1.
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src/**/*"]
+}
