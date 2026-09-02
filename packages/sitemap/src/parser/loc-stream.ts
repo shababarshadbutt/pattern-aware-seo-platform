@@ -109,7 +109,10 @@ export async function streamLocs(
     const input = decoded.pipe(preambleStripper);
 
     let rootElement: SitemapRootElement = "unknown";
-    let rootSeen = false;
+    // The tag as written, kept for diagnostics: `rootElement` narrows anything
+    // unrecognised to "unknown", which throws away the one detail that tells
+    // you what the server actually served.
+    let rootTagName: string | undefined;
     let inLoc = false;
     let locText = "";
     let locCount = 0;
@@ -165,8 +168,8 @@ export async function streamLocs(
 
       const name = localName(node.name);
 
-      if (!rootSeen) {
-        rootSeen = true;
+      if (rootTagName === undefined) {
+        rootTagName = node.name;
         rootElement =
           name === "urlset" || name === "sitemapindex" ? name : "unknown";
       }
@@ -265,7 +268,7 @@ export async function streamLocs(
       }
 
       if (options.requireSitemapRoot !== false && rootElement === "unknown") {
-        settle(new NotASitemapError(rootSeen ? "unknown" : "empty document"));
+        settle(new NotASitemapError(rootTagName ?? "empty document"));
 
         return;
       }

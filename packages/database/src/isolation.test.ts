@@ -176,6 +176,44 @@ describe("cross-tenant isolation", () => {
     expect(await findSiteById(harness.db, rivalSite)).toBeDefined();
   });
 
+  /**
+   * The claim M1 made was that cross-tenant references are unrepresentable by
+   * construction. Automated review on PR #2 pointed out they were not: every
+   * table referencing a run also carries `site_id`, but only
+   * `(sitemap_run_id)` was constrained, so a row could name one site and a run
+   * belonging to another. Migration 0002 closes it with composite keys; this
+   * asserts the hole is actually shut rather than trusting the DDL.
+   */
+  it("refuses a row naming one site and another site's run", async () => {
+    const db = internalDatabase(harness.db);
+
+    await expect(
+      db.execute(sql`
+        insert into pattern
+          (site_id, sitemap_run_id, template, segment_count, population_count)
+        values (${acmeSite.siteId}, ${rivalRunId}, '/forged/{param}', 2, 1)
+      `)
+    ).rejects.toThrow();
+
+    await expect(
+      db.execute(sql`
+        insert into sitemap_file (site_id, sitemap_run_id, url)
+        values (${acmeSite.siteId}, ${rivalRunId}, 'https://parts.acme-aviation.test/s.xml')
+      `)
+    ).rejects.toThrow();
+  });
+
+  it("still accepts a row whose site and run agree", async () => {
+    const db = internalDatabase(harness.db);
+
+    await expect(
+      db.execute(sql`
+        insert into sitemap_file (site_id, sitemap_run_id, url)
+        values (${acmeSite.siteId}, ${acmeRunId}, 'https://parts.acme-aviation.test/ok.xml')
+      `)
+    ).resolves.toBeDefined();
+  });
+
   it("lists only an organization's own sites", async () => {
     expect((await listSites(harness.db, acmeOrg)).map((s) => s.name)).toEqual([
       "Acme Parts"

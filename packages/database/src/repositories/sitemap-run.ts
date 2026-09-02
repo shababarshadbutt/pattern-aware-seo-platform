@@ -210,10 +210,23 @@ export async function listRuns(
   scope: SiteScope,
   limit = 20
 ): Promise<readonly SitemapRunRow[]> {
-  return internalDatabase(db)
-    .select(COLUMNS)
-    .from(sitemapRun)
-    .where(eq(sitemapRun.siteId, scope.siteId))
-    .orderBy(desc(sitemapRun.startedAt))
-    .limit(limit);
+  return (
+    internalDatabase(db)
+      .select(COLUMNS)
+      .from(sitemapRun)
+      .where(eq(sitemapRun.siteId, scope.siteId))
+      /**
+       * NULLS LAST, and a tie-breaker.
+       *
+       * `started_at` is nullable — a pending run has not started — and Postgres
+       * sorts NULLs FIRST in a DESC order. So a never-started run appeared at the
+       * top of "recent runs", ahead of runs that had actually happened, which is
+       * the opposite of what the run-history view is for.
+       */
+      .orderBy(
+        sql`${sitemapRun.startedAt} desc nulls last`,
+        desc(sitemapRun.createdAt)
+      )
+      .limit(limit)
+  );
 }

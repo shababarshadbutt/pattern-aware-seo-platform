@@ -131,6 +131,7 @@ export class PatternTrie<T> {
   readonly #factory: TerminalFactory<T>;
 
   #nodeCount = 1;
+  #finalized = false;
 
   public constructor(factory: TerminalFactory<T>) {
     this.#factory = factory;
@@ -149,6 +150,8 @@ export class PatternTrie<T> {
    * answer.
    */
   public terminalFor(segments: readonly string[]): T {
+    this.#finalized = false;
+
     let node = this.#root;
 
     for (const segment of segments) {
@@ -183,7 +186,16 @@ export class PatternTrie<T> {
    * Idempotent, so calling `entries()` twice is free.
    */
   public finalize(): void {
+    // Genuinely idempotent, as the doc claims. `result()` and
+    // `estimatedBytes()` both call `entries()`, so without this guard reading
+    // a result twice re-walked and re-evaluated the entire trie each time.
+    if (this.#finalized) {
+      return;
+    }
+
     this.#reevaluate(this.#root);
+    this.#nodeCount = countNodes(this.#root);
+    this.#finalized = true;
   }
 
   /**
@@ -195,8 +207,23 @@ export class PatternTrie<T> {
    * leave the same pattern under two different templates.
    */
   public merge(other: PatternTrie<T>): void {
+    this.#finalized = false;
     this.#mergeNode(this.#root, other.#root);
     this.#reevaluate(this.#root);
+
+    /**
+     * Recount from scratch rather than trying to track the delta.
+     *
+     * `#mergeNode` adopts whole subtrees in one assignment, so incrementing by
+     * one per adoption undercounts everything beneath it — and `nodeCount`
+     * feeds `PatternAccumulator.estimatedBytes()`, which is what the memory cap
+     * is enforced against. An undercount there would let the cap be silently
+     * exceeded, which defeats the point of having one.
+     *
+     * A full walk is O(nodes) and a merge already is, so this costs nothing
+     * asymptotically and is exact rather than approximately right.
+     */
+    this.#nodeCount = countNodes(this.#root);
   }
 
   #descend(node: TrieNode<T>, segment: string): TrieNode<T> {
@@ -516,4 +543,27 @@ export class PatternTrie<T> {
       this.#walk(node.paramChild, [...prefix, PARAM_SEGMENT], out);
     }
   }
+}
+
+/**
+ * Every node in a subtree, including its root.
+ *
+ * Used to recount after a merge or a finalize rather than tracking a delta:
+ * `#mergeNode` adopts whole subtrees in a single assignment, so incrementing
+ * once per adoption undercounts everything beneath it. The count feeds
+ * `PatternAccumulator.estimatedBytes()`, which the memory cap is enforced
+ * against, and an undercount there would let the cap be silently exceeded.
+ */
+function countNodes<T>(node: TrieNode<T>): number {
+  let total = 1;
+
+  for (const child of node.children.values()) {
+    total += countNodes(child);
+  }
+
+  if (node.paramChild !== undefined) {
+    total += countNodes(node.paramChild);
+  }
+
+  return total;
 }

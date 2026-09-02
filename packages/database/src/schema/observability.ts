@@ -90,9 +90,12 @@ export const auditSnapshot = pgTable(
       foreignColumns: [patternSample.siteId, patternSample.id],
       name: "fk_audit_snapshot_pattern_sample"
     }),
+    // Composite: a published claim cannot belong to one site and a run from
+    // another. This table is the audit trail, so a mismatch here would corrupt
+    // the provenance of the number itself.
     foreignKey({
-      columns: [t.sitemapRunId],
-      foreignColumns: [sitemapRun.id],
+      columns: [t.siteId, t.sitemapRunId],
+      foreignColumns: [sitemapRun.siteId, sitemapRun.id],
       name: "fk_audit_snapshot_sitemap_run"
     }),
     // "Latest claim for this pattern and status" — the evidence page's query.
@@ -214,9 +217,15 @@ export const samplingHealth = pgTable(
       foreignColumns: [site.id],
       name: "fk_sampling_health_site"
     }),
+    /**
+     * Composite, like the others. `sitemap_run_id` is nullable here for
+     * cross-run daily rollups, and Postgres's default MATCH SIMPLE skips the
+     * check when any column is NULL — so a rollup row is unconstrained, which
+     * is the intended behaviour rather than an oversight.
+     */
     foreignKey({
-      columns: [t.sitemapRunId],
-      foreignColumns: [sitemapRun.id],
+      columns: [t.siteId, t.sitemapRunId],
+      foreignColumns: [sitemapRun.siteId, sitemapRun.id],
       name: "fk_sampling_health_sitemap_run"
     }),
     uniqueIndex("uq_sampling_health_site_run_window").on(

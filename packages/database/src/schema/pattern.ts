@@ -58,9 +58,10 @@ export const pattern = pgTable(
       foreignColumns: [site.id],
       name: "fk_pattern_site"
     }),
+    // Composite: a pattern cannot belong to one site and a run from another.
     foreignKey({
-      columns: [t.sitemapRunId],
-      foreignColumns: [sitemapRun.id],
+      columns: [t.siteId, t.sitemapRunId],
+      foreignColumns: [sitemapRun.siteId, sitemapRun.id],
       name: "fk_pattern_sitemap_run"
     }),
     uniqueIndex("uq_pattern_run_template").on(

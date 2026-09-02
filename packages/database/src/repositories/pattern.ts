@@ -158,11 +158,13 @@ export async function countPatternsByStatus(
   scope: SiteScope,
   sitemapRunId: string
 ): Promise<readonly PatternStatusCount[]> {
-  return internalDatabase(db)
+  const rows = await internalDatabase(db)
     .select({
       status: pattern.status,
       count: sql<number>`count(*)::int`,
-      populationCount: sql<number>`coalesce(sum(${pattern.populationCount}), 0)::bigint`
+      // Summed as bigint because a fleet-scale total overflows int4, and
+      // node-postgres hands int8 back as a STRING to avoid losing precision.
+      populationCount: sql<string>`coalesce(sum(${pattern.populationCount}), 0)::bigint`
     })
     .from(pattern)
     .where(
@@ -172,4 +174,19 @@ export async function countPatternsByStatus(
       )
     )
     .groupBy(pattern.status);
+
+  /**
+   * Normalised here rather than typed as `number` and hoped for.
+   *
+   * Declaring the column `sql<number>` made the exported type a lie: callers
+   * got a string at runtime, so arithmetic on it silently concatenated and
+   * comparisons silently failed. A URL population fits comfortably inside
+   * Number.MAX_SAFE_INTEGER even summed across a fleet, so converting at the
+   * repository boundary is safe and keeps the contract honest.
+   */
+  return rows.map((row) => ({
+    status: row.status,
+    count: row.count,
+    populationCount: Number(row.populationCount)
+  }));
 }

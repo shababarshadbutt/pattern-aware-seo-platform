@@ -80,10 +80,30 @@ export function parseCorpusArgs(
     }
   }
 
+  /**
+   * Rejects a non-numeric value rather than yielding NaN.
+   *
+   * `--urls abc` silently produced an empty corpus: `while (written < NaN)`
+   * never runs, the generator reports success, and the benchmark then measures
+   * parsing nothing at all. A benchmark that quietly measures the wrong thing
+   * is worse than one that fails.
+   */
   const number = (key: string, fallback: number): number => {
     const raw = options[key];
 
-    return raw === undefined || raw === "" ? fallback : Number(raw);
+    if (raw === undefined || raw === "") {
+      return fallback;
+    }
+
+    const parsed = Number(raw);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new TypeError(
+        `--${key} must be a positive number, got ${JSON.stringify(raw)}`
+      );
+    }
+
+    return parsed;
   };
 
   return {

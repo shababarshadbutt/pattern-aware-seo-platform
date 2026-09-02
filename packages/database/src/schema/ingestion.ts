@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core";
@@ -86,6 +87,20 @@ export const sitemapRun = pgTable(
     uniqueIndex("uq_sitemap_run_one_active_per_site")
       .on(t.siteId)
       .where(sql`${t.status} in ('pending', 'running')`),
+    /**
+     * Redundant against the primary key on `id` alone, and deliberately so.
+     *
+     * It exists to be the target of a COMPOSITE foreign key. Every table that
+     * references a run also carries `site_id`, and with only
+     * `(sitemap_run_id) -> sitemap_run(id)` constrained, nothing stopped a row
+     * whose `site_id` disagreed with its run's — so a cross-site reference was
+     * representable in a schema that claimed otherwise. Pointing those keys at
+     * `(site_id, id)` makes the two agree by construction. See ADR-0004.
+     *
+     * A UNIQUE CONSTRAINT rather than a unique index, because that is what
+     * Postgres requires a foreign key to reference.
+     */
+    unique("uq_sitemap_run_site_id").on(t.siteId, t.id),
     index("idx_sitemap_run_site_started").on(t.siteId, t.startedAt.desc()),
     // The stale sweeper's only query shape.
     index("idx_sitemap_run_heartbeat")
@@ -138,9 +153,10 @@ export const sitemapFile = pgTable(
       foreignColumns: [site.id],
       name: "fk_sitemap_file_site"
     }),
+    // Composite: a file cannot belong to one site and a run from another.
     foreignKey({
-      columns: [t.sitemapRunId],
-      foreignColumns: [sitemapRun.id],
+      columns: [t.siteId, t.sitemapRunId],
+      foreignColumns: [sitemapRun.siteId, sitemapRun.id],
       name: "fk_sitemap_file_sitemap_run"
     }),
     // Ingestion is idempotent on (run, url): re-running a crashed parse must not
