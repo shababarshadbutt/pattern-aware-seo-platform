@@ -3,7 +3,12 @@ services:
     image: postgres:16
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Host port is overridable because a natively-installed Postgres or Redis
+      # on the default port silently shadows the container: connections succeed
+      # against the wrong server and fail on credentials, which is a confusing
+      # way to lose an afternoon. Set POSTGRES_PORT / REDIS_PORT in .env when
+      # that happens; the container side never changes, so nothing else does.
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: seo_platform
       POSTGRES_PASSWORD: password
@@ -15,7 +20,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
 

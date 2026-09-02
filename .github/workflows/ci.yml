@@ -15,6 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # A real Postgres, not a mock. The data layer's whole point is partitioning,
+    # composite foreign keys into partitioned parents, partial unique indexes and
+    # CHECK constraints — none of which a mocked query layer reproduces, so a
+    # suite that passed without this would be testing nothing that matters.
+    # See docs/CODING_STANDARDS.md section 1.10.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: seo_platform
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: seo_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://seo_platform:password@localhost:5432/seo_platform
+
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +63,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Integration tests create and drop their own throwaway databases on this
+      # server, so the migration set is exercised from empty on every run.
       - name: Test
         run: pnpm test
 

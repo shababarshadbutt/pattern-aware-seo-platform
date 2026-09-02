@@ -300,3 +300,97 @@ which is the intended friction. Anything genuinely one-off still has Tailwind's
 arbitrary-value syntax as an escape hatch, so this constrains defaults rather
 than making exceptions impossible; `/impeccable audit` against `DESIGN.md` is the
 backstop for those.
+
+---
+
+## ADR-0010 — Composite primary keys on partitioned tables, and hand-completed migrations
+
+**Status:** Accepted (implemented in M1)
+
+**Context.** Two constraints collide in M1, and both are forced rather than
+chosen.
+
+First, Postgres requires a partitioned table's primary key to contain the
+partition key. `pattern`, `sitemap_file`, `pattern_population`, `pattern_sample`,
+`sample_observation` and `audit_snapshot` are all partitioned by `site_id`
+(ADR-0003), so none of them can have `id` alone as its primary key. That
+contradicts `CODING_STANDARDS.md` section 2.1, which says primary keys are
+always `id`.
+
+Second, Drizzle cannot express declarative partitioning. `drizzle-kit generate`
+emits an ordinary `CREATE TABLE` for a table the schema says nothing special
+about, because there is no way to say it.
+
+**Decision.** Primary keys on partitioned tables are `(site_id, id)`. `id` stays
+a UUID and stays unique in practice; what changes is that the database enforces
+uniqueness per partition rather than globally. Foreign keys into these tables
+carry both columns, which is why every child already has `site_id`.
+
+Migrations are produced by `drizzle-kit generate` and then completed by hand:
+the six `PARTITION BY LIST ("site_id")` clauses are added to the emitted SQL.
+The generated snapshot stays authoritative for future diffs, because the
+partition clause is invisible to Drizzle in both directions. `drizzle-kit push`
+is never used on this project — it would recreate the partitioned tables as
+ordinary ones and silently discard the partitioning.
+
+**Consequences.** The composite key is not really a cost: carrying `site_id` on
+every child row is what gives partition pruning something to prune on, so the
+convention this breaks was working against the schema anyway. Update
+`CODING_STANDARDS.md` section 2.1 to record the exception rather than leaving
+the schema silently non-conforming.
+
+The hand-edit is the real cost, and it is a genuine hazard: deleting and
+regenerating `0000_init_schema.sql` would produce a schema that applies cleanly,
+passes every type check, and is unpartitioned. Three things guard it — a banner
+at the top of the migration, a test asserting each of the six tables reports
+`relkind = 'p'` with `LIST (site_id)`, and a second test asserting the
+`PARTITIONED_TABLES` constant matches what the database actually reports, so a
+new partitioned table cannot be added without also being onboarded.
+
+Considered and rejected: dropping partitioning in favour of row-level security
+alone. RLS gives isolation but nothing for query performance, and the plan's
+whole reason for partitioning from creation is that retrofitting it after 650
+sites have data is the migration to avoid.
+
+---
+
+## ADR-0011 — Push invariants into the database when they can be expressed there
+
+**Status:** Accepted (implemented in M1)
+
+**Context.** The action plan names the estimator's degenerate interval as the
+highest-value paging alert in the system: after ADR-0001, no sample that failed
+to cover its population may produce `ci_low == ci_high`, and if one is ever
+written the statistical core has regressed. An alert is a reasonable answer.
+Writing the row and then telling someone about it is not the best available one.
+
+The same question applies to several other rules M1 had to place somewhere: at
+most one in-flight run per site, an evidence tier that matches actual sample
+coverage, and an interval that contains its own point estimate.
+
+**Decision.** Where an invariant can be stated as a constraint, it is a
+constraint, not a convention, a code path, or an alert.
+
+- `ck_audit_snapshot_no_degenerate_interval` makes the legacy estimator's exact
+  defect unwritable, while still permitting the `n = N` case where the interval
+  correctly collapses because that population was counted rather than estimated.
+- `ck_audit_snapshot_evidence_tier_matches_coverage` enforces ADR-0008's three
+  tiers at storage: a partial sample cannot be labelled `counted`, and a
+  `blocked` row cannot smuggle in a non-zero estimate.
+- `uq_sitemap_run_one_active_per_site`, a partial unique index, arbitrates the
+  race that a check-then-insert loses — and the cost of losing it is two runs
+  pointing traffic at one origin.
+- Composite foreign keys into partitioned parents make an observation that
+  references another site's pattern unrepresentable.
+
+**Consequences.** These failures now surface as a failing insert during a test
+run rather than as a client-facing number that was wrong for a week, and they
+hold regardless of which service, script or future language wrote the row. The
+cost is that the rules live in two places — SQL and the code that respects them
+— and a legitimate future change means a migration rather than an edit. That is
+the intended friction: these are the claims the product's credibility rests on.
+
+The constraints are asserted directly in `constraints.test.ts`, by name rather
+than by error message, so a test also fails if some *other* constraint catches
+the row first — which would mean the guard under test is not the one doing the
+work.

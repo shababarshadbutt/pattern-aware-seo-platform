@@ -54,7 +54,8 @@ All four run in CI on every pull request ([`.github/workflows/ci.yml`](.github/w
 
 Two conventions worth knowing before you add a query or a number to a screen:
 
-- **Every database read goes through a repository function that takes a `SiteScope` token.** An unscoped query is a compile error, not something a reviewer has to catch ([ADR-0004](docs/decisions.md)).
+- **Every database read goes through a repository function that takes a `SiteScope` token.** The `Database` handle is opaque — its public type has no query methods — so an unscoped query is a compile error, not something a reviewer has to catch ([ADR-0004](docs/decisions.md)).
+- **An invariant that can be a database constraint is one.** The estimator cannot write a zero-width interval for a partial sample, a partial sample cannot be labelled `counted`, and a site cannot have two runs in flight ([ADR-0011](docs/decisions.md)).
 - **A sampled number may never be rendered without its confidence interval.** One `<Estimate>` component enforces this in the type system, and a CI test asserts nothing bypasses it ([ADR-0008](docs/decisions.md)).
 - **UI values come from the token layer, never from a literal.** [`apps/web/app/globals.css`](apps/web/app/globals.css) resets Tailwind's default colour, radius, and font-size namespaces and defines only what [`DESIGN.md`](DESIGN.md) specifies — so `rounded-2xl` and `bg-indigo-500` do not exist to be typed by accident. The bans in DESIGN.md section 9 are structural, not a review checklist.
 
@@ -67,7 +68,7 @@ apps/
   worker/    BullMQ workers + Piscina pools
 packages/
   shared/     Validated config, pino logging, domain error hierarchy
-  database/   Drizzle schema + SiteScope-gated repositories   (M1)
+  database/   Drizzle schema, partitioning, SiteScope-gated repositories
   sitemap/    Streaming SAX parser + single-pass extraction   (M2)
   sampling/   Min-heap-by-hash, Wilson intervals with FPC     (M3)
   ml-client/  Client for the ml-service /predict endpoint     (Phase 4)
@@ -82,6 +83,21 @@ Packages marked with a milestone are deliberately empty until then — see the a
 
 `packageManager` pins **pnpm 8.15.0**, matching the pnpm currently installed and the `lockfileVersion: '6.0'` lockfile. Upgrading to pnpm 9+ is worth doing deliberately, as its own change: it needs `corepack enable` in an elevated shell (or a global install) and it rewrites the lockfile to v9 format, so it should land in a commit of its own rather than mixed into feature work.
 
+## Database
+
+The schema is `organization -> site -> sitemap_run -> sitemap_file -> pattern -> pattern_population / pattern_sample -> sample_observation`, plus `audit_snapshot` and `sampling_health`. Six of those tables are `PARTITION BY LIST (site_id)` from creation, and onboarding a site creates its partitions in the same transaction as the row ([ADR-0003](docs/decisions.md)).
+
+```bash
+pnpm --filter @pattern-aware/database db:generate   # after editing src/schema
+pnpm --filter @pattern-aware/database db:migrate    # apply pending migrations
+```
+
+Two things to know before touching migrations. **Never run `drizzle-kit push`** — it would recreate the partitioned tables as ordinary ones and silently discard the partitioning. And `drizzle/0000_init_schema.sql` is hand-completed after generation, because Drizzle cannot express `PARTITION BY`; regenerating over it produces a schema that applies cleanly, typechecks, and is unpartitioned. Tests guard both ([ADR-0010](docs/decisions.md)).
+
+Integration tests create and drop their own throwaway databases against a real Postgres — partitioning, composite foreign keys, partial unique indexes and CHECK constraints are the substance of this package, and a mocked query layer reproduces none of them. `docker compose up -d` is enough; CI runs a Postgres service container.
+
+If a natively-installed Postgres already holds port 5432, set `POSTGRES_PORT` in `.env` (and match it in `DATABASE_URL`). The container is otherwise shadowed and connections fail on credentials against the wrong server.
+
 ## Status
 
-**M0 complete** — the workspace builds, lints, typechecks, tests, and runs end to end. Next is M1: schema, tenancy, and partitioning. See the action plan for what's built versus planned.
+**M0 and M1 complete** — the workspace builds, lints, typechecks, tests and runs end to end, and the schema, tenant boundary and partitioning are in place. Next is M2: single-pass streaming sitemap ingestion. See the action plan for what's built versus planned.
