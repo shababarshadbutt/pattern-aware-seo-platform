@@ -481,3 +481,60 @@ them unreachable; a bottom-up rebuild never revisited the subtree it had just
 merged; and nodes created moments before a collapse fingerprinted as leaves and
 were stranded. Each produced plausible-looking output. That is the argument for
 keeping the corpus adversarial rather than tidy.
+
+---
+
+## ADR-0013 — Confidence bands need two threshold pairs, not one
+
+**Status:** Accepted (implemented in M3)
+
+**Context.** The plan defines the confidence band from the interval's width
+relative to the point estimate: under 20% is `confident`, at or above 50% is
+`low`. That works for any ordinary estimate and breaks completely when nothing
+was found.
+
+With zero observed hits the point estimate is zero, so a ratio against it is
+infinite and every clean pattern on the fleet classifies as `low`. That is not a
+cosmetic problem. The M7 alert watches the share of patterns stuck at LOW
+confidence, and it would fire on healthy sites — the signal would be worthless
+within a week of switching it on.
+
+The first attempt at a fix measured the zero-hit width against the population
+instead and reused the same 20/50 cuts. That fails in the other direction: a
+pattern where thirty probes found nothing has a ceiling of about 11% of its
+population — 4,539 possible broken URLs out of 40,000 — and 11% is comfortably
+inside the 20% cut, so it came back `confident`. A test written from the
+product's point of view caught it.
+
+**Decision.** Two threshold pairs, chosen because they bound two different
+quantities.
+
+- For an estimate above zero, width relative to the ESTIMATE: 20% / 50%.
+  "Give or take half the estimate" is a statement about relative precision.
+- For an estimate of zero, width relative to the POPULATION: 2% / 10%.
+  "Up to this many could be broken and we would not know" is a statement about
+  absolute exposure, and the numbers that read as tolerable are an order of
+  magnitude smaller.
+
+Calibrated against what the sample budget actually produces at zero hits: 400
+probes leave a ceiling near 0.9% (`confident`), 100 leave 3.7%
+(`approximate`), and 30 leave 11.3% (`low`).
+
+**Consequences.** A clean pattern that was probed properly now reads as
+confident, which is what makes the LOW-confidence alert meaningful. A clean
+pattern probed thinly still reads as uncertain, which is correct — thirty
+probes genuinely cannot distinguish zero from four thousand.
+
+The cost is two pairs of numbers to keep calibrated instead of one, and the
+zero-hit pair has to move if the sample budget moves. Both live in
+`packages/shared` config alongside the sample sizes they are calibrated
+against, so the relationship is at least visible.
+
+A related finding worth recording, since it looks like a bug and is not: under
+the default 400-probe first round, a mid-range error rate on a large pattern
+lands at `approximate` and can never reach `confident` — reaching it on a 15%
+rate would take roughly 1,900 probes. That is the correct trade. "Somewhere
+around 13.5 million, likely between 10.7 and 16.9 million" is entirely
+sufficient to rank a pattern first for attention, which is the decision the
+number feeds, and 1,500 further requests at a client's origin would change
+nothing.

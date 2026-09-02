@@ -105,6 +105,14 @@ const configSchema = z.object({
   // would mean the interface flags a pattern the engine considers settled.
   CONFIDENCE_LOW_BAND_WIDTH: z.coerce.number().min(0).default(0.5),
   CONFIDENCE_APPROXIMATE_BAND_WIDTH: z.coerce.number().min(0).default(0.2),
+  // The same two cuts for an estimate of zero, where interval width is measured
+  // against the population rather than against the estimate. Different numbers
+  // because they bound a different quantity — see confidence-band.ts.
+  CONFIDENCE_ZERO_HIT_LOW_BAND_WIDTH: z.coerce.number().min(0).default(0.1),
+  CONFIDENCE_ZERO_HIT_APPROXIMATE_BAND_WIDTH: z.coerce
+    .number()
+    .min(0)
+    .default(0.02),
 
   // --- Outbound HTTP budgets ---
   // These bound traffic at somebody else's origin. The per-host numbers are
