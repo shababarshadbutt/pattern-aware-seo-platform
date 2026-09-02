@@ -50,13 +50,24 @@ export interface ImpactScoreOptions {
   readonly severityTable: SeverityTable;
   /**
    * Reserved multiplier for search-traffic weighting, from Google Search
-   * Console.
+   * Console. Must be in (0, 1] — it can only ever DE-weight.
    *
-   * A deliberately inert hook. The action plan asks for the Impact Score now
+   * A deliberately inert hook: the action plan asks for the Impact Score now
    * and GSC integration in Phase 5, and wiring the shape in advance means that
    * arrives as one multiplication rather than a reshaping of every consumer.
-   * Left at 1 and unset by anything today; there is no partial GSC support
-   * hiding behind it.
+   *
+   * THE UPPER BOUND IS NOT ARBITRARY. `impact_score` is stored, and
+   * `ck_audit_snapshot_impact_sane` requires it not to exceed the estimate it
+   * weights, because the number is in URL units and a score larger than the
+   * affected-URL count it derives from is not interpretable as anything. A
+   * multiplier above one produces exactly that: 2.5 on a 100,000-URL estimate
+   * gives 250,000, and the database rejects the row. The hook as originally
+   * written could not actually have been used.
+   *
+   * De-weighting is the semantics that fits: this pattern has no search
+   * traffic, rank it lower. If the product later wants traffic to AMPLIFY, the
+   * score stops being URL-denominated and needs its own column plus a revised
+   * constraint. That is an ADR decision, not a quiet relaxation of this bound.
    */
   readonly trafficMultiplier?: number;
 }
@@ -78,6 +89,13 @@ export function scoreImpact(
   const absence = isAbsenceOfEvidence(severityClass);
   const severity = severityFor(severityClass, options.severityTable);
   const traffic = options.trafficMultiplier ?? 1;
+
+  if (!Number.isFinite(traffic) || traffic <= 0 || traffic > 1) {
+    throw new RangeError(
+      `trafficMultiplier must be in (0, 1]; got ${traffic}. Above one the score exceeds the estimate it weights and audit_snapshot rejects the row.`
+    );
+  }
+
   const weight = severity * traffic;
 
   return {
@@ -152,8 +170,7 @@ export function scorePatternImpact(
 /**
  * Order patterns for a triage queue: worst first.
  *
- * Ties break on the estimated URL count and then on the identifier, so the
- * ordering is total. Without that, two equally-scored patterns could swap
+ * Ties break on the identifier, so the ordering is total. Without that, two equally-scored patterns could swap
  * places between page loads and a reader would think something had changed.
  */
 export function compareByImpact(

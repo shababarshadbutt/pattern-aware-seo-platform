@@ -183,10 +183,45 @@ describe("scoreImpact", () => {
     );
     const weighted = scoreImpact(
       { outcome: { httpStatus: 404 }, estimate },
-      { severityTable: TABLE, trafficMultiplier: 2.5 }
+      { severityTable: TABLE, trafficMultiplier: 0.4 }
     );
 
-    expect(weighted.score).toBeCloseTo(plain.score * 2.5, 6);
+    expect(weighted.score).toBeCloseTo(plain.score * 0.4, 6);
+  });
+
+  /**
+   * The traffic hook could not actually have been used as first written.
+   *
+   * `impact_score` is stored, and `ck_audit_snapshot_impact_sane` requires it
+   * not to exceed the estimate it weights — the number is in URL units, and a
+   * score larger than the affected-URL count it derives from means nothing. A
+   * multiplier of 2.5 on a 100,000-URL estimate produced 250,000 and the
+   * database rejected the row. Found by probing the interaction between the
+   * hook and the constraint, which neither one shows in isolation.
+   */
+  it("refuses a traffic multiplier that would exceed the estimate", () => {
+    const estimate = estimateFor(1_000_000, 400, 40);
+
+    expect(() =>
+      scoreImpact(
+        { outcome: { httpStatus: 404 }, estimate },
+        { severityTable: TABLE, trafficMultiplier: 2.5 }
+      )
+    ).toThrow(RangeError);
+  });
+
+  it("keeps the score inside the estimate for every legal multiplier", () => {
+    const estimate = estimateFor(1_000_000, 400, 40);
+
+    for (const multiplier of [1, 0.9, 0.5, 0.01]) {
+      const score = scoreImpact(
+        { outcome: { httpStatus: 404 }, estimate },
+        { severityTable: TABLE, trafficMultiplier: multiplier }
+      );
+
+      // Exactly what the database CHECK asserts.
+      expect(score.score).toBeLessThanOrEqual(estimate.pointEstimate);
+    }
   });
 });
 

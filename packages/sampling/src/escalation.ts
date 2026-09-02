@@ -68,7 +68,16 @@ export type EscalationDecision =
       readonly reason: "GET_ESCALATION_CAP";
       readonly escalated: number;
       readonly allowed: number;
-    };
+    }
+  /**
+   * Nothing was planned, so there is nothing to escalate.
+   *
+   * Distinguished from `flag_for_review` deliberately. An empty plan yields an
+   * allowance of zero, which read as "the cap is already spent" and flagged the
+   * pattern — sending a human to review a pattern with no sample and no
+   * findings.
+   */
+  | { readonly kind: "nothing_to_probe" };
 
 /** How many escalations this pattern's sample is allowed in total. */
 export function escalationAllowance(
@@ -103,6 +112,10 @@ export function decideEscalation(
   state: EscalationState,
   budget: EscalationBudget = DEFAULT_ESCALATION_BUDGET
 ): EscalationDecision {
+  if (state.plannedSampleSize <= 0) {
+    return { kind: "nothing_to_probe" };
+  }
+
   const allowed = escalationAllowance(state.plannedSampleSize, budget);
 
   if (state.escalated >= allowed) {
@@ -136,6 +149,12 @@ export function escalationRate(state: EscalationState): number {
  * it as one under-counts the platform request budget by however much escalation
  * is happening. Legacy documents the same arithmetic: a check is a HEAD, plus a
  * GET when it escalated.
+ *
+ * A FLOOR, not the whole cost. Legacy also notes that a 3xx costs a HEAD plus a
+ * follow-up HEAD on the destination, which this cannot count because nothing
+ * here tracks redirects. The HTTP client will know its real request count and
+ * should report that, rather than leaving this as the platform budget only
+ * input.
  */
 export function estimatedRequestCost(state: EscalationState): number {
   return state.probed + state.escalated;

@@ -96,6 +96,19 @@ describe("decideEscalation", () => {
     expect(decision.kind).toBe("flag_for_review");
   });
 
+  /**
+   * An empty plan is not a spent budget. Returning `flag_for_review` here sent
+   * a human to look at a pattern with no sample and nothing to find.
+   */
+  it("says there is nothing to probe rather than flagging an empty plan", () => {
+    expect(
+      decideEscalation(
+        { probed: 0, escalated: 0, plannedSampleSize: 0 },
+        BUDGET
+      )
+    ).toEqual({ kind: "nothing_to_probe" });
+  });
+
   it("honours a stricter budget", () => {
     const decision = decideEscalation(
       { probed: 50, escalated: 5, plannedSampleSize: 400 },
