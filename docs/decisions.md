@@ -538,3 +538,109 @@ around 13.5 million, likely between 10.7 and 16.9 million" is entirely
 sufficient to rank a pattern first for attention, which is the decision the
 number feeds, and 1,500 further requests at a client's origin would change
 nothing.
+
+---
+
+## ADR-0014 — Impact Score severity weights
+
+**Status:** Accepted. **Ratified by Shabab Arshad, 2026-09-02.**
+
+**Context.** The Impact Score is `population × error probability × severity`.
+The first two terms are measured; severity is a judgement about how much each
+kind of failure actually costs a client, and the action plan has flagged it as
+needing SEO/business input rather than an engineering guess since Phase 0.
+`CLAUDE.md` states the rule directly: do not pick a plausible-looking static
+table.
+
+**Decision.** The ratified weights, with the reasoning for each:
+
+| Class | Weight | Why |
+|---|---|---|
+| `gone` (410) | 1.0 | A definite, server-asserted loss of an indexed URL. |
+| `not_found` (404) | 1.0 | Same practical outcome; the thing clients pay to find out about. |
+| `soft_not_found` | 0.9 | Worse than a hard 404 for index quality — the URL can stay indexed pointing at a useless page — but it is a detection inference rather than a status the server asserted, so just below. |
+| `server_error` (5xx) | 0.8 | Severe, but frequently transient; a sampled 5xx may say more about the moment than the URL. |
+| `redirect_chain` | 0.4 | Multiple hops leak link equity and waste crawl budget. |
+| `redirect_single` | 0.15 | Usually working as intended. Noted, not alarming. |
+| `ok` (2xx) | 0 | Not a finding. |
+| `blocked` | 0 | Not a finding either — an absence of measurement. |
+| `unknown` | 0 | Refuses to invent a weight for an unclassified outcome. |
+
+Three structural choices go with the numbers.
+
+**No default table anywhere in the code.** `severityFor` throws
+`MissingSeverityTableError` when none is supplied. The ratified set is exported
+as `RATIFIED_SEVERITY_TABLE` — named for what it is, not as a fallback — and
+nothing reaches for it implicitly. A default would be exactly the
+plausible-looking guess the rule exists to prevent, and it would quietly become
+the shipped answer the first time a caller forgot the argument.
+
+**A refusal can never carry impact.** `blocked` and `unknown` weigh zero, and
+`ck_audit_snapshot_refusal_has_no_impact` enforces it in the database as well.
+A 403 is both a status code and a refusal; reading it as a client error would
+put a crawler-blocking but perfectly healthy client at the top of the triage
+queue, which is the most misleading thing this product could do. Legacy
+migration `042` draws the same line.
+
+**The weight is frozen with the claim.** `audit_snapshot` stores
+`severity_class`, `severity_weight` and `impact_score` rather than recomputing
+from the current table. These weights will be revised, and a claim published
+under the old set has to stay reconstructible — reading the live table would
+silently restate history.
+
+**Consequences.** Ranking is on the point estimate weighted by severity, never
+on an interval bound: a wide interval means thin evidence, not a big problem, so
+ranking on the upper bound would put the least-understood patterns first and
+invert the ordering.
+
+Volume can outweigh severity, and that is intended. Fifty thousand redirect
+chains outrank two hundred gone pages, because severity says how bad each URL
+is while the score decides where an analyst looks first. It is pinned by a test,
+because "worst finding" reads as "highest severity" and a future change might
+quietly make it so.
+
+Revising the table is a migration-free code change plus a new ADR, and it does
+not alter any stored claim. What it does alter is the ordering of the queue, so
+it needs the same sign-off this did.
+
+---
+
+## ADR-0015 — The HEAD→GET escalation cap is a budget, not a ratio
+
+**Status:** Accepted (policy in M4; wired to the HTTP client when it lands)
+
+**Context.** Verification is HEAD-first because a HEAD is cheap and answers
+most questions, escalating to a GET only when the result is suspicious — a
+method rejection, or a 2xx whose body needs sniffing for a soft-404. A pattern
+where everything looks suspicious defeats that entirely: every probe costs a
+HEAD plus a ranged GET, and the run quietly spends several times its budget.
+The action plan asks for a cap.
+
+The obvious form — escalations as a share of probes completed — does not work.
+One escalation out of one probe is 100%, so the cap trips on the first probe and
+needs an arbitrary warm-up floor before it becomes usable. That floor would then
+be a second tuning knob with no principled value.
+
+**Decision.** Measure against the PLANNED sample size instead, making it an
+absolute budget from the first probe: 20% of a 400-probe sample is 80
+escalations, and the first one is obviously fine. Rounded up and floored at one,
+because a pattern permitted zero escalations cannot be verified at all and would
+be flagged for review before doing any work.
+
+Exceeding it flags the pattern for manual review rather than throttling or
+continuing. The escalations are each individually justified; what the cap
+notices is that this pattern is not answerable cheaply. That is a finding, not
+a failure.
+
+The policy is pure and synchronous, in `packages/sampling`, and the HTTP client
+consults it. Phase 0 found the action plan's claim that GET bodies were
+unbounded to be wrong — legacy already caps them at 64 KB for a soft-404 sniff
+and 8 KB for a method-fallback re-probe, with a `Range` header so the server
+does not transmit more than is read — so those values are ported rather than
+invented.
+
+**Consequences.** The cap is testable without an HTTP client, which is where
+this class of bug hides. `estimatedRequestCost` is exported alongside it,
+because "one check" is not one request and treating it as one under-counts the
+platform request budget by exactly however much escalation is happening — which
+is highest on the sites already in trouble.
