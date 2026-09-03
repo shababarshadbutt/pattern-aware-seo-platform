@@ -21,7 +21,7 @@ export function StatStrip({
           >
             {stat.value}
           </div>
-          <div className="mt-1.5 font-mono text-2xs uppercase tracking-wider text-tertiary">
+          <div className="mt-1 font-mono text-2xs uppercase tracking-wider text-tertiary">
             {stat.label}
           </div>
         </div>

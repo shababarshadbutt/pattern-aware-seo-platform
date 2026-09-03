@@ -17,7 +17,7 @@ export function StatusBadge({
 
   return (
     <span
-      className="rounded-xs border px-1.5 py-0.5 font-mono text-2xs whitespace-nowrap uppercase tracking-wider"
+      className="rounded-xs border px-2 py-1 font-mono text-2xs whitespace-nowrap uppercase tracking-wider"
       style={{
         color,
         borderColor: color,

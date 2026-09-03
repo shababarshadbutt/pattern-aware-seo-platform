@@ -146,7 +146,7 @@ export default async function SiteDetailPage({
         </p>
       )}
 
-      <h2 className="mt-10 text-lg font-semibold tracking-tight">Patterns</h2>
+      <h2 className="mt-12 text-lg font-semibold tracking-tight">Patterns</h2>
 
       {patternsError && (
         <div className="mt-4">

@@ -28,9 +28,5 @@
     "@pattern-aware/verification": "workspace:^",
     "bullmq": "^5.28.0",
     "zod": "^4.5.4"
-  },
-  "devDependencies": {
-    "pg": "^8.23.0",
-    "@types/pg": "^8.23.1"
   }
 }

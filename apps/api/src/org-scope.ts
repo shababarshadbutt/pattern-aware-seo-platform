@@ -4,7 +4,7 @@ import {
   type OrganizationScope,
   systemOrganizationScope
 } from "@pattern-aware/database";
-import type { Config } from "@pattern-aware/shared";
+import type { ApiConfig } from "./api-config.js";
 
 /**
  * Thrown when the configured organization slug has no row yet.
@@ -50,7 +50,7 @@ let cached: OrganizationScope | undefined;
  */
 export async function resolveDefaultOrgScope(
   db: Database,
-  config: Config
+  config: ApiConfig
 ): Promise<OrganizationScope> {
   if (cached) {
     return cached;

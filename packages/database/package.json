@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/test-harness.d.ts",
+      "default": "./dist/test-harness.js"
     }
   },
   "files": [

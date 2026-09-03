@@ -6,8 +6,8 @@ import {
   listSites,
   siteScopeWithin
 } from "@pattern-aware/database";
-import type { Config } from "@pattern-aware/shared";
 
+import type { ApiConfig } from "../api-config.js";
 import type { ApiInstance } from "../app.js";
 import { ApiProblem } from "../errors.js";
 import { resolveDefaultOrgScope } from "../org-scope.js";
@@ -30,7 +30,7 @@ import {
 export function registerSiteRoutes(
   app: ApiInstance,
   db: Database,
-  config: Config
+  config: ApiConfig
 ): void {
   app.get(
     "/sites",

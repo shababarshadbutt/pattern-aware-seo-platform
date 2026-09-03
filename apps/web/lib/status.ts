@@ -45,8 +45,18 @@ export function patternStatusTone(status: PatternStatus): Tone {
     case "sampling":
     case "unsampled":
       return "unknown";
+    /**
+     * A HOST REFUSING US IS NOT A SITE DEFECT.
+     *
+     * This was `critical`, which is the specific inversion schema/enums.ts
+     * warns about by name: "reporting that as a site defect would poison every
+     * downstream estimate and impact score", and ADR-0008 gives blocked its
+     * own channel precisely so a WAF cannot turn a healthy client into a P0.
+     * `severityTone` already maps `blocked` to `unknown`; the two disagreed
+     * about the same concept, and the red one was wrong.
+     */
     case "blocked":
-      return "critical";
+      return "unknown";
     // A tripped GET-escalation cap, not damage — see schema/enums.ts. Amber,
     // same as "needs attention", not the critical red.
     case "needs_review":

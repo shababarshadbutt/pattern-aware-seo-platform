@@ -16,6 +16,10 @@ import {
   startRun,
   sumPatternPopulation
 } from "@pattern-aware/database";
+import {
+  createTestDatabase,
+  type TestDatabase
+} from "@pattern-aware/database/testing";
 import { createLogger } from "@pattern-aware/shared";
 import { LocalDiskFileStore } from "@pattern-aware/sitemap";
 import {
@@ -23,17 +27,12 @@ import {
   HostRateLimiter
 } from "@pattern-aware/verification";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
 import type { PipelineDeps, PipelineStage } from "./index.js";
 import { runDiscover } from "./stages/discover.js";
 import { runEstimate } from "./stages/estimate.js";
 import { runFinalize } from "./stages/finalize.js";
 import { IngestAlreadyAggregatedError, runIngest } from "./stages/ingest.js";
 import { runVerify } from "./stages/verify.js";
-import {
-  createPipelineTestDatabase,
-  type PipelineTestDatabase
-} from "./test-harness.js";
 
 /**
  * The whole pipeline, end to end, against a real Postgres and a real HTTP
@@ -67,7 +66,7 @@ const GOOD_BODY = `<!doctype html><html><head><title>A real product</title></hea
   200
 )}</p></body></html>`;
 
-let harness: PipelineTestDatabase;
+let harness: TestDatabase;
 let server: Server;
 let fixture: Fixture;
 let storeRoot = "";
@@ -128,7 +127,7 @@ function isSoft404Path(path: string): boolean {
 }
 
 beforeAll(async () => {
-  harness = await createPipelineTestDatabase();
+  harness = await createTestDatabase();
   storeRoot = await mkdtemp(join(tmpdir(), "pipeline-e2e-"));
 
   const requests: string[] = [];

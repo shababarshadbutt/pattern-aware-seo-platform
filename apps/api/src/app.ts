@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import cors from "@fastify/cors";
 import type { Database } from "@pattern-aware/database";
-import type { Config, Logger } from "@pattern-aware/shared";
+import type { Logger } from "@pattern-aware/shared";
 import Fastify, { type FastifyInstance, type RawServerDefault } from "fastify";
 import {
   serializerCompiler,
@@ -9,10 +9,13 @@ import {
   type ZodTypeProvider
 } from "fastify-type-provider-zod";
 
+import type { ApiConfig } from "./api-config.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerPatternRoutes } from "./routes/patterns.js";
 import { registerSiteRoutes } from "./routes/sites.js";
+
+export type { ApiConfig } from "./api-config.js";
 
 /**
  * This API's Fastify instance type.
@@ -43,7 +46,7 @@ export type ApiInstance = FastifyInstance<
  * reaches for global state to find one.
  */
 export function buildApp(
-  config: Config,
+  config: ApiConfig,
   logger: Logger,
   db: Database
 ): ApiInstance {

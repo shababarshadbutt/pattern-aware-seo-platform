@@ -3,8 +3,10 @@ import { ApiErrorPanel } from "../../../../../components/api-error";
 import { Breadcrumbs } from "../../../../../components/breadcrumbs";
 import {
   Estimate,
-  estimateFromSnapshot
+  estimateFromSnapshot,
+  impactFromSnapshot
 } from "../../../../../components/estimate";
+import { StatStrip } from "../../../../../components/stat-strip";
 import { StatusBadge } from "../../../../../components/status-badge";
 import { ApiError, getPattern, getSite } from "../../../../../lib/api";
 import { formatCount, formatDateTime } from "../../../../../lib/format";
@@ -81,27 +83,26 @@ export default async function PatternDetailPage({
         )}
       </div>
 
-      <div className="mt-8 flex divide-x divide-border-subtle border-y border-border-subtle">
-        {[
-          { label: "population", value: formatCount(pattern.populationCount) },
-          { label: "segments", value: formatCount(pattern.segmentCount) },
-          { label: "files", value: formatCount(pattern.fileCount) }
-        ].map((stat) => (
-          <div key={stat.label} className="flex-1 px-4 py-3">
-            <div
-              className="font-mono text-2xl leading-none tabular-nums"
-              data-numeric
-            >
-              {stat.value}
-            </div>
-            <div className="mt-1.5 font-mono text-2xs uppercase tracking-wider text-tertiary">
-              {stat.label}
-            </div>
-          </div>
-        ))}
+      {/*
+        <StatStrip>, not a second copy of it. This markup was duplicated
+        inline — same dividers, same mono 2xl numerals — so a change to the
+        strip's treatment would have landed on the site page and silently
+        missed this one.
+      */}
+      <div className="mt-8">
+        <StatStrip
+          stats={[
+            {
+              label: "population",
+              value: formatCount(pattern.populationCount)
+            },
+            { label: "segments", value: formatCount(pattern.segmentCount) },
+            { label: "files", value: formatCount(pattern.fileCount) }
+          ]}
+        />
       </div>
 
-      <h2 className="mt-10 text-lg font-semibold tracking-tight">
+      <h2 className="mt-12 text-lg font-semibold tracking-tight">
         Latest sample
       </h2>
 
@@ -144,7 +145,7 @@ export default async function PatternDetailPage({
         </dl>
       )}
 
-      <h2 className="mt-10 text-lg font-semibold tracking-tight">Findings</h2>
+      <h2 className="mt-12 text-lg font-semibold tracking-tight">Findings</h2>
 
       {findings.length === 0 ? (
         <p className="mt-4 text-sm text-secondary">
@@ -216,11 +217,12 @@ export default async function PatternDetailPage({
                   <td className="py-3 pr-4 text-right">
                     <Estimate {...estimateFromSnapshot(finding)} />
                   </td>
-                  <td
-                    className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
-                    data-numeric
-                  >
-                    {finding.impactScore.toFixed(1)}
+                  <td className="py-3 pr-4 text-right">
+                    {/*
+                      Through <Estimate>, not formatted here. Impact is an
+                      estimated quantity and ADR-0008 does not exempt it.
+                    */}
+                    <Estimate {...impactFromSnapshot(finding)} />
                   </td>
                   <td
                     className="py-3 text-right font-mono text-xs tabular-nums text-secondary"
@@ -235,7 +237,7 @@ export default async function PatternDetailPage({
         </table>
       )}
 
-      <h2 className="mt-10 text-lg font-semibold tracking-tight">
+      <h2 className="mt-12 text-lg font-semibold tracking-tight">
         Sample evidence
       </h2>
       <p className="mt-1 text-sm text-secondary">

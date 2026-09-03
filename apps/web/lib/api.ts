@@ -193,7 +193,6 @@ export type SeverityClassName =
 
 export interface AuditSnapshotSummary {
   readonly id: string;
-  readonly siteId: string;
   readonly patternId: string;
   readonly patternSampleId: string;
   readonly sitemapRunId: string;
@@ -206,8 +205,21 @@ export interface AuditSnapshotSummary {
   readonly ciLow: number;
   readonly ciHigh: number;
   readonly confidenceBand: ConfidenceBandName;
+  /** The level the interval was computed at, e.g. 0.95. */
+  readonly confidenceLevel: number;
   readonly severityClass: SeverityClassName;
+  /** The weight in force when this claim was published. */
+  readonly severityWeight: number;
   readonly impactScore: number;
+  /**
+   * Impact's interval, under the same weighting as the estimate.
+   *
+   * Impact is `pointEstimate x severityWeight`, so it is an ESTIMATED
+   * quantity and ADR-0008 forbids rendering it without its interval. The API
+   * derives these from the same row rather than storing them.
+   */
+  readonly impactLow: number;
+  readonly impactHigh: number;
   readonly estimatorVersion: string;
   readonly computedAt: string;
 }
