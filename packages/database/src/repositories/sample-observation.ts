@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { type Database, internalDatabase } from "../client.js";
 import { sampleObservation } from "../schema/sampling.js";
@@ -130,6 +130,64 @@ export async function tallyObservations(
     isSoft404: row.isSoft404,
     count: Number(row.count)
   }));
+}
+
+export interface SampleObservationRow {
+  readonly id: string;
+  readonly patternId: string;
+  readonly patternSampleId: string;
+  readonly url: string;
+  readonly urlHash: number;
+  readonly httpStatus: number | null;
+  readonly methodUsed: HttpMethodUsed | null;
+  readonly escalatedToGet: boolean;
+  readonly isSoft404: boolean;
+  readonly errorReason: string | null;
+  readonly responseMs: number | null;
+  readonly observedAt: Date;
+}
+
+const OBSERVATION_COLUMNS = {
+  id: sampleObservation.id,
+  patternId: sampleObservation.patternId,
+  patternSampleId: sampleObservation.patternSampleId,
+  url: sampleObservation.url,
+  urlHash: sampleObservation.urlHash,
+  httpStatus: sampleObservation.httpStatus,
+  methodUsed: sampleObservation.methodUsed,
+  escalatedToGet: sampleObservation.escalatedToGet,
+  isSoft404: sampleObservation.isSoft404,
+  errorReason: sampleObservation.errorReason,
+  responseMs: sampleObservation.responseMs,
+  observedAt: sampleObservation.observedAt
+} as const;
+
+/**
+ * Individual probed URLs for one draw, most recently observed first.
+ *
+ * The sample-evidence screen's job is "show me exactly which URLs were
+ * checked and what came back" — a tally answers "how many," this answers
+ * "which ones." Capped rather than unbounded: a draw is at most
+ * `SAMPLE_MAX_EXPANDED` (1,200 by default), so a page-sized limit here is a
+ * display concern, not a correctness one.
+ */
+export async function listObservations(
+  db: Database,
+  scope: SiteScope,
+  patternSampleId: string,
+  limit = 100
+): Promise<readonly SampleObservationRow[]> {
+  return internalDatabase(db)
+    .select(OBSERVATION_COLUMNS)
+    .from(sampleObservation)
+    .where(
+      and(
+        eq(sampleObservation.siteId, scope.siteId),
+        eq(sampleObservation.patternSampleId, patternSampleId)
+      )
+    )
+    .orderBy(desc(sampleObservation.observedAt))
+    .limit(limit);
 }
 
 /** How many URLs have been observed for one draw. The `n` of an estimate. */

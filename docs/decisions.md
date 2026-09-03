@@ -248,7 +248,7 @@ a type error, and a CI test asserts no page formats a sampled figure outside it.
 The confidence-band thresholds are the same constants the adaptive expansion
 trigger uses (`CONFIDENCE_*` in `packages/shared/src/config.ts`), defined once.
 
-Visual treatment comes from `../DESIGN.md`, which is the source of truth for it:
+Visual treatment comes from `DESIGN.md`, which is the source of truth for it:
 the three tiers and the confidence bands are coloured from the existing
 `--status-*` tokens rather than a new palette. Low confidence maps to
 `--status-unknown`, whose own definition reads *"insufficient sampling
@@ -915,3 +915,204 @@ every organization, and every repository read is scoped by construction
 error. Granting the worker a fleet-wide read is a real decision about the tenant
 boundary, not a convenience to add while wiring queues, so a run is attached
 explicitly for now.
+
+## ADR-0023 — `packages/database/testing`: a second, narrow, test-only entry point
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+### Context
+
+`packages/database` publishes exactly one entry point (`.`) by design, and
+`compile-guards.test.ts` asserts it. That single door is what makes ADR-0004's
+guarantee structural rather than advisory: `internalDatabase` exists inside the
+package, and nothing outside can reach it because no published path leads there.
+
+Two consumers then needed a *migrated* Postgres in their own suites —
+`packages/pipeline` at M6, and `apps/api` here, whose route tests are meaningless
+against a mock (the thing under test is the boundary between the routes and the
+scoped repository layer). M6 solved it by duplicating a harness inside
+`packages/pipeline`, which meant migration-running boilerplate was on its way to
+being reinvented once per package.
+
+`docs/CODING_STANDARDS.md` §1.4 recorded the decision to fix this properly on
+2026-09-02, with two conditions attached. This ADR is the implementation the
+standard asked for.
+
+### Decision
+
+Add a second export subpath, `./testing`, exposing a migrated-pool factory
+(`createTestDatabase`) for use from test files only.
+
+`.` is unchanged and no less restrictive than before. The harness hands back the
+same opaque `Database`, so a test can create and drop a database and still
+cannot write an unscoped query — the compile-time guarantee is untouched. What
+the subpath grants is the ability to *get* a real migrated database, not the
+ability to bypass scoping.
+
+Both conditions from §1.4 are enforced by tests rather than by review:
+
+1. The exports-map guard now asserts the exact sanctioned set,
+   `[".", "./testing"]`, so a third entry point is a failing test rather than
+   something a reviewer must notice.
+2. A second guard asserts `./testing` is imported only from test files and never
+   from `apps/*/src`. The harness opens its own `pg` client to create and drop
+   databases — proportionate in a test, completely inappropriate in a request
+   path, and the difference was a convention until something checked it.
+
+`apps/api`'s tests therefore live in `apps/api/test/` rather than beside the
+source, which satisfies "never from `apps/*/src`" literally instead of by
+argument.
+
+### Consequences
+
+`packages/pipeline/src/test-harness.ts` is deleted, along with the `pg`
+devDependency it needed. One harness, one place migrations get run in tests.
+
+The first version of the import guard searched for the bare specifier anywhere in
+a file and flagged `apps/api/vitest.config.ts`, whose docblock *explains* this
+rule — a comment describing the constraint read as a violation of it. It now
+matches import syntax. Worth recording because it is the failure mode of every
+grep-shaped guard: verify such a check both ways, on a planted violation and on a
+file that merely mentions the thing.
+
+## ADR-0024 — Impact's interval is derived, not stored
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+### Context
+
+ADR-0008 forbids rendering an estimate without its interval. `impact_score` is
+`point_estimate x severity_weight` — a weighted count of URLs — so it is exactly
+as estimated as the count it derives from, and it was being rendered as a bare
+figure with no `~` and no interval, identically whether the evidence tier was
+`counted` or `estimated`.
+
+`scoreImpact` already computes `scoreLow`/`scoreHigh` for this purpose, and its
+own doc says so: "the bounds are carried through so the interface can show the
+range beside the score, which is the honest presentation." They were computed and
+then dropped on the floor, because `audit_snapshot` stores only the point.
+
+### Decision
+
+Derive the bounds in the API rather than adding columns:
+
+    impactLow  = ci_low  x severity_weight
+    impactHigh = ci_high x severity_weight
+
+Every input is already on the row. `severity_weight` was written to
+`audit_snapshot` but never selected, which is what made the derivation look
+impossible; it and `confidence_level` are now projected (and coerced from
+node-postgres's numeric-as-string).
+
+The confidence band is reused rather than recomputed. Scaling a point and both of
+its bounds by the same constant cannot change the interval's width relative to
+its point, so the band is invariant under weighting — recomputing it would be
+arithmetic that can only agree.
+
+### Consequences
+
+No migration, and no second place for the same number to drift. The alternative —
+persisting `impact_low`/`impact_high` — would store three values that must always
+satisfy a fixed relationship, which is the shape of a constraint waiting to be
+violated by a partial write.
+
+The trade-off is that a future change to how impact is weighted (ADR-0014's note
+that traffic amplification would need its own column and a revised constraint)
+must update this derivation too. That is a smaller surface than a migration plus
+a backfill plus a CHECK.
+
+## ADR-0025 — The API validates with zod through a Fastify type provider
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+### Context
+
+The first API routes were typed with Fastify's route generics and nothing else.
+That is a compile-time claim with no runtime check: `request.params.siteId` was
+typed `string` and flowed straight into a Postgres `uuid` comparison. A non-UUID
+path segment produced SQLSTATE `22P02` and, because no error handler was
+registered, Fastify serialized the driver error — raw query text and column list
+— to the client as a 500.
+
+Two failures in one response: the wrong status, and an information leak.
+
+### Decision
+
+Validate with zod via `fastify-type-provider-zod`, so one schema per route drives
+both the runtime check and the handler's types. zod is already this project's
+validation tool (`packages/shared`'s startup config, the pipeline's job
+payloads), so this is one idiom rather than a second dialect alongside JSON
+Schema.
+
+Responses are serialized through declared schemas too. Unknown keys are stripped,
+which means adding a column to a table does not silently start publishing it —
+`organization_id` and `site_id` stop crossing the wire on rows with no use for
+them.
+
+Two typing details worth recording, because both cost time:
+
+- Date fields are a union of string and Date, **not** a `.transform()`. A
+  transform makes zod's input and output types differ, and the provider types a
+  reply by its *output* — so a transformed schema demands the handler already
+  return strings while every repository returns `Date`. JSON serialization
+  renders a `Date` as an ISO string regardless.
+- Every array is `.readonly()`. The repositories return `readonly T[]`
+  deliberately, and unlike a readonly *property*, a readonly array is not
+  assignable to a mutable one.
+
+### Consequences
+
+A malformed id is a 400 naming the offending field, before any query runs. One
+error envelope covers validation failures, domain errors, unknown routes and
+unhandled exceptions; anything that might carry internals is logged server-side
+and never serialized.
+
+A response schema that drifts from reality now fails loudly rather than
+publishing the wrong shape quietly — the correct direction for this project, and
+why every route has a test against a real database.
+
+## ADR-0026 — The API acts as one organization, under a *system* scope, until auth exists
+
+**Date:** 2026-09-03
+**Status:** Accepted (superseded when session auth lands)
+
+### Context
+
+There is no login yet; auth was deliberately deferred so the evidence screens
+could be built against real data first. But every repository call requires an
+`OrganizationScope` or `SiteScope`, by construction — there is no unscoped path.
+Something has to produce one.
+
+The first implementation used `authenticatedOrganizationScope`, which stamps
+`origin: "request"`. That value means "a session asserted this membership", and
+`scope.ts` documents it as the caller vouching for the session. Nothing here can
+vouch for anything: the organization comes from `DEFAULT_ORGANIZATION_SLUG`.
+Every audit log line would have attributed a hardcoded identity to a user.
+
+### Decision
+
+Resolve the configured slug once and wrap it in `systemOrganizationScope`, whose
+`origin: "system"` is true. `scope.ts` describes that constructor as deliberately
+the most awkward of the three names, so platform-internal authority stands out in
+a diff — exactly the property wanted for a placeholder.
+
+The scope is threaded through as a parameter, never read from a global inside a
+repository, so when session auth lands `resolveDefaultOrgScope` is the only thing
+replaced and no call site changes shape.
+
+### Consequences
+
+Two things are explicitly *not* granted by this. Scoping is still enforced: the
+API cannot read across organizations, and the route tests prove a site id
+belonging to another organization returns 404 rather than that tenant's rows.
+And the membership check `siteScopeWithin` cannot perform — that a site belongs
+to the organization the scope names — is now performed by every route taking a
+`siteId`, via `findSiteById`, which filters on both ids.
+
+Left open, and to remove when auth lands: CORS is `origin: true` and must narrow
+to a configured list; `DEFAULT_ORGANIZATION_SLUG` defaults to the demo
+organization, so a production boot resolves to demo data rather than failing —
+acceptable while nothing is deployed, wrong the moment something is.

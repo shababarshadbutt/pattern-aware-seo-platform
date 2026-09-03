@@ -1,5 +1,4 @@
-import type { Config } from "@pattern-aware/shared";
-
+import type { ApiConfig } from "../api-config.js";
 import type { ApiInstance } from "../app.js";
 
 /**
@@ -11,7 +10,10 @@ import type { ApiInstance } from "../app.js";
  * blip. Dependency readiness gets its own endpoint once there are dependencies
  * worth reporting on (M1).
  */
-export function registerHealthRoutes(app: ApiInstance, config: Config): void {
+export function registerHealthRoutes(
+  app: ApiInstance,
+  config: ApiConfig
+): void {
   app.get("/health", () => ({
     status: "ok",
     service: "api",

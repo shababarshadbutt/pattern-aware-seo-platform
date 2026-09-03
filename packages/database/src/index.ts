@@ -29,6 +29,7 @@ export {
   type AuditSnapshotRow,
   type ConfidenceBandName,
   type EvidenceTier,
+  findSnapshotsByPattern,
   ImpossibleClaimError,
   insertAuditSnapshot,
   listSnapshotsByImpact,
@@ -71,8 +72,10 @@ export {
   appendSampleObservations,
   countObservations,
   type HttpMethodUsed,
+  listObservations,
   type ObservationTally,
   type SampleObservationInsert,
+  type SampleObservationRow,
   tallyObservations
 } from "./repositories/sample-observation.js";
 export {

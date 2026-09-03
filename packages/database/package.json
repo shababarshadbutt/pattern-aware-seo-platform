@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/test-harness.d.ts",
+      "default": "./dist/test-harness.js"
     }
   },
   "files": [
@@ -20,7 +24,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/migrate.ts"
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts"
   },
   "dependencies": {
     "@pattern-aware/shared": "workspace:^",

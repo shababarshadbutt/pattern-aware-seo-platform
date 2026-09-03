@@ -41,6 +41,12 @@ const configSchema = z.object({
     .default("info"),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   WEB_PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  // Only the internal team logs in today (see schema/tenancy.ts), so the API
+  // has no session to derive an OrganizationScope from yet. This stands in
+  // until real auth exists in M7 and row-level security attaches to
+  // organization_id — every route that touches this must say so in a comment,
+  // not bury the placeholder silently.
+  DEFAULT_ORGANIZATION_SLUG: z.string().min(1).default("asapsemi-demo"),
 
   // --- Infrastructure ---
   DATABASE_URL: urlString,

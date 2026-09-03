@@ -45,6 +45,18 @@ export interface AuditSnapshotRow {
   readonly ciHigh: number;
   readonly confidenceBand: ConfidenceBandName;
   readonly severityClass: SeverityClassName;
+  /**
+   * The weight in force when this claim was published.
+   *
+   * Selected, not just stored: the interface needs it to show impact as the
+   * estimated quantity it is. Impact is `point_estimate × severity_weight`, so
+   * its interval is `[ci_low × w, ci_high × w]` — derivable from this row
+   * without persisting two more columns, and ADR-0008 forbids rendering an
+   * estimate without its interval.
+   */
+  readonly severityWeight: number;
+  /** The level the interval was computed at, e.g. 0.95. */
+  readonly confidenceLevel: number;
   readonly impactScore: number;
   readonly estimatorVersion: string;
   readonly computedAt: Date;
@@ -66,6 +78,8 @@ const COLUMNS = {
   ciHigh: auditSnapshot.ciHigh,
   confidenceBand: auditSnapshot.confidenceBand,
   severityClass: auditSnapshot.severityClass,
+  severityWeight: auditSnapshot.severityWeight,
+  confidenceLevel: auditSnapshot.confidenceLevel,
   impactScore: auditSnapshot.impactScore,
   estimatorVersion: auditSnapshot.estimatorVersion,
   computedAt: auditSnapshot.computedAt
@@ -131,18 +145,29 @@ export class ImpossibleClaimError extends Error {
 /**
  * Coerce the numeric columns the driver hands back as strings.
  *
- * `impact_score` is `numeric`, and node-postgres returns numerics as strings
- * rather than guessing at a precision-losing float. The row type promises a
- * number, so the conversion happens here, once, instead of at each of the
- * places that read it — one of which would eventually compare a string to a
- * number and silently sort "9" above "10".
+ * `impact_score`, `severity_weight` and `confidence_level` are all `numeric`,
+ * and node-postgres returns numerics as strings rather than guessing at a
+ * precision-losing float. The row type promises numbers, so the conversion
+ * happens here, once, instead of at each of the places that read them — one of
+ * which would eventually compare a string to a number and silently sort "9"
+ * above "10".
  */
 function toRow(raw: RawSnapshotRow): AuditSnapshotRow {
-  return { ...raw, impactScore: Number(raw.impactScore) };
+  return {
+    ...raw,
+    impactScore: Number(raw.impactScore),
+    severityWeight: Number(raw.severityWeight),
+    confidenceLevel: Number(raw.confidenceLevel)
+  };
 }
 
-type RawSnapshotRow = Omit<AuditSnapshotRow, "impactScore"> & {
+type RawSnapshotRow = Omit<
+  AuditSnapshotRow,
+  "impactScore" | "severityWeight" | "confidenceLevel"
+> & {
   readonly impactScore: string;
+  readonly severityWeight: string;
+  readonly confidenceLevel: string;
 };
 
 export async function insertAuditSnapshot(
@@ -192,6 +217,37 @@ export async function insertAuditSnapshot(
 
     throw error;
   }
+}
+
+/**
+ * A single pattern's published claims, most recently computed first.
+ *
+ * The pattern-detail screen's question is "what does this ONE pattern's
+ * evidence say," not "rank the whole site" — `listSnapshotsByImpact` answers
+ * the latter and does not take a pattern filter, so a second, narrower query
+ * is worth having rather than fetching the site's top findings and filtering
+ * in the API layer, which would silently stop working once a site has more
+ * findings than that list's page size.
+ */
+export async function findSnapshotsByPattern(
+  db: Database,
+  scope: SiteScope,
+  patternId: string,
+  options: { readonly limit?: number } = {}
+): Promise<readonly AuditSnapshotRow[]> {
+  const rows = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(auditSnapshot)
+    .where(
+      and(
+        eq(auditSnapshot.siteId, scope.siteId),
+        eq(auditSnapshot.patternId, patternId)
+      )
+    )
+    .orderBy(desc(auditSnapshot.computedAt))
+    .limit(options.limit ?? 20);
+
+  return rows.map(toRow);
 }
 
 /**

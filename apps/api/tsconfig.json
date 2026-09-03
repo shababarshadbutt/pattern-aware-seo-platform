@@ -1,9 +1,9 @@
 {
+  // Typecheck config: covers src and the integration tests in test/.
+  // rootDir/outDir live in tsconfig.build.json.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
     "noEmit": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
 }
