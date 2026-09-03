@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "tsx": "^4.19.0",
-    "vitest": "^4.1.11",
-    "@types/pg": "^8.23.1"
+    "vitest": "^4.1.11"
   }
 }
