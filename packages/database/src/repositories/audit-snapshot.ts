@@ -195,6 +195,37 @@ export async function insertAuditSnapshot(
 }
 
 /**
+ * A single pattern's published claims, most recently computed first.
+ *
+ * The pattern-detail screen's question is "what does this ONE pattern's
+ * evidence say," not "rank the whole site" — `listSnapshotsByImpact` answers
+ * the latter and does not take a pattern filter, so a second, narrower query
+ * is worth having rather than fetching the site's top findings and filtering
+ * in the API layer, which would silently stop working once a site has more
+ * findings than that list's page size.
+ */
+export async function findSnapshotsByPattern(
+  db: Database,
+  scope: SiteScope,
+  patternId: string,
+  options: { readonly limit?: number } = {}
+): Promise<readonly AuditSnapshotRow[]> {
+  const rows = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(auditSnapshot)
+    .where(
+      and(
+        eq(auditSnapshot.siteId, scope.siteId),
+        eq(auditSnapshot.patternId, patternId)
+      )
+    )
+    .orderBy(desc(auditSnapshot.computedAt))
+    .limit(options.limit ?? 20);
+
+  return rows.map(toRow);
+}
+
+/**
  * A site's findings, worst first.
  *
  * Ranked on `impact_score`, which is derived from the POINT estimate and never

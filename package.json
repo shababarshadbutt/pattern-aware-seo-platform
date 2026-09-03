@@ -17,7 +17,8 @@
     "lint:promises": "eslint .",
     "format": "biome format --write .",
     "prepare": "husky",
-    "gen:sitemaps": "tsx scripts/generate-synthetic-sitemaps.ts"
+    "gen:sitemaps": "tsx scripts/generate-synthetic-sitemaps.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,json,jsonc,css}": "biome check --write --no-errors-on-unmatched"

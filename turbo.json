@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "concurrency": "11",
   "tasks": {
     "dev": {
       "cache": false,
@@ -15,7 +16,12 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "env": ["DATABASE_URL", "REDIS_URL", "POSTGRES_PORT", "REDIS_PORT"]
+      "env": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "POSTGRES_PORT",
+        "REDIS_PORT"
+      ]
     }
   }
 }
