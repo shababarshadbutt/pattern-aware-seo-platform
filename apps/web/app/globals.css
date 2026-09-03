@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Token layer for the design system in ../../../DESIGN.md.
+ * Token layer for the design system in ../../../docs/DESIGN.md.
  *
  * DESIGN.md is the source of truth for every value here. If the two disagree,
  * DESIGN.md wins and this file is the bug. Do not add a token that is not in

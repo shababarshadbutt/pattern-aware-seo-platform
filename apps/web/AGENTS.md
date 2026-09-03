@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Before building any screen in this app
 
-Read `../../DESIGN.md`. It is the source of truth for every UI decision here and
+Read `../../docs/DESIGN.md`. It is the source of truth for every UI decision here and
 is specific rather than advisory — section 9 is a list of bans, not preferences.
 The short version:
 

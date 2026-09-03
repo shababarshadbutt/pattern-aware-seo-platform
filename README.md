@@ -7,7 +7,7 @@ Read these before making non-trivial changes:
 - [`docs/architecture-review-and-action-plan.md`](docs/architecture-review-and-action-plan.md) — product direction, phasing, and the Phase 0 verification results (which correct several claims in the original review).
 - [`docs/decisions.md`](docs/decisions.md) — architecture decision records. Start here to understand *why* something is the way it is.
 - [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) — TypeScript and PostgreSQL conventions.
-- [`DESIGN.md`](DESIGN.md) — **the design system, and the source of truth for every UI decision.** Read it before building or modifying any screen. It is specific and opinionated: a dark-first instrument-panel language, one amber accent, monospace tabular numbers, tables rather than cards, and a named list of anti-patterns that are bans rather than suggestions.
+- [`DESIGN.md`](docs/DESIGN.md) — **the design system, and the source of truth for every UI decision.** Read it before building or modifying any screen. It is specific and opinionated: a dark-first instrument-panel language, one amber accent, monospace tabular numbers, tables rather than cards, and a named list of anti-patterns that are bans rather than suggestions.
 - [`CLAUDE.md`](CLAUDE.md) — the non-negotiable project rules, for humans and coding agents alike.
 
 ## Stack
@@ -57,7 +57,7 @@ Two conventions worth knowing before you add a query or a number to a screen:
 - **Every database read goes through a repository function that takes a `SiteScope` token.** The `Database` handle is opaque — its public type has no query methods — so an unscoped query is a compile error, not something a reviewer has to catch ([ADR-0004](docs/decisions.md)).
 - **An invariant that can be a database constraint is one.** The estimator cannot write a zero-width interval for a partial sample, a partial sample cannot be labelled `counted`, and a site cannot have two runs in flight ([ADR-0011](docs/decisions.md)).
 - **A sampled number may never be rendered without its confidence interval.** One `<Estimate>` component enforces this in the type system, and a CI test asserts nothing bypasses it ([ADR-0008](docs/decisions.md)).
-- **UI values come from the token layer, never from a literal.** [`apps/web/app/globals.css`](apps/web/app/globals.css) resets Tailwind's default colour, radius, and font-size namespaces and defines only what [`DESIGN.md`](DESIGN.md) specifies — so `rounded-2xl` and `bg-indigo-500` do not exist to be typed by accident. The bans in DESIGN.md section 9 are structural, not a review checklist.
+- **UI values come from the token layer, never from a literal.** [`apps/web/app/globals.css`](apps/web/app/globals.css) resets Tailwind's default colour, radius, and font-size namespaces and defines only what [`DESIGN.md`](docs/DESIGN.md) specifies — so `rounded-2xl` and `bg-indigo-500` do not exist to be typed by accident. The bans in DESIGN.md section 9 are structural, not a review checklist.
 
 ## Project structure
 
