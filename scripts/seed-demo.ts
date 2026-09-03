@@ -2,6 +2,7 @@ import { argv } from "node:process";
 
 import {
   type AuditSnapshotInsert,
+  appendSampleObservations,
   createDatabase,
   createOrganization,
   createSite,
@@ -11,7 +12,7 @@ import {
   listPatternsByPopulation,
   listSites,
   recordPatternSample,
-  appendSampleObservations,
+  type SiteScope,
   setFileParseStatus,
   setPatternStatus,
   siteScopeWithin,
@@ -21,21 +22,20 @@ import {
   upsertPatternPopulations,
   upsertPatterns,
   upsertSamplingHealth,
-  upsertSitemapFiles,
-  type SiteScope
+  upsertSitemapFiles
 } from "../packages/database/src/index.js";
 import {
+  classifyOutcome,
   confidenceBandFor,
   DEFAULT_CONFIDENCE_LEVEL,
   ESTIMATOR_VERSION,
-  RATIFIED_SEVERITY_TABLE,
-  classifyOutcome,
   estimateStratified,
   firstRoundSampleSize,
-  severityFor,
-  stableHash,
   type ProbeOutcome,
-  type SeverityClass
+  RATIFIED_SEVERITY_TABLE,
+  type SeverityClass,
+  severityFor,
+  stableHash
 } from "../packages/sampling/src/index.js";
 
 /**
@@ -63,11 +63,7 @@ interface PatternPlan {
   readonly segmentCount: number;
   readonly populationCount: number;
   readonly fileIndex: number; // which of the 3 demo files this pattern's URLs live in
-  readonly kind:
-    | "census-healthy"
-    | "measured"
-    | "blocked"
-    | "needs-review";
+  readonly kind: "census-healthy" | "measured" | "blocked" | "needs-review";
   /** Only for "measured": the finding this pattern's audit_snapshot is about. */
   readonly finding?: {
     readonly httpStatus: number;
@@ -242,9 +238,7 @@ async function main(): Promise<void> {
 
   try {
     let org = await findOrganizationBySlug(db, ORG_SLUG);
-    let orgScope = org
-      ? systemOrganizationScope(org.id)
-      : undefined;
+    let orgScope = org ? systemOrganizationScope(org.id) : undefined;
 
     if (!org) {
       const created = await createOrganization(db, {
@@ -287,9 +281,21 @@ async function main(): Promise<void> {
       console.log(`Created site ${siteScope.siteId} (Skyline Aviation Parts)`);
     }
 
+    /*
+      MARKED AS A DRY RUN, and that is the point.
+      
+      These observations were manufactured, not measured — no HTTP request was
+      ever sent (the host is a reserved .example domain that cannot resolve).
+      Stamped `isDryRun: false`, the resulting rows were indistinguishable at
+      the data layer from a real audit: status `complete`, patterns `measured`,
+      intervals computed by the real estimator. The only markers were an org
+      slug and a worker id, neither of which any query filters on. A row that
+      cannot say it was never measured is exactly the kind of plausible-looking
+      wrong answer this project spends its effort preventing.
+    */
     const run = await startRun(db, siteScope, {
       workerId: WORKER_ID,
-      isDryRun: false
+      isDryRun: true
     });
 
     console.log(`Started run ${run.id}`);
@@ -298,7 +304,16 @@ async function main(): Promise<void> {
       db,
       siteScope,
       run.id,
-      FILES.map((f) => ({ filename: f.filename, fileOrdinal: f.fileOrdinal }))
+      /*
+        `url` is required and is the idempotency key: uq_sitemap_file_run_url
+        is (site, run, url), so omitting it would make every re-seed collide
+        on an empty string rather than on the file it describes.
+      */
+      FILES.map((f) => ({
+        url: `${SITE_BASE_URL}/${f.filename}`,
+        filename: f.filename,
+        fileOrdinal: f.fileOrdinal
+      }))
     );
 
     for (const file of fileRows) {
@@ -334,7 +349,7 @@ async function main(): Promise<void> {
     let httpRequests = 0;
     let getEscalations = 0;
     let patternsLowConfidence = 0;
-    let patternsExpanded = 0;
+    const patternsExpanded = 0;
     const patternsBlocked = PATTERN_PLANS.filter(
       (p) => p.kind === "blocked"
     ).length;
@@ -544,7 +559,9 @@ async function main(): Promise<void> {
           ? { httpStatus: 200 }
           : (plan.finding?.outcome ?? { httpStatus: 200 });
       const httpStatus =
-        plan.kind === "census-healthy" ? 200 : (plan.finding?.httpStatus ?? 200);
+        plan.kind === "census-healthy"
+          ? 200
+          : (plan.finding?.httpStatus ?? 200);
 
       const estimate = estimateStratified([
         {

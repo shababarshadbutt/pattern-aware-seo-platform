@@ -1,11 +1,10 @@
 import Link from "next/link";
-
-import { ApiError, listSites, type SiteSummary } from "../lib/api";
-import { formatDateTime } from "../lib/format";
-import { rowAccentStyle, siteActiveTone } from "../lib/status";
 import { ApiErrorPanel } from "../components/api-error";
 import { StatStrip } from "../components/stat-strip";
 import { StatusBadge } from "../components/status-badge";
+import { ApiError, listSites, type SiteSummary } from "../lib/api";
+import { formatDateTime } from "../lib/format";
+import { rowAccentStyle, siteActiveTone } from "../lib/status";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +108,10 @@ export default async function SitesPage() {
                   className="border-b border-border-subtle"
                   style={rowAccentStyle(tone)}
                 >
-                  <th scope="row" className="py-3 pr-4 pl-3 text-left font-normal">
+                  <th
+                    scope="row"
+                    className="py-3 pr-4 pl-3 text-left font-normal"
+                  >
                     <Link
                       href={`/sites/${site.id}`}
                       className="hover:text-accent hover:underline"

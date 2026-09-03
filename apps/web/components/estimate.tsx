@@ -1,6 +1,6 @@
 import type { AuditSnapshotSummary, ConfidenceBandName } from "../lib/api";
 import { formatCount } from "../lib/format";
-import { TONE_VAR, confidenceBandTone } from "../lib/status";
+import { confidenceBandTone, TONE_VAR } from "../lib/status";
 
 /**
  * The one sanctioned way to render a sampled number — ADR-0008.
@@ -41,7 +41,9 @@ export function Estimate(props: EstimateProps) {
       <span
         className="font-mono text-xs uppercase tracking-wider"
         style={{ color: TONE_VAR.unknown }}
-        title={props.reason ?? "Host refused verification; no measurement was made."}
+        title={
+          props.reason ?? "Host refused verification; no measurement was made."
+        }
       >
         no measurement
       </span>

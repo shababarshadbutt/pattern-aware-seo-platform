@@ -117,7 +117,9 @@ export interface SamplingHealthSummary {
   readonly circuitBreaks: number;
 }
 
-export function listSites(): Promise<{ readonly sites: readonly SiteSummary[] }> {
+export function listSites(): Promise<{
+  readonly sites: readonly SiteSummary[];
+}> {
   return getJson("/sites");
 }
 
@@ -154,9 +156,10 @@ export interface PatternSummary {
   readonly updatedAt: string;
 }
 
-export function listPatterns(
-  siteId: string
-): Promise<{ readonly sitemapRunId: string; readonly patterns: readonly PatternSummary[] }> {
+export function listPatterns(siteId: string): Promise<{
+  readonly sitemapRunId: string;
+  readonly patterns: readonly PatternSummary[];
+}> {
   return getJson(`/sites/${encodeURIComponent(siteId)}/patterns`);
 }
 

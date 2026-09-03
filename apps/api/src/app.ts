@@ -1,10 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-
-import type { Config, Logger } from "@pattern-aware/shared";
-import type { Database } from "@pattern-aware/database";
 import cors from "@fastify/cors";
+import type { Database } from "@pattern-aware/database";
+import type { Config, Logger } from "@pattern-aware/shared";
 import Fastify, { type FastifyInstance, type RawServerDefault } from "fastify";
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider
+} from "fastify-type-provider-zod";
 
+import { registerErrorHandler } from "./errors.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerPatternRoutes } from "./routes/patterns.js";
 import { registerSiteRoutes } from "./routes/sites.js";
@@ -21,7 +26,8 @@ export type ApiInstance = FastifyInstance<
   RawServerDefault,
   IncomingMessage,
   ServerResponse,
-  Logger
+  Logger,
+  ZodTypeProvider
 >;
 
 /**
@@ -41,12 +47,29 @@ export function buildApp(
   logger: Logger,
   db: Database
 ): ApiInstance {
-  const app = Fastify({ loggerInstance: logger });
+  const app = Fastify({
+    loggerInstance: logger
+  }).withTypeProvider<ZodTypeProvider>();
 
-  // apps/web (port 3000) and this API (port 3001) are different origins in
-  // dev, so the browser needs an explicit allow rather than same-origin
-  // defaults. Wide open for now — there is no cookie/credential auth yet to
-  // scope this down to (M7 will tighten it alongside real auth).
+  /**
+   * One zod schema per route drives BOTH runtime validation and the handler's
+   * types, so `request.params` cannot drift from what the route declares.
+   *
+   * Without this the routes were typed by generics alone — a compile-time
+   * claim with no runtime check — and a non-UUID path segment reached Postgres
+   * and returned a 500 whose body carried the raw SQL.
+   */
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  // Registered before the routes so a failure during route setup is still
+  // formatted, and so no handler has to format its own errors.
+  registerErrorHandler(app, logger);
+
+  // apps/web and this API are different origins in dev, so the browser needs
+  // an explicit allow rather than same-origin defaults. Wide open for now —
+  // there is no cookie/credential auth yet to scope this down to, and it must
+  // be narrowed to a configured origin list when auth lands.
   void app.register(cors, { origin: true });
 
   registerHealthRoutes(app, config);

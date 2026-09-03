@@ -1,8 +1,8 @@
 import {
-  authenticatedOrganizationScope,
   type Database,
   findOrganizationBySlug,
-  type OrganizationScope
+  type OrganizationScope,
+  systemOrganizationScope
 } from "@pattern-aware/database";
 import type { Config } from "@pattern-aware/shared";
 
@@ -28,14 +28,22 @@ let cached: OrganizationScope | undefined;
 /**
  * Resolve the single internal organization's scope.
  *
- * PLACEHOLDER UNTIL REAL AUTH EXISTS (M7). Only the internal team logs in
- * today (see packages/database/src/schema/tenancy.ts), so there is no
- * session to derive an OrganizationScope from — every request currently acts
- * as one fixed organization, named by DEFAULT_ORGANIZATION_SLUG rather than
- * looked up per request. When session-based auth lands, this function is
- * exactly what gets replaced (and every caller already takes a scope as a
- * parameter rather than reaching for a global, so the call sites do not
- * change shape).
+ * PLACEHOLDER UNTIL REAL AUTH EXISTS. Only the internal team reaches this
+ * today (see packages/database/src/schema/tenancy.ts), so there is no session
+ * to derive an OrganizationScope from — every request acts as one fixed
+ * organization, named by DEFAULT_ORGANIZATION_SLUG rather than looked up per
+ * request. When session-based auth lands, this function is exactly what gets
+ * replaced, and every caller already takes a scope as a parameter rather than
+ * reaching for a global, so no call site changes shape.
+ *
+ * SYSTEM, NOT AUTHENTICATED, and the distinction is not cosmetic.
+ * `authenticatedOrganizationScope` stamps `origin: "request"`, which means "a
+ * session asserted this membership" — a claim nothing here can make, because
+ * there is no session. Every audit log line would have attributed a hardcoded
+ * identity to a user. `systemOrganizationScope` is described in scope.ts as
+ * deliberately the most awkward of the three names precisely so that
+ * platform-internal authority stands out in a diff, which is exactly what
+ * this is until auth exists.
  *
  * Cached after the first successful lookup — this changes only when someone
  * re-seeds under a different slug, not per request.
@@ -57,7 +65,7 @@ export async function resolveDefaultOrgScope(
     throw new OrganizationNotSeededError(config.DEFAULT_ORGANIZATION_SLUG);
   }
 
-  cached = authenticatedOrganizationScope(org.id);
+  cached = systemOrganizationScope(org.id);
 
   return cached;
 }

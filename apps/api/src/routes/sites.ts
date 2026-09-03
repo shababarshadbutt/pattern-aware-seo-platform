@@ -1,4 +1,3 @@
-import type { Config } from "@pattern-aware/shared";
 import {
   type Database,
   findRunSamplingHealth,
@@ -7,9 +6,17 @@ import {
   listSites,
   siteScopeWithin
 } from "@pattern-aware/database";
+import type { Config } from "@pattern-aware/shared";
 
 import type { ApiInstance } from "../app.js";
+import { ApiProblem } from "../errors.js";
 import { resolveDefaultOrgScope } from "../org-scope.js";
+import {
+  errorResponse,
+  siteDetailResponse,
+  siteParams,
+  sitesResponse
+} from "../schemas.js";
 
 /**
  * Sites list + single-site overview.
@@ -25,33 +32,57 @@ export function registerSiteRoutes(
   db: Database,
   config: Config
 ): void {
-  app.get("/sites", async () => {
-    const orgScope = await resolveDefaultOrgScope(db, config);
-    const sites = await listSites(db, orgScope);
+  app.get(
+    "/sites",
+    { schema: { response: { 200: sitesResponse, 503: errorResponse } } },
+    async () => {
+      const orgScope = await resolveDefaultOrgScope(db, config);
 
-    return { sites };
-  });
+      return { sites: await listSites(db, orgScope) };
+    }
+  );
 
-  app.get<{ Params: { siteId: string } }>(
+  app.get(
     "/sites/:siteId",
-    async (request, reply) => {
+    {
+      schema: {
+        params: siteParams,
+        response: {
+          200: siteDetailResponse,
+          400: errorResponse,
+          404: errorResponse
+        }
+      }
+    },
+    async (request) => {
       const orgScope = await resolveDefaultOrgScope(db, config);
       const siteScope = siteScopeWithin(orgScope, request.params.siteId);
 
+      /**
+       * THE ORGANIZATION-MEMBERSHIP CHECK, and it has to happen here.
+       *
+       * `siteScopeWithin` carries the organization across but cannot verify
+       * that the site belongs to it — its own doc says the caller owes that
+       * check and that `findSiteById` performs it, because that query filters
+       * on both ids. A site belonging to another organization therefore finds
+       * nothing rather than returning their data.
+       */
       const site = await findSiteById(db, siteScope);
 
       if (!site) {
-        reply.code(404);
-        return { error: "site not found" };
+        throw ApiProblem.notFound("SITE_NOT_FOUND", "No such site.");
       }
 
       const runs = await listRuns(db, siteScope, 1);
       const latestRun = runs[0];
-      const samplingHealth = latestRun
-        ? await findRunSamplingHealth(db, siteScope, latestRun.id)
-        : undefined;
 
-      return { site, latestRun, samplingHealth };
+      return {
+        site,
+        latestRun,
+        samplingHealth: latestRun
+          ? await findRunSamplingHealth(db, siteScope, latestRun.id)
+          : undefined
+      };
     }
   );
 }

@@ -13,20 +13,40 @@ export function Breadcrumbs({
   readonly items: readonly {
     readonly label: string;
     readonly href?: string;
+    /**
+     * Render this crumb in the mono face.
+     *
+     * DESIGN.md section 2 puts "every numeric value, URL, pattern string,
+     * status code" in JetBrains Mono. A pattern template is a pattern string
+     * wherever it appears, and it was rendering in the UI sans here while the
+     * same string on the same page got `font-mono` in the heading — the two
+     * read as different values.
+     */
+    readonly mono?: boolean;
   }[];
 }) {
   return (
     <nav aria-label="Breadcrumb" className="text-sm text-secondary">
-      <ol className="flex flex-wrap items-center gap-1.5">
+      <ol className="flex flex-wrap items-center gap-2">
         {items.map((item, index) => (
-          <li key={`${item.label}-${index}`} className="flex items-center gap-1.5">
+          // Keyed on href, falling back to the label for the final unlinked
+          // crumb: an index key makes React reuse the wrong node when a trail
+          // gains or loses a level.
+          <li key={item.href ?? item.label} className="flex items-center gap-2">
             {index > 0 && <span className="text-tertiary">/</span>}
             {item.href ? (
-              <Link href={item.href} className="hover:text-primary hover:underline">
+              <Link
+                href={item.href}
+                className={`hover:text-primary hover:underline${item.mono ? " font-mono text-xs" : ""}`}
+              >
                 {item.label}
               </Link>
             ) : (
-              <span className="text-primary">{item.label}</span>
+              <span
+                className={`text-primary${item.mono ? " font-mono text-xs" : ""}`}
+              >
+                {item.label}
+              </span>
             )}
           </li>
         ))}

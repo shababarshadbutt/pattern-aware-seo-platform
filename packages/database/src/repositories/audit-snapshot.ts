@@ -45,6 +45,18 @@ export interface AuditSnapshotRow {
   readonly ciHigh: number;
   readonly confidenceBand: ConfidenceBandName;
   readonly severityClass: SeverityClassName;
+  /**
+   * The weight in force when this claim was published.
+   *
+   * Selected, not just stored: the interface needs it to show impact as the
+   * estimated quantity it is. Impact is `point_estimate × severity_weight`, so
+   * its interval is `[ci_low × w, ci_high × w]` — derivable from this row
+   * without persisting two more columns, and ADR-0008 forbids rendering an
+   * estimate without its interval.
+   */
+  readonly severityWeight: number;
+  /** The level the interval was computed at, e.g. 0.95. */
+  readonly confidenceLevel: number;
   readonly impactScore: number;
   readonly estimatorVersion: string;
   readonly computedAt: Date;
@@ -66,6 +78,8 @@ const COLUMNS = {
   ciHigh: auditSnapshot.ciHigh,
   confidenceBand: auditSnapshot.confidenceBand,
   severityClass: auditSnapshot.severityClass,
+  severityWeight: auditSnapshot.severityWeight,
+  confidenceLevel: auditSnapshot.confidenceLevel,
   impactScore: auditSnapshot.impactScore,
   estimatorVersion: auditSnapshot.estimatorVersion,
   computedAt: auditSnapshot.computedAt
@@ -131,18 +145,29 @@ export class ImpossibleClaimError extends Error {
 /**
  * Coerce the numeric columns the driver hands back as strings.
  *
- * `impact_score` is `numeric`, and node-postgres returns numerics as strings
- * rather than guessing at a precision-losing float. The row type promises a
- * number, so the conversion happens here, once, instead of at each of the
- * places that read it — one of which would eventually compare a string to a
- * number and silently sort "9" above "10".
+ * `impact_score`, `severity_weight` and `confidence_level` are all `numeric`,
+ * and node-postgres returns numerics as strings rather than guessing at a
+ * precision-losing float. The row type promises numbers, so the conversion
+ * happens here, once, instead of at each of the places that read them — one of
+ * which would eventually compare a string to a number and silently sort "9"
+ * above "10".
  */
 function toRow(raw: RawSnapshotRow): AuditSnapshotRow {
-  return { ...raw, impactScore: Number(raw.impactScore) };
+  return {
+    ...raw,
+    impactScore: Number(raw.impactScore),
+    severityWeight: Number(raw.severityWeight),
+    confidenceLevel: Number(raw.confidenceLevel)
+  };
 }
 
-type RawSnapshotRow = Omit<AuditSnapshotRow, "impactScore"> & {
+type RawSnapshotRow = Omit<
+  AuditSnapshotRow,
+  "impactScore" | "severityWeight" | "confidenceLevel"
+> & {
   readonly impactScore: string;
+  readonly severityWeight: string;
+  readonly confidenceLevel: string;
 };
 
 export async function insertAuditSnapshot(

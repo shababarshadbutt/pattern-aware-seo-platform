@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
+import { ApiErrorPanel } from "../../../components/api-error";
+import { Breadcrumbs } from "../../../components/breadcrumbs";
+import { StatStrip } from "../../../components/stat-strip";
+import { StatusBadge } from "../../../components/status-badge";
 import {
   ApiError,
   getSite,
@@ -14,10 +17,6 @@ import {
   rowAccentStyle,
   runStatusTone
 } from "../../../lib/status";
-import { ApiErrorPanel } from "../../../components/api-error";
-import { Breadcrumbs } from "../../../components/breadcrumbs";
-import { StatStrip } from "../../../components/stat-strip";
-import { StatusBadge } from "../../../components/status-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +28,6 @@ function statsFor(detail: SiteDetail) {
   }
 
   const stats = [
-    { label: "run status", value: latestRun.status },
     { label: "urls", value: formatCount(latestRun.totalUrls) },
     { label: "patterns", value: formatCount(latestRun.totalPatterns) },
     {
@@ -40,7 +38,10 @@ function statsFor(detail: SiteDetail) {
 
   if (samplingHealth) {
     stats.push(
-      { label: "low confidence", value: formatCount(samplingHealth.patternsLowConfidence) },
+      {
+        label: "low confidence",
+        value: formatCount(samplingHealth.patternsLowConfidence)
+      },
       { label: "blocked", value: formatCount(samplingHealth.patternsBlocked) }
     );
   }
@@ -112,6 +113,31 @@ export default async function SiteDetailPage({
 
       {detail.latestRun ? (
         <div className="mt-8">
+          {/*
+            The run's state is a BADGE, not a stat-strip value. The strip is
+            mono and tabular-nums for numerals; a word rendered in that slot
+            reads as a number that failed to load, and it carried no tone, so
+            "failed" and "complete" looked identical.
+          */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <StatusBadge
+              tone={runStatusTone(detail.latestRun.status)}
+              label={detail.latestRun.status}
+            />
+            {detail.latestRun.isDryRun && (
+              <StatusBadge tone="unknown" label="dry run" />
+            )}
+            {detail.latestRun.statusReason && (
+              /*
+                A degraded run has to say why on the screen. The reason is
+                machine-readable from the finalize stage, so it is shown as
+                written rather than mapped to prose that could drift from it.
+              */
+              <span className="font-mono text-2xs uppercase tracking-wider text-tertiary">
+                {detail.latestRun.statusReason.replace(/_/g, " ")}
+              </span>
+            )}
+          </div>
           <StatStrip stats={statsFor(detail)} />
         </div>
       ) : (
@@ -143,9 +169,7 @@ export default async function SiteDetailPage({
 
       {patterns.length > 0 && (
         <table className="mt-4 w-full border-collapse text-sm">
-          <caption className="sr-only">
-            Patterns for {detail.site.name}
-          </caption>
+          <caption className="sr-only">Patterns for {detail.site.name}</caption>
           <thead>
             <tr className="border-b border-border-strong text-left">
               <th
@@ -190,7 +214,10 @@ export default async function SiteDetailPage({
                   className="border-b border-border-subtle"
                   style={rowAccentStyle(tone)}
                 >
-                  <th scope="row" className="py-3 pr-4 pl-3 text-left font-normal">
+                  <th
+                    scope="row"
+                    className="py-3 pr-4 pl-3 text-left font-normal"
+                  >
                     <Link
                       href={`/sites/${siteId}/patterns/${pattern.id}`}
                       className="font-mono text-xs hover:text-accent hover:underline"
