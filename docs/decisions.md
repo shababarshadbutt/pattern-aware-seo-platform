@@ -1116,3 +1116,106 @@ Left open, and to remove when auth lands: CORS is `origin: true` and must narrow
 to a configured list; `DEFAULT_ORGANIZATION_SLUG` defaults to the demo
 organization, so a production boot resolves to demo data rather than failing —
 acceptable while nothing is deployed, wrong the moment something is.
+
+---
+
+## ADR-0027 — The Google Stitch design supersedes the instrument-panel spec
+
+**Date:** 2026-09-04
+**Status:** Accepted
+
+### Context
+
+`docs/DESIGN.md` described a "glass cockpit instrument panel" identity: amber
+accent, hairline borders, no card chrome, Switzer as the UI face, and an
+explicit ban list (§9) naming purple/indigo accents, KPI card rows, capsule
+badges and drop shadows.
+
+Two things were true about it. It was coherent and structurally enforced —
+`apps/web/app/globals.css` resets Tailwind's colour, radius, font and font-size
+namespaces to nothing, so an off-spec utility does not compile. And it was not
+what shipped: Switzer is not on Google Fonts, its files were never vendored, so
+`--font-switzer` stayed unset and every screen fell back to system sans. The
+largest visual gap between the app and its own spec was a font that was never
+there.
+
+The project owner designed a replacement in Google Stitch (project
+`12137181229897682385`, 13 desktop screens) and decided it supersedes
+`docs/DESIGN.md` rather than being reconciled with it.
+
+### Decision
+
+The Stitch design is the product's visual identity. `docs/DESIGN.md` is
+rewritten to describe it, including a §9 that bans what the new identity
+rejects rather than what the old one did.
+
+Values are transcribed from the `tailwind.config` in Stitch's own generated
+HTML, not sampled from a screenshot. Palette is Material 3 dark; accent is
+indigo, in two strictly separate roles — `--accent` `#4f46e5` is a fill (never
+text, at 4.0:1 against the page) and `--accent-text` `#c3c0ff` is the tint for
+accented text. Radius becomes 2/4/8/12. Type is Geist + JetBrains Mono, both
+served self-hosted by `next/font/google`, which is what finally makes the UI
+face real.
+
+Three decisions inside this one, each made deliberately:
+
+- **Dark only.** Every Stitch screen is `html class="dark"` and its config
+  carries no light ramp, so the previous spec's fully-designed light palette
+  and the `data-theme` switch are retired rather than half-kept. A future light
+  mode is a palette to design, not a switch someone forgot to wire.
+- **The namespace reset survives the values it protected.** The technique is
+  independent of which design it enforces, and it is the reason a spec stays
+  true: drift becomes a build error rather than something a reviewer must
+  notice. Only the surviving token set changed.
+- **The rail mirrors Stitch's navigation exactly** — Overview, Projects,
+  Crawls, Issues, Tools, Analytics — at the owner's explicit direction, after
+  the conflict was raised and reaffirmed. Recorded plainly because it is a real
+  tension: "Crawls" is a crawler product's language, and this platform's whole
+  differentiator is that it samples patterns instead of crawling every URL
+  (CLAUDE.md, non-negotiable rules). The label is presentational. A screen
+  built under that item must still not acquire crawl-everything behaviour, and
+  `components/app-shell.tsx` carries that warning next to the list. Only
+  Overview has a screen; the rest render disabled rather than link to a 404.
+
+### What is explicitly NOT superseded
+
+A visual redesign is the most natural way for a correctness fix to be undone
+quietly, so these carry forward unchanged, and each has a test that fails if it
+does not:
+
+- **ADR-0008's rendering contract.** Every sampled figure renders through
+  `<Estimate>` with its `~` and interval. `lib/adr-0008-guard.test.ts` hardcodes
+  `components/estimate.tsx` as the sole permitted adapter — that file must not
+  be renamed or moved, or the guard passes while checking a convention nothing
+  follows.
+- **The tone mapping in `lib/status.ts` is product logic, not decoration.**
+  Only the colours the four tones resolve to changed. `patternStatusTone`
+  still maps `blocked` to `unknown`, not `critical`: a host refusing us is not
+  a site defect.
+- **The confidence band is said, not only coloured** — the band word renders
+  beside the interval, so it survives a screenshot, a print, and a reader who
+  cannot separate the hues.
+- **Tabular numerals in every data column**, applied at the element level via
+  `[data-numeric]` rather than left to each cell.
+
+### Consequences
+
+Warning is no longer the accent colour. Under the amber accent the two were
+deliberately the same token; with an indigo accent they are independent, and
+`--status-warning` carries its own amber.
+
+The previous spec's §7 rejected the "row of 4 KPI cards" layout by name. The
+Stitch design uses it, so `StatCards` replaces the hairline `StatStrip`.
+
+The design covers 13 screens for a broader, more conventional SEO product —
+redirect analysis, Core Web Vitals, internal links, structured data — of which
+three have a counterpart today (overview → sites list, sitemap analyzer → site
+detail, issue detail → pattern evidence). The other ten are reference for
+future work, not a commitment to build them.
+
+Stitch's own MCP server is registered at local scope, but Node cannot reach
+`stitch.googleapis.com` from this machine: TLS inspection presents a certificate
+Windows trusts and Node does not, so `curl` succeeds where the MCP client fails.
+The design was pulled over `curl` against the same JSON-RPC endpoint. Anyone
+re-pulling it needs either that workaround or the inspecting proxy's root CA in
+`NODE_EXTRA_CA_CERTS`.

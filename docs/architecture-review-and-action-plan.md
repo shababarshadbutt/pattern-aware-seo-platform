@@ -226,3 +226,19 @@ Recommended combination for this project: Impeccable (taste layer, set up as a "
 Final recommendation
 
 Stick with and harden the current direction: Next.js 15/16 + Fastify 5 + BullMQ + Redis + PostgreSQL 16 + Piscina + TypeScript for the platform, plus one small separate Python service for model training and inference once Phase 4 has enough historical data to train on. For the coding assistant building the frontend, pair Impeccable (design taste, set up for a product/dashboard surface) with the shadcn/ui MCP (components). This is the strongest combination for a pattern-aware, sampling-based SEO platform that needs to run locally today, look genuinely professional rather than templated, and scale to AWS with multiple users and, later, ML-driven sampling.
+
+---
+
+Amendment — 2026-09-04: the design source changed (D-track)
+
+The UI now follows a Google Stitch design (project 12137181229897682385, 13 desktop screens), which SUPERSEDES the "glass cockpit instrument panel" spec docs/DESIGN.md carried through M7. Recorded as ADR-0027; docs/DESIGN.md is rewritten rather than amended, because the identity itself changed rather than a detail of it.
+
+What shipped with it: a persistent 240px navigation rail and 48px breadcrumb bar (the app shell M7 left unbuilt), the three existing screens restyled onto it, and — the largest single visual fix — a UI typeface that actually loads. The previous spec named Switzer, which is not on Google Fonts and was never vendored, so every screen through M7 rendered in system sans while the spec said otherwise. Geist replaces it and is served self-hosted by next/font/google.
+
+Three deliberate decisions inside the change: dark only, since the Stitch design ships no light ramp and the previous light palette was retired rather than half-kept; the Tailwind namespace reset kept even though every value it protects changed, because the technique is what makes drift a build error rather than a review note; and the rail mirroring Stitch's item list exactly — Overview, Projects, Crawls, Issues, Tools, Analytics — at the project owner's explicit direction after the conflict was raised and reaffirmed. That last one is a real tension worth seeing plainly: "Crawls" is a crawler product's language, and this platform's differentiator is that it samples rather than crawls. The label is presentational; the sampling rules are not, and app-shell.tsx carries that warning beside the list. Only Overview has a screen — the rest render disabled rather than linking to a 404.
+
+Four things a redesign could have quietly undone, all held and all still covered by tests: ADR-0008's interval rendering (the CI guard hardcodes components/estimate.tsx as the sole adapter, so that file must not move), the tone mapping in lib/status.ts as product logic rather than decoration (blocked stays unknown, not critical), the confidence band said as a word rather than reaching the reader through hue alone, and tabular numerals in every data column.
+
+Still owed by D3, unchanged by this: the slide-over drill-down, the Cmd+K palette, j/k navigation, the density toggle, sparklines, and the three motion moments. The design's remaining ten screens — redirect analysis, Core Web Vitals, internal links, structured data, content audit — describe a broader SEO product than this platform builds today; they are reference for future work, not a commitment.
+
+Note on the section above: its recommendation to use Impeccable and the shadcn/ui MCP for drift-checking is now partly overtaken. The design source is Stitch, and the token layer is enforced mechanically by the namespace reset rather than by a taste audit. Stitch's own MCP server cannot be reached by Node from the current dev machine (TLS inspection presents a certificate Windows trusts and Node does not); the design was pulled over curl against the same JSON-RPC endpoint. See ADR-0027.
