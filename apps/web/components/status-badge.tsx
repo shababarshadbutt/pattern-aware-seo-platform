@@ -1,7 +1,7 @@
 import { TONE_VAR, type Tone } from "../lib/status";
 
 /**
- * Rectangular, 2px radius, uppercase mono label, 1px border over a ~12% tint
+ * Rectangular, 4px radius, uppercase mono label, 1px border over a ~12% tint
  * rather than a solid fill — DESIGN.md section 5. Shared across every status
  * domain in the product (site, run, pattern, confidence band, severity) so
  * they all read as the same visual language.
@@ -17,7 +17,7 @@ export function StatusBadge({
 
   return (
     <span
-      className="rounded-xs border px-2 py-1 font-mono text-2xs whitespace-nowrap uppercase tracking-wider"
+      className="rounded-sm border px-2 py-1 font-mono text-2xs whitespace-nowrap uppercase tracking-wider"
       style={{
         color,
         borderColor: color,

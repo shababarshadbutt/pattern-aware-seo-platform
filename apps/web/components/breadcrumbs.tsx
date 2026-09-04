@@ -33,7 +33,11 @@ export function Breadcrumbs({
           // crumb: an index key makes React reuse the wrong node when a trail
           // gains or loses a level.
           <li key={item.href ?? item.label} className="flex items-center gap-2">
-            {index > 0 && <span className="text-tertiary">/</span>}
+            {index > 0 && (
+              <span aria-hidden="true" className="text-tertiary">
+                ›
+              </span>
+            )}
             {item.href ? (
               <Link
                 href={item.href}

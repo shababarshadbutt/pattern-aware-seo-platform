@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiErrorPanel } from "../../../components/api-error";
-import { Breadcrumbs } from "../../../components/breadcrumbs";
-import { StatStrip } from "../../../components/stat-strip";
+import { PageBody, TopBar } from "../../../components/app-shell";
+import { StatCards } from "../../../components/stat-cards";
 import { StatusBadge } from "../../../components/status-badge";
 import {
   ApiError,
@@ -66,18 +66,20 @@ export default async function SiteDetailPage({
     }
 
     return (
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <Breadcrumbs items={[{ label: "Sites", href: "/" }]} />
-        <div className="mt-6">
-          <ApiErrorPanel
-            message={
-              error instanceof ApiError
-                ? error.message
-                : "Unknown error contacting the API."
-            }
-          />
-        </div>
-      </main>
+      <>
+        <TopBar items={[{ label: "Sites", href: "/" }]} />
+        <PageBody>
+          <div className="mt-6">
+            <ApiErrorPanel
+              message={
+                error instanceof ApiError
+                  ? error.message
+                  : "Unknown error contacting the API."
+              }
+            />
+          </div>
+        </PageBody>
+      </>
     );
   }
 
@@ -99,159 +101,162 @@ export default async function SiteDetailPage({
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <Breadcrumbs
+    <>
+      <TopBar
         items={[{ label: "Sites", href: "/" }, { label: detail.site.name }]}
       />
+      <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight">
+          {detail.site.name}
+        </h1>
+        <p className="mt-1 font-mono text-xs text-secondary">
+          {detail.site.host}
+        </p>
 
-      <h1 className="mt-2 text-xl font-semibold tracking-tight">
-        {detail.site.name}
-      </h1>
-      <p className="mt-1 font-mono text-xs text-secondary">
-        {detail.site.host}
-      </p>
-
-      {detail.latestRun ? (
-        <div className="mt-8">
-          {/*
+        {detail.latestRun ? (
+          <div className="mt-8">
+            {/*
             The run's state is a BADGE, not a stat-strip value. The strip is
             mono and tabular-nums for numerals; a word rendered in that slot
             reads as a number that failed to load, and it carried no tone, so
             "failed" and "complete" looked identical.
           */}
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <StatusBadge
-              tone={runStatusTone(detail.latestRun.status)}
-              label={detail.latestRun.status}
-            />
-            {detail.latestRun.isDryRun && (
-              <StatusBadge tone="unknown" label="dry run" />
-            )}
-            {detail.latestRun.statusReason && (
-              /*
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <StatusBadge
+                tone={runStatusTone(detail.latestRun.status)}
+                label={detail.latestRun.status}
+              />
+              {detail.latestRun.isDryRun && (
+                <StatusBadge tone="unknown" label="dry run" />
+              )}
+              {detail.latestRun.statusReason && (
+                /*
                 A degraded run has to say why on the screen. The reason is
                 machine-readable from the finalize stage, so it is shown as
                 written rather than mapped to prose that could drift from it.
               */
-              <span className="font-mono text-2xs uppercase tracking-wider text-tertiary">
-                {detail.latestRun.statusReason.replace(/_/g, " ")}
-              </span>
-            )}
+                <span className="font-mono text-2xs uppercase tracking-wider text-tertiary">
+                  {detail.latestRun.statusReason.replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
+            <StatCards stats={statsFor(detail)} />
           </div>
-          <StatStrip stats={statsFor(detail)} />
-        </div>
-      ) : (
-        <p className="mt-8 text-sm text-secondary">
-          This site has no sitemap run yet.
-        </p>
-      )}
+        ) : (
+          <p className="mt-8 text-sm text-secondary">
+            This site has no sitemap run yet.
+          </p>
+        )}
 
-      <h2 className="mt-12 text-lg font-semibold tracking-tight">Patterns</h2>
+        <h2 className="mt-12 text-lg font-semibold tracking-tight">Patterns</h2>
 
-      {patternsError && (
-        <div className="mt-4">
-          <ApiErrorPanel message={patternsError} />
-        </div>
-      )}
+        {patternsError && (
+          <div className="mt-4">
+            <ApiErrorPanel message={patternsError} />
+          </div>
+        )}
 
-      {noCompletedRun && !patternsError && (
-        <p className="mt-4 text-sm text-secondary">
-          No completed run yet — patterns appear here once a sitemap run for
-          this site finishes.
-        </p>
-      )}
+        {noCompletedRun && !patternsError && (
+          <p className="mt-4 text-sm text-secondary">
+            No completed run yet — patterns appear here once a sitemap run for
+            this site finishes.
+          </p>
+        )}
 
-      {!noCompletedRun && !patternsError && patterns.length === 0 && (
-        <p className="mt-4 text-sm text-secondary">
-          The latest run found no patterns.
-        </p>
-      )}
+        {!noCompletedRun && !patternsError && patterns.length === 0 && (
+          <p className="mt-4 text-sm text-secondary">
+            The latest run found no patterns.
+          </p>
+        )}
 
-      {patterns.length > 0 && (
-        <table className="mt-4 w-full border-collapse text-sm">
-          <caption className="sr-only">Patterns for {detail.site.name}</caption>
-          <thead>
-            <tr className="border-b border-border-strong text-left">
-              <th
-                scope="col"
-                className="py-2 pr-4 pl-3 font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
-              >
-                Template
-              </th>
-              <th
-                scope="col"
-                className="py-2 pr-4 font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="py-2 pr-4 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
-              >
-                Population
-              </th>
-              <th
-                scope="col"
-                className="py-2 pr-4 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
-              >
-                Files
-              </th>
-              <th
-                scope="col"
-                className="py-2 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
-              >
-                Updated
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {patterns.map((pattern) => {
-              const tone = patternStatusTone(pattern.status);
-
-              return (
-                <tr
-                  key={pattern.id}
-                  className="border-b border-border-subtle"
-                  style={rowAccentStyle(tone)}
+        {patterns.length > 0 && (
+          <table className="mt-4 w-full border-collapse text-sm">
+            <caption className="sr-only">
+              Patterns for {detail.site.name}
+            </caption>
+            <thead>
+              <tr className="border-b border-border-strong text-left">
+                <th
+                  scope="col"
+                  className="py-2 pr-4 pl-3 font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
                 >
-                  <th
-                    scope="row"
-                    className="py-3 pr-4 pl-3 text-left font-normal"
+                  Template
+                </th>
+                <th
+                  scope="col"
+                  className="py-2 pr-4 font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="py-2 pr-4 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                >
+                  Population
+                </th>
+                <th
+                  scope="col"
+                  className="py-2 pr-4 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                >
+                  Files
+                </th>
+                <th
+                  scope="col"
+                  className="py-2 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                >
+                  Updated
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {patterns.map((pattern) => {
+                const tone = patternStatusTone(pattern.status);
+
+                return (
+                  <tr
+                    key={pattern.id}
+                    className="border-b border-border-subtle transition-colors hover:bg-surface"
+                    style={rowAccentStyle(tone)}
                   >
-                    <Link
-                      href={`/sites/${siteId}/patterns/${pattern.id}`}
-                      className="font-mono text-xs hover:text-accent hover:underline"
+                    <th
+                      scope="row"
+                      className="py-3 pr-4 pl-3 text-left font-normal"
                     >
-                      {pattern.template}
-                    </Link>
-                  </th>
-                  <td className="py-3 pr-4">
-                    <StatusBadge tone={tone} label={pattern.status} />
-                  </td>
-                  <td
-                    className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
-                    data-numeric
-                  >
-                    {formatCount(pattern.populationCount)}
-                  </td>
-                  <td
-                    className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
-                    data-numeric
-                  >
-                    {formatCount(pattern.fileCount)}
-                  </td>
-                  <td
-                    className="py-3 text-right font-mono text-xs tabular-nums text-secondary"
-                    data-numeric
-                  >
-                    {formatDateTime(pattern.updatedAt)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </main>
+                      <Link
+                        href={`/sites/${siteId}/patterns/${pattern.id}`}
+                        className="font-mono text-xs hover:text-accent-text hover:underline"
+                      >
+                        {pattern.template}
+                      </Link>
+                    </th>
+                    <td className="py-3 pr-4">
+                      <StatusBadge tone={tone} label={pattern.status} />
+                    </td>
+                    <td
+                      className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
+                      data-numeric
+                    >
+                      {formatCount(pattern.populationCount)}
+                    </td>
+                    <td
+                      className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
+                      data-numeric
+                    >
+                      {formatCount(pattern.fileCount)}
+                    </td>
+                    <td
+                      className="py-3 text-right font-mono text-xs tabular-nums text-secondary"
+                      data-numeric
+                    >
+                      {formatDateTime(pattern.updatedAt)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </PageBody>
+    </>
   );
 }
