@@ -103,13 +103,25 @@ export async function upsertSitemapFiles(
   return listSitemapFiles(db, scope, sitemapRunId);
 }
 
-/** Every file in a run, in a stable order. */
+/**
+ * Every file in a run, in a stable order.
+ *
+ * `limit` is OPTIONAL AND UNSET BY DEFAULT on purpose. The pipeline's own
+ * callers need the whole list — `finalize` counts failed files across the run,
+ * and a capped read would silently judge a run on its first page — so the
+ * default cannot be a number. A screen is the opposite case: a 90M-URL site is
+ * thousands of files, and no reader needs them all in one response. So the cap
+ * belongs to the caller that has a reason for one, and a truncated list is the
+ * caller's to disclose (the run's own `total_files` counter is what it says
+ * "showing n of N" against).
+ */
 export async function listSitemapFiles(
   db: Database,
   scope: SiteScope,
-  sitemapRunId: string
+  sitemapRunId: string,
+  options: { readonly limit?: number } = {}
 ): Promise<readonly SitemapFileRow[]> {
-  return internalDatabase(db)
+  const query = internalDatabase(db)
     .select(COLUMNS)
     .from(sitemapFile)
     .where(
@@ -119,6 +131,37 @@ export async function listSitemapFiles(
       )
     )
     .orderBy(asc(sitemapFile.fileOrdinal));
+
+  return options.limit === undefined ? query : query.limit(options.limit);
+}
+
+/**
+ * How many files a run has.
+ *
+ * Exists so a capped read of {@link listSitemapFiles} can be disclosed as
+ * "n of N". Deliberately not served from `sitemap_run.total_files`: that is a
+ * progress counter a stage writes, so it states what a run believes rather than
+ * what the table holds, and the two disagreeing is a fact worth being able to
+ * see rather than one to hide behind a single number.
+ */
+export async function countSitemapFiles(
+  db: Database,
+  scope: SiteScope,
+  sitemapRunId: string
+): Promise<number> {
+  const [row] = await internalDatabase(db)
+    // Counted as bigint and coerced once here: node-postgres hands int8 back
+    // as a string rather than guessing at precision.
+    .select({ count: sql<string>`count(*)::bigint` })
+    .from(sitemapFile)
+    .where(
+      and(
+        eq(sitemapFile.siteId, scope.siteId),
+        eq(sitemapFile.sitemapRunId, sitemapRunId)
+      )
+    );
+
+  return Number(row?.count ?? 0);
 }
 
 /**

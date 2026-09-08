@@ -1,0 +1,220 @@
+# Running a real audit against a live site
+
+This is the runbook for `scripts/live-run.ts` (invoked as `pnpm live:run`) — the
+one thing this repo could not previously do. Before this script, `startRun`
+had callers only in tests and in `scripts/seed-demo.ts` (which fabricates
+evidence and stamps `is_dry_run: true` to say so), and `attachSite` in
+`apps/worker` has never had a caller, so the worker process starts, logs
+"awaiting site attachments", and waits forever. There was no route, script, or
+queue that could start a measured run. This script drives the five pipeline
+stages (`discover → ingest → verify → estimate → finalize`) directly, in one
+process, against a real sitemap URL and real HTTP responses.
+
+Read the whole "Before you start" section before pointing this at anything —
+it sends real requests to somebody else's server.
+
+## What this does and does not do
+
+- It calls `discover`, `ingest`, `verify`, `estimate`, `finalize` exactly as
+  the worker would, through the same `runStage` dispatch — so a stage cannot
+  behave differently here than in production.
+- It does **not** go through Redis or BullMQ. The pipeline doesn't self-chain
+  end to end (`discover` enqueues nothing; nothing enqueues `finalize`), so
+  something always has to own the chain — the script owns it here, in-process,
+  so a run is easy to watch start to finish. Redis/BullMQ queuing is therefore
+  the one layer this does **not** exercise.
+- It writes real rows: `organization`, `site`, `sitemap_run`, `sitemap_file`,
+  `pattern`, `pattern_population`, `pattern_sample`, `sample_observation`,
+  `audit_snapshot`, `sampling_health`. A plan-only run (see below) writes
+  everything except `sample_observation`/`audit_snapshot` and cancels instead
+  of publishing.
+- The per-host rate limiter and circuit breaker are real and in force,
+  constructed from the same policy config the worker reads
+  (`HTTP_PER_HOST_REQUESTS_PER_SECOND`, `HTTP_PER_HOST_CONCURRENCY`,
+  `HTTP_CIRCUIT_BREAK_AFTER_429/403`, `HTTP_CIRCUIT_COOLDOWN_MS`).
+- The daily/platform request caps (`HTTP_PLATFORM_DAILY_REQUEST_CAP`,
+  `HTTP_PER_SITE_DAILY_REQUEST_CAP`, the warn/halt fractions) are **not**
+  enforced anywhere in the codebase (ADR-0030 — no counter exists in any table
+  or Redis key). The script's own `--max-requests` flag (default 5,000) is a
+  standalone guard, not the platform's config taking effect.
+- Nothing anywhere in this platform reads `robots.txt`.
+
+## Before you start
+
+1. **Only point this at a site you're authorized to test.** It sends real
+   HEAD/GET requests. Don't run `--probe` against a domain you don't own or
+   don't have permission to audit.
+2. Start with a **small** sitemap for the first pass — tens to low hundreds of
+   URLs — not a client's full production sitemap.
+3. Bring up local infra and confirm env is set:
+   ```
+   docker compose up -d
+   docker compose ps        # postgres + redis both "Up"
+   ```
+   `.env` needs `DATABASE_URL` at minimum (copy from `.env.example` if you
+   haven't already, and remember the native-Postgres-on-5432 caveat — this
+   repo already runs Postgres on `POSTGRES_PORT=5433` per your `.env`).
+4. `pnpm install` if you haven't recently (the script now depends on the
+   workspace packages directly from the root `package.json`).
+
+## Step 1 — plan-only pass (no requests sent)
+
+This is the one to run first. It does `discover` + `ingest` only — real
+sitemap fetch and parse, real pattern extraction, real population counts
+written to the database — then **cancels the run** before anything is probed.
+
+```
+pnpm live:run --sitemap https://<your-test-site>/sitemap.xml
+```
+
+What to check in the output:
+
+- `discover`: `root element` is `urlset` or `sitemapindex`, `files` is a
+  sane count, `suspicious` is `false`. If `suspicious: true` or `files: 0`,
+  the sitemap parsed but named nothing — that's flagged, not silently treated
+  as an empty site — and the run is cancelled automatically.
+- `ingest`: `files parsed` matches `files failed: 0`, `urls counted` matches
+  what you expect for the site, `patterns` is a believable number of URL
+  families (not 1 giant pattern, not one-pattern-per-URL).
+- Section 3 (`patterns extracted`): eyeball the templates — do
+  `/product/{param}`-shaped things look right for this site?
+- Section 4 (`probe budget`): `planned probes` and the estimated wall-clock
+  time at the rate ceiling. This is what `--probe` would actually cost.
+
+If ingest reports `files failed > 0`, don't proceed to `--probe` yet — see
+"Known issue" below before assuming your target site is broken.
+
+## Step 2 — measured pass (sends real requests)
+
+Only after step 1 looks right:
+
+```
+pnpm live:run --sitemap https://<your-test-site>/sitemap.xml --probe
+```
+
+Optional flags:
+
+- `--max-requests <n>` — raise/lower the script's own safety ceiling (default
+  5,000). The run is cancelled before sending anything if the planned probe
+  count exceeds this.
+- `--tier standard|priority|bulk` — site tier (affects nothing but the queue
+  namespace when this later runs through the worker; harmless here).
+- `--name "..."` — site display name (defaults to the hostname).
+- `--org <slug>` — organization slug to seed/reuse under (defaults to
+  `DEFAULT_ORGANIZATION_SLUG`, `asapsemi-demo`). **Use a distinct slug for
+  test traffic** (e.g. `--org my-test-org`) so it doesn't mix into the demo
+  organization's data.
+
+What to check:
+
+- Section 5/6: stage jobs complete, `finalize` prints a JSON result — check
+  `status` (`"complete"` vs `"degraded"` — a degraded run always carries a
+  `reason`).
+- Section 7 (`what landed`): pattern status counts, `http requests` (a floor,
+  not an exact cost — see the sampling-health caveats in `docs/DESIGN.md`
+  §7.2), escalations, low-confidence pattern count.
+- Section 8 (`top findings by impact`): severity class, HTTP status, the
+  Wilson interval and confidence band per pattern.
+- The printed links at the end — open them in the running web app
+  (`pnpm dev`, or `pnpm --filter web dev` if the API is already up) to confirm
+  the same numbers render in the UI:
+  - `/runs/<runId>` — run detail, files, sampling health
+  - `/sites/<siteId>` — site overview, findings
+  - `/sites/<siteId>/patterns` — pattern explorer
+  - `/issues`, `/projects` — fleet views
+
+## Re-running against the same site
+
+The script reuses the existing `site` row for a host it already knows about
+(`site` is a durable entity, not an artifact of one run — this is deliberate,
+see CLAUDE.md's "core entity model" section). A second run against the same
+sitemap is how you'd see a trend later, once trend UI exists. If a previous
+run for that site is still `running` (e.g. you Ctrl+C'd mid-run), the script
+will refuse to start a new one — `uq_sitemap_run_one_active_per_site` is a
+database constraint, not a script preference. You'll need to close or inspect
+that stale run before retrying.
+
+## Known issue found while validating this script (real, pre-existing)
+
+**A gzip-served sitemap can make `ingest` report the file as failed with
+`Z_DATA_ERROR: incorrect header check`, even though the sitemap is fine.**
+
+This is a bug in the pipeline itself
+(`packages/pipeline/src/stages/discover.ts`'s `isGzip()`,
+around line 186), not something introduced by this script — the live-run
+script just newly exercises the discover→ingest path against real gzip-capable
+servers, which nothing in the repo's test suite does (the e2e fixture server
+never gzips, and `packages/verification`'s suite is transport-mocked by
+design).
+
+Root cause: Node's `fetch` (undici) transparently decompresses a gzip
+response body, but leaves `content-encoding: gzip` present on
+`response.headers`. `isGzip()` trusts that header as a proxy for "the bytes I'm
+about to store are still gzip-compressed":
+
+```ts
+function isGzip(url: string, response: SitemapResponse): boolean {
+  const encoding = response.headers.get("content-encoding") ?? "";
+  return url.endsWith(".gz") || encoding.includes("gzip");
+}
+```
+
+When a server gzips its response (common — e.g. IIS/nginx compressing
+`text/xml` on the fly, unrelated to whether the URL ends in `.gz`), the stored
+bytes are already plain XML, but the file is marked `isGzip: true`. The
+sitemap parser then tries to gunzip already-decompressed bytes and fails.
+Confirmed against `https://www.sitemaps.org/sitemap.xml`, which IIS serves
+gzip-encoded even though the URL has no `.gz` suffix.
+
+**Workarounds until this is fixed:**
+
+- Prefer a test target whose sitemap response does **not** have
+  `content-encoding: gzip` set (check with `curl -sI <url>` — note this shows
+  the *wire* header; Node's own `fetch` may still report gzip on `.headers`
+  even after decoding it, so curl is the more reliable check here).
+- If you control the test target, temporarily disable server-side compression
+  for the sitemap path.
+- A real fix belongs in `packages/pipeline/src/stages/discover.ts`: `isGzip`
+  needs to reflect what's actually in the stored bytes, not what the
+  now-decoded `content-encoding` header used to say — e.g. sniff the gzip
+  magic bytes (`1f 8b`) on the stored file instead of trusting the header, or
+  only trust `.gz` in the URL and stop trusting `content-encoding` for a
+  fetch-based fetcher. This is a fix to raise separately (recorded here rather
+  than patched silently, per this repo's own rule about surfacing what a
+  redesign or a new caller reveals).
+
+## Next: edge cases to try once the basic flow is confirmed
+
+Once step 1 and step 2 both work cleanly on a small site, here's the list to
+work through for edge-case coverage (matches the failure modes the codebase's
+own non-negotiable rules and milestone log call out):
+
+- **Sitemap index** (multiple child files) vs a single `urlset` file.
+- **A `.gz` sitemap** (real gzip, `.gz` extension) — once the bug above is
+  understood, confirm the `.gz`-suffix path still works correctly.
+- **An index that names zero children**, or a URL that returns a
+  non-2xx status for the sitemap itself — confirms the `suspiciouslyEmpty` /
+  `SitemapUnavailableError` paths (§1.5 in CLAUDE.md).
+- **A site with a mix of healthy and broken URL families** — confirms
+  per-pattern severity doesn't get averaged away by a site-wide number.
+- **A site behind a WAF or one that 403/429s quickly** — confirms the circuit
+  breaker actually opens (`HTTP_CIRCUIT_BREAK_AFTER_429/403`) and the pattern
+  ends up `blocked`, not `broken`.
+- **Soft 404s** (200 status, "page not found" body) — confirms the GET
+  escalation and body-sniff actually fire, and that it costs 2 requests
+  (HEAD + GET), not 1.
+- **A pattern whose GET-escalation share exceeds
+  `HTTP_MAX_GET_ESCALATION_FRACTION`** — should flag for manual review rather
+  than keep spending budget (this fraction is itself one of the twelve
+  documented-but-unenforced limits — see `/settings` in the running app — so
+  confirm what actually happens today rather than what the config implies).
+- **Re-running against a host that already has a site row** — confirms reuse
+  (not a duplicate site) and that `uq_site_organization_host` doesn't 500.
+- **Starting a run while one is already active for that site** — confirms the
+  script's `findActiveRun` guard and the underlying
+  `uq_sitemap_run_one_active_per_site` constraint.
+- **A `--max-requests` value below the planned probe count** — confirms the
+  script cancels before sending a single request rather than sending a partial
+  batch.
+- **A very large pattern** (>400 population) — confirms the first-round sample
+  size caps at `SAMPLE_MAX_FIRST_ROUND` rather than sampling 1% of everything.

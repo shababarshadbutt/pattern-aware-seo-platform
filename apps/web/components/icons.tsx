@@ -154,3 +154,142 @@ export function UserIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+/*
+ * --- Tool-catalogue glyphs. ---
+ *
+ * The Stitch Tools screen gives every utility card an icon tile and marks its
+ * hero panel with a filled accent tile. These are drawn to the same 24px grid
+ * and the same 1.5 stroke as the rail's set above, so a card icon and a rail
+ * icon read as one family rather than two imports.
+ *
+ * Several name capabilities this platform does NOT have — a browser, a robot,
+ * a globe. They are drawn anyway because the cards for those capabilities are
+ * rendered as unavailable rather than hidden (see `lib/tools-catalog.ts`), and
+ * a card with an empty tile reads as a loading failure rather than a refusal.
+ */
+
+export function BoltIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
+    </Svg>
+  );
+}
+
+export function SitemapIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect height="5" rx="1" width="7" x="9" y="2" />
+      <rect height="5" rx="1" width="6" x="2" y="17" />
+      <rect height="5" rx="1" width="6" x="16" y="17" />
+      <path d="M12.5 7v4M5 17v-3h14v3" />
+    </Svg>
+  );
+}
+
+export function BranchIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="6" cy="5" r="2.5" />
+      <circle cx="18" cy="5" r="2.5" />
+      <circle cx="12" cy="19" r="2.5" />
+      <path d="M6 7.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3" />
+      <path d="M12 13.5v3" />
+    </Svg>
+  );
+}
+
+export function TargetIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
+    </Svg>
+  );
+}
+
+export function ExpandIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 9V4h5M20 15v5h-5M4 15v5h5M20 9V4h-5" />
+      <path d="m4 4 6 6M20 20l-6-6M4 20l6-6M20 4l-6 6" />
+    </Svg>
+  );
+}
+
+export function GaugeIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 18a8 8 0 1 1 16 0" />
+      <path d="m12 18 4.5-6" />
+      <circle cx="12" cy="18" r="1.5" />
+    </Svg>
+  );
+}
+
+export function ScaleIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 4v16M7 20h10" />
+      <path d="M4 9h16" />
+      <path d="M4 9 1.5 15h5L4 9ZM20 9l-2.5 6h5L20 9Z" />
+    </Svg>
+  );
+}
+
+export function GlobeIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M4 12h16" />
+      <path d="M12 4a13 13 0 0 1 0 16 13 13 0 0 1 0-16Z" />
+    </Svg>
+  );
+}
+
+export function RobotIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect height="10" rx="2" width="16" x="4" y="9" />
+      <path d="M12 5v4M9.5 14h.01M14.5 14h.01" />
+      <circle cx="12" cy="4" r="1.5" />
+    </Svg>
+  );
+}
+
+export function CodeIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 4l-4 16" />
+    </Svg>
+  );
+}
+
+export function TerminalIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect height="16" rx="2" width="18" x="3" y="4" />
+      <path d="m7 10 2.5 2L7 14M13 15h4" />
+    </Svg>
+  );
+}
+
+export function LayersIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </Svg>
+  );
+}
+
+/** The trailing arrow on a card's launch action. */
+export function ArrowRightIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 12h15M13 6l6 6-6 6" />
+    </Svg>
+  );
+}

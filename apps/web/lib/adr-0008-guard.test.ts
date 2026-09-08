@@ -35,6 +35,19 @@ const SAMPLED_FIELDS = [
   "impactHigh"
 ] as const;
 
+/**
+ * A field no module here may read — not even the adapter.
+ *
+ * `rankScore` is the bare summed impact `listPatternsRanked` orders and pages a
+ * run's patterns by. It is a point value with NO bounds, and the API
+ * deliberately does not put it on the wire; a pattern's rolled-up impact
+ * reaches the UI as `impactScore`/`impactLow`/`impactHigh` instead, which the
+ * list above already polices. So this is not an "adapter reads it" case like
+ * the fields above — it is a name that must not appear in this app at all, and
+ * the day it does is the day someone shipped an interval-less estimate.
+ */
+const FORBIDDEN_FIELDS = ["rankScore"] as const;
+
 /** The only module allowed to read those fields. */
 const ADAPTER_FILE = "estimate.tsx";
 
@@ -138,5 +151,42 @@ describe("ADR-0008: no sampled figure is formatted outside <Estimate>", () => {
     for (const field of SAMPLED_FIELDS) {
       expect(adapter).toContain(`.${field}`);
     }
+  });
+
+  it("no module reads a bounds-free rank score, adapter included", () => {
+    /**
+     * Stricter than the rule above, and deliberately not folded into it: those
+     * fields have one sanctioned reader, and this one has none. Scanning
+     * `estimate.tsx` too is the whole point — an adapter that learned to format
+     * `rankScore` would satisfy every other check in this file while rendering
+     * a summed estimate with no interval.
+     */
+    const offences: string[] = [];
+
+    for (const file of [
+      ...tsxFilesUnder("app"),
+      ...tsxFilesUnder("components"),
+      ...tsxFilesUnder("lib")
+    ]) {
+      const source = readFileSync(file, "utf8");
+
+      for (const [index, line] of source.split("\n").entries()) {
+        const code = line.trim();
+
+        if (code.startsWith("//") || code.startsWith("*")) {
+          continue;
+        }
+
+        for (const field of FORBIDDEN_FIELDS) {
+          if (code.includes(`.${field}`) || code.includes(`${field}:`)) {
+            offences.push(
+              `${file.replace(WEB_ROOT, "")}:${index + 1} touches ${field}, which carries no interval — the API sends impactScore/impactLow/impactHigh for exactly this reason`
+            );
+          }
+        }
+      }
+    }
+
+    expect(offences).toEqual([]);
   });
 });

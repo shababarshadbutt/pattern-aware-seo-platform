@@ -10,7 +10,9 @@
       "!**/.turbo",
       "!**/coverage",
       "!apps/web/next-env.d.ts",
-      "!apps/web/app/globals.css"
+      "!apps/web/app/globals.css",
+      "!docs/design-source",
+      "!screen source"
     ]
   },
   "formatter": {

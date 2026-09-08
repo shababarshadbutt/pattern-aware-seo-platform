@@ -57,3 +57,7 @@ tmp/
 *.xlsx
 !docs/**/*.csv
 !docs/**/*.xlsx
+
+# Downloaded sitemap files between pipeline stages (SITEMAP_STORE_ROOT).
+# Real client sitemaps land here on a live run and must never be committed.
+.sitemaps/

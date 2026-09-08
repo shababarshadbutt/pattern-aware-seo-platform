@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Engine - Issues</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#1f1f28",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#e4e1ee",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "inverse-primary": "#4d44e3",
+                        "surface-container-highest": "#35343e",
+                        "on-surface": "#e4e1ee",
+                        "surface-variant": "#35343e",
+                        "surface": "#13121b",
+                        "surface-dim": "#13121b",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-background": "#e4e1ee",
+                        "surface-tint": "#c3c0ff",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "secondary-fixed": "#e2dfff",
+                        "tertiary": "#ffb695",
+                        "surface-container-lowest": "#0e0d16",
+                        "surface-container-low": "#1b1b24",
+                        "on-primary-fixed": "#0f0069",
+                        "on-secondary": "#2a276a",
+                        "on-primary-container": "#dad7ff",
+                        "on-secondary-fixed": "#140f54",
+                        "error-container": "#93000a",
+                        "secondary-container": "#413f82",
+                        "outline": "#918fa1",
+                        "outline-variant": "#464555",
+                        "surface-bright": "#393842",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "on-primary": "#1d00a5",
+                        "background": "#13121b",
+                        "on-tertiary-container": "#ffd2be",
+                        "surface-container-high": "#2a2933",
+                        "secondary": "#c3c0ff",
+                        "on-tertiary-fixed": "#351000",
+                        "primary": "#c3c0ff",
+                        "on-secondary-fixed-variant": "#413f82",
+                        "on-secondary-container": "#b0aef9",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-surface-variant": "#c7c4d8",
+                        "inverse-on-surface": "#302f39",
+                        "on-error": "#690005",
+                        "primary-fixed": "#e2dfff",
+                        "tertiary-container": "#a44100",
+                        "on-tertiary": "#571f00",
+                        "primary-container": "#4f46e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-margin": "24px",
+                        "component-padding-y": "6px",
+                        "unit": "4px",
+                        "component-padding-x": "12px",
+                        "gutter": "12px"
+                    },
+                    "fontFamily": {
+                        "label-xs": ["JetBrains Mono", "monospace"],
+                        "headline-sm": ["Geist", "sans-serif"],
+                        "data-mono": ["JetBrains Mono", "monospace"],
+                        "body-md": ["Geist", "sans-serif"],
+                        "display-sm": ["Geist", "sans-serif"],
+                        "body-sm": ["Geist", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "label-xs": ["11px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "450" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* Setup Geist font - using a standard sans as fallback for environments without local Geist */
+        @font-face {
+            font-family: 'Geist';
+            src: local('Geist'), local('Helvetica Neue'), local('Arial');
+        }
+        
+        /* Custom scrollbar for data dense tables */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #464555;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #918fa1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md text-body-md min-h-screen flex antialiased">
+<!-- Shared Component: SideNavBar -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin z-50">
+<!-- Header -->
+<div class="px-container-margin mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-white font-bold">
+<span class="material-symbols-outlined" style="font-size: 18px;">radar</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface leading-tight">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant uppercase mt-1">Technical SEO v2.4</p>
+</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">dashboard</span>
+<span class="font-body-sm text-body-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">folder_open</span>
+<span class="font-body-sm text-body-sm">Projects</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">cloud_download</span>
+<span class="font-body-sm text-body-sm">Crawls</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 py-2 text-primary dark:text-primary font-bold border-l-2 border-primary pl-4 bg-surface-container-low/50 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px; font-variation-settings: 'FILL' 1;">error_outline</span>
+<span class="font-body-sm text-body-sm">Issues</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">build</span>
+<span class="font-body-sm text-body-sm">Tools</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">analytics</span>
+<span class="font-body-sm text-body-sm">Analytics</span>
+</a>
+</div>
+<!-- Footer Tabs & CTA -->
+<div class="px-4 mt-auto flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-size: 20px;">description</span>
+<span class="font-body-sm text-body-sm">Documentation</span>
+</a>
+</div>
+<button class="w-full bg-primary-container text-white rounded font-body-sm text-body-sm py-2 hover:opacity-90 transition-opacity">
+                Upgrade Plan
+            </button>
+</div>
+</nav>
+<!-- Main Workspace -->
+<div class="flex-1 flex flex-col ml-[240px] w-[calc(100%-240px)] min-h-screen relative">
+<!-- Shared Component: TopNavBar -->
+<header class="bg-surface dark:bg-surface fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40">
+<!-- Left: Breadcrumb / Context -->
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="font-label-xs text-label-xs uppercase">Enterprise Commerce</span>
+<span class="text-outline-variant">/</span>
+<span class="font-label-xs text-label-xs uppercase text-primary">Technical Issues</span>
+</div>
+<!-- Middle: Nav Links (Hidden if not used semantically, but kept for JSON adherence) -->
+<div class="hidden md:flex items-center gap-6 font-label-xs text-label-xs">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all duration-150" href="#">Projects</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all duration-150" href="#">Date Range</a>
+</div>
+<!-- Right: Actions -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">search</span>
+</button>
+<div class="w-6 h-6 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant cursor-pointer">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A small, professional headshot avatar of a user in a minimalist style, well-lit against a dark background, fitting a sleek UI design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALCqLoBPrbZPy5SwiqDrptnXLp-M42zcRGMCWzH0aIkMJsb5QbCQiaJnoxAsDuM4_YxVzSac8TIZ2QukaY85-lDAsi3psNc4d8nrHQrNWkpMCLEDjHEmMWQ5fDKudLh2Z5mHehAuy7Wc_ku8R8qnqPdWRkkZgCe6lXsRzkNvv_ypY3l1wZhnWp0pobehZ6ocV_E61t6veycjKRA8Bd-aD9xuP0bX0GQ9BtD8raqacxfxnTsGasMROg_g"/>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<main class="flex-1 overflow-y-auto mt-[48px] p-container-margin flex flex-col gap-6">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface">Issue Explorer</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Found 1,248 issues across 50,000 crawled URLs.</p>
+</div>
+<div class="flex gap-2">
+<button class="h-8 px-3 rounded border border-outline-variant text-on-surface flex items-center gap-2 hover:bg-surface-container-low transition-colors font-body-sm text-body-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+                        Export CSV
+                    </button>
+<button class="h-8 px-3 rounded bg-primary-container text-white flex items-center gap-2 hover:opacity-90 transition-opacity font-body-sm text-body-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
+                        Re-crawl
+                    </button>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="flex items-center gap-3 bg-surface-container-lowest p-2 rounded border border-outline-variant">
+<div class="relative flex-1 max-w-xs">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-size: 16px;">search</span>
+<input class="w-full h-8 pl-8 pr-3 bg-surface border-none rounded text-on-surface font-body-sm text-body-sm focus:ring-1 focus:ring-primary focus:outline-none" placeholder="Search issues..." type="text"/>
+</div>
+<div class="w-px h-5 bg-outline-variant mx-1"></div>
+<select class="h-8 bg-surface border-none rounded text-on-surface font-body-sm text-body-sm focus:ring-1 focus:ring-primary py-0 pl-3 pr-8 appearance-none cursor-pointer">
+<option>Status: All</option>
+<option>Open</option>
+<option>Resolved</option>
+<option>Ignored</option>
+</select>
+<select class="h-8 bg-surface border-none rounded text-on-surface font-body-sm text-body-sm focus:ring-1 focus:ring-primary py-0 pl-3 pr-8 appearance-none cursor-pointer">
+<option>Severity: All</option>
+<option>Critical</option>
+<option>Error</option>
+<option>Warning</option>
+</select>
+<select class="h-8 bg-surface border-none rounded text-on-surface font-body-sm text-body-sm focus:ring-1 focus:ring-primary py-0 pl-3 pr-8 appearance-none cursor-pointer">
+<option>Category: All</option>
+<option>Indexability</option>
+<option>Performance</option>
+<option>Content</option>
+<option>Links</option>
+</select>
+<button class="ml-auto text-primary font-label-xs text-label-xs uppercase hover:underline">Clear Filters</button>
+</div>
+<!-- Data Table Container -->
+<div class="rounded border border-outline-variant overflow-hidden bg-surface-container-lowest">
+<table class="w-full text-left border-collapse whitespace-nowrap">
+<thead>
+<tr class="bg-surface-container-high border-b border-outline-variant">
+<th class="py-2 px-4 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider font-semibold w-1/3">Issue Details</th>
+<th class="py-2 px-4 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider font-semibold">Category</th>
+<th class="py-2 px-4 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider font-semibold text-right">Affected URLs</th>
+<th class="py-2 px-4 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider font-semibold">7d Trend</th>
+<th class="py-2 px-4 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider font-semibold w-[120px]">Status</th>
+<th class="py-2 px-4 w-10"></th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm divide-y divide-outline-variant">
+<!-- Row 1: Critical -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">cancel</span>
+<div>
+<div class="font-medium text-on-surface">5xx Server Errors</div>
+<div class="font-label-xs text-label-xs text-on-surface-variant mt-0.5">Pages returning 500/503 status codes</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Indexability</td>
+<td class="py-3 px-4 text-right font-data-mono text-data-mono text-on-surface">1,402</td>
+<td class="py-3 px-4">
+<!-- Sparkline SVG placeholder -->
+<svg class="stroke-error fill-none stroke-2 stroke-linecap-round stroke-linejoin-round" height="20" viewbox="0 0 60 20" width="60">
+<path d="M0,15 L10,12 L20,18 L30,5 L40,8 L50,2 L60,10"></path>
+</svg>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-medium bg-error/10 text-error">
+                                    Open
+                                </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Error -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<div class="font-medium text-on-surface">Missing Meta Descriptions</div>
+<div class="font-label-xs text-label-xs text-on-surface-variant mt-0.5">Pages without meta description tags</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Content</td>
+<td class="py-3 px-4 text-right font-data-mono text-data-mono text-on-surface">8,934</td>
+<td class="py-3 px-4">
+<svg class="stroke-tertiary fill-none stroke-2 stroke-linecap-round stroke-linejoin-round" height="20" viewbox="0 0 60 20" width="60">
+<path d="M0,10 L10,10 L20,12 L30,11 L40,15 L50,14 L60,16"></path>
+</svg>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-medium bg-error/10 text-error">
+                                    Open
+                                </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Warning -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline-variant" style="font-variation-settings: 'FILL' 1;">info</span>
+<div>
+<div class="font-medium text-on-surface">Slow LCP (&gt; 2.5s)</div>
+<div class="font-label-xs text-label-xs text-on-surface-variant mt-0.5">Core Web Vitals performance issue</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Performance</td>
+<td class="py-3 px-4 text-right font-data-mono text-data-mono text-on-surface">420</td>
+<td class="py-3 px-4">
+<svg class="stroke-outline-variant fill-none stroke-2 stroke-linecap-round stroke-linejoin-round" height="20" viewbox="0 0 60 20" width="60">
+<path d="M0,5 L10,8 L20,7 L30,15 L40,12 L50,18 L60,16"></path>
+</svg>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-medium bg-primary/10 text-primary">
+                                    Investigating
+                                </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Resolved -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer opacity-70">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#10B981]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<div class="font-medium text-on-surface line-through decoration-outline-variant">Broken Internal Links</div>
+<div class="font-label-xs text-label-xs text-on-surface-variant mt-0.5">Links pointing to 404 pages</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Links</td>
+<td class="py-3 px-4 text-right font-data-mono text-data-mono text-on-surface">0</td>
+<td class="py-3 px-4">
+<svg class="stroke-[#10B981] fill-none stroke-2 stroke-linecap-round stroke-linejoin-round" height="20" viewbox="0 0 60 20" width="60">
+<path d="M0,2 L10,8 L20,15 L30,18 L40,19 L50,19 L60,20"></path>
+</svg>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-sm text-[11px] font-medium bg-[#10B981]/10 text-[#10B981]">
+                                    Resolved
+                                </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination Footer -->
+<div class="px-4 py-3 border-t border-outline-variant flex items-center justify-between bg-surface-container-high">
+<span class="font-label-xs text-label-xs text-on-surface-variant">Showing 1-4 of 24 issues</span>
+<div class="flex gap-1">
+<button class="w-7 h-7 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface hover:text-on-surface disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined" style="font-size: 16px;">chevron_left</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-primary-container text-white font-label-xs text-label-xs">1</button>
+<button class="w-7 h-7 flex items-center justify-center rounded border border-outline-variant text-on-surface hover:bg-surface font-label-xs text-label-xs">2</button>
+<button class="w-7 h-7 flex items-center justify-center rounded border border-outline-variant text-on-surface hover:bg-surface font-label-xs text-label-xs">3</button>
+<button class="w-7 h-7 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

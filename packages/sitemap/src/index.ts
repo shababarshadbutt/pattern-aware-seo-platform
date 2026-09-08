@@ -1,32 +1,34 @@
+/*
+ * The extraction subtree is re-exported wholesale from its own barrel rather
+ * than file by file, so `.` and `./extraction` cannot drift into publishing
+ * different sets. `./extraction` exists because this barrel also pulls in
+ * `node:fs`, `sax` and a fixture generator — see `extraction/index.ts`.
+ */
 export {
   type AccumulatedPattern,
   type AccumulatorResult,
-  PatternAccumulator,
-  type PatternAccumulatorOptions
-} from "./extraction/pattern-accumulator.js";
-export {
+  type ForeignLoc,
+  isSameHost,
+  LocObserver,
+  type LocObserverOptions,
+  type LocParseResult,
+  normalizeHost,
   PARAM_MIN_OBSERVED_URLS,
   PARAM_SEGMENT,
   PARAM_UNIQUE_RATIO_THRESHOLD,
   PARAM_UNIQUE_THRESHOLD,
+  type ParsedLoc,
+  PatternAccumulator,
+  type PatternAccumulatorOptions,
   PatternTrie,
-  type TerminalFactory
-} from "./extraction/pattern-trie.js";
-export {
+  parseLoc,
   segmentsFromTemplate,
+  type TerminalFactory,
   templateArity,
   templateForSegments,
-  templateParamCount
-} from "./extraction/template.js";
-export {
-  type ForeignLoc,
-  isSameHost,
-  type LocParseResult,
-  normalizeHost,
-  type ParsedLoc,
-  parseLoc,
+  templateParamCount,
   type UnparseableLoc
-} from "./extraction/url-path.js";
+} from "./extraction/index.js";
 export {
   type ParseFileOptions,
   type ParseFileResult,

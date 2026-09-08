@@ -8,6 +8,7 @@ import {
   countPatternsByStatus,
   createOrganization,
   createSite,
+  findRunSamplingHealth,
   listPatternsByPopulation,
   listSitemapFiles,
   listSnapshotsByImpact,
@@ -20,6 +21,7 @@ import {
   createTestDatabase,
   type TestDatabase
 } from "@pattern-aware/database/testing";
+import { measureProportion } from "@pattern-aware/sampling";
 import { createLogger } from "@pattern-aware/shared";
 import { LocalDiskFileStore } from "@pattern-aware/sitemap";
 import {
@@ -424,6 +426,85 @@ describe("the pipeline end to end", () => {
     }
   }, 120_000);
 
+  it("persists exactly what the shared measurement composition produces", async () => {
+    /**
+     * THE PIPELINE HALF OF THE EQUIVALENCE PAIR (ADR-0035).
+     *
+     * `apps/api`'s sample-plan tool answers "what would you conclude from n of
+     * N with h hits?", and the only honest answer is the one the pipeline would
+     * reach for the same numbers. Both now go through `measureProportion`, so
+     * the equivalence is structural — but structure is a claim until something
+     * fails when it breaks.
+     *
+     * This pins the PERSISTED ROW, which is independently-computed ground
+     * truth: it came out of a real run against a real HTTP server and a real
+     * Postgres, not out of calling the function under test. The API side pins
+     * the other end against an HTTP response. If either drifts, the shared
+     * function is the only place the fix can go.
+     *
+     * MEASURED, and one of the two neutralisations I expected did not fire —
+     * recorded rather than quietly dropped, because a "confirmed load-bearing"
+     * claim that was never run is the D3c defect repeating.
+     *
+     * Two DO fail, and THE LAYER NEUTRALISED IN EACH IS `buildSnapshot`'S
+     * DELEGATION TO THE SHARED COMPOSITION: hardcoding
+     * `confidenceBand: "confident"` fails here, and perturbing `ciHigh` by one
+     * fails here.
+     *
+     * Hardcoding `evidenceTier: "estimated"` does NOT fail, and that is a fact
+     * about this fixture rather than about the test: no pattern in the corpus
+     * is sampled to completion, so no `counted` row exists to disagree with.
+     * The tier rule is covered instead where a census can be constructed
+     * directly — `measurement.test.ts`'s n = N case, and the API's
+     * `population=40&sampled=40&hits=6`. Adding a census-sized family to this
+     * corpus would close it here too.
+     */
+    const snapshots = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 100
+    });
+
+    // Anti-vacuity first: a `for` over an empty list asserts nothing at all,
+    // which is the shape that has bitten this suite three times.
+    expect(snapshots.length).toBeGreaterThan(0);
+
+    let compared = 0;
+
+    for (const snapshot of snapshots) {
+      if (snapshot.evidenceTier === "blocked") {
+        // A blocked pattern was never measured, so there is no proportion to
+        // reproduce — the stage writes that row without an estimator at all.
+        continue;
+      }
+
+      const expected = measureProportion([
+        {
+          label: "all",
+          population: snapshot.populationCount,
+          sampled: snapshot.sampleSize,
+          hits: snapshot.observedCount
+        }
+      ]);
+
+      expect({
+        evidenceTier: snapshot.evidenceTier,
+        observedCount: snapshot.observedCount,
+        sampleSize: snapshot.sampleSize,
+        populationCount: snapshot.populationCount,
+        pointEstimate: snapshot.pointEstimate,
+        ciLow: snapshot.ciLow,
+        ciHigh: snapshot.ciHigh,
+        confidenceLevel: snapshot.confidenceLevel,
+        confidenceBand: snapshot.confidenceBand,
+        estimatorVersion: snapshot.estimatorVersion
+      }).toEqual(expected);
+
+      compared += 1;
+    }
+
+    expect(compared).toBeGreaterThan(0);
+  }, 120_000);
+
   it("finalises the run with an honest status", async () => {
     const result = await runFinalize(deps, scope, {
       siteId: scope.siteId,
@@ -440,6 +521,73 @@ describe("the pipeline end to end", () => {
     } else {
       expect(result.reason).toBeUndefined();
     }
+  }, 120_000);
+
+  it("records the requests the origin actually received", async () => {
+    /**
+     * THE PROOF THE ANALYTICS SLICE RESTS ON (ADR-0034).
+     *
+     * `sampling_health.http_requests`, `get_escalations` and `patterns_expanded`
+     * were literal zeros written by `runFinalize` on every real run — visible
+     * only because the demo seed wrote its own figures, which made two shipped
+     * screens look populated while the pipeline reported a platform that sent
+     * no requests at all.
+     *
+     * Ground truth here is the FIXTURE SERVER'S OWN LOG, not another query:
+     * `fixture.requests` records every request the origin received, so this
+     * checks the derivation against reality rather than against itself.
+     */
+    const probeRequests = fixture.requests.filter(
+      (entry) => !entry.includes("/sitemap")
+    );
+    const getProbes = probeRequests.filter((entry) => entry.startsWith("GET "));
+
+    /*
+     * ANTI-VACUITY, ASSERTED FIRST. The fixture serves 200s, so soft-404 sniffs
+     * must have escalated; without these two lines every assertion below could
+     * be 0 === 0 and the whole case would pass with the derivation deleted.
+     * This suite has been bitten by exactly that shape three times.
+     */
+    expect(probeRequests.length).toBeGreaterThan(0);
+    expect(getProbes.length).toBeGreaterThan(0);
+
+    const health = await findRunSamplingHealth(deps.db, scope, runId);
+
+    expect(health).toBeDefined();
+
+    /**
+     * EXACT, not a lower bound, and deliberately so. `summariseRunRequests`
+     * documents itself as a floor because a probe that got no response may have
+     * cost two requests. This fixture has no transport failures, no method
+     * rejections and a single profile-ladder rung, so the floor IS the exact
+     * answer here.
+     *
+     * If a future fixture starts serving errors, extend the fixture or assert
+     * the bound — do NOT loosen this to `toBeLessThanOrEqual`, which would stop
+     * the test noticing the charging rule being dropped altogether.
+     */
+    expect(health?.httpRequests).toBe(probeRequests.length);
+
+    /*
+     * An independent check of the escalation predicate rather than a restatement
+     * of the line above: every escalated probe is a GET and every unescalated
+     * one is a HEAD, so the server's GET count must equal the column.
+     */
+    expect(health?.getEscalations).toBe(getProbes.length);
+
+    /*
+     * And an escalated check really does cost two, so the total must exceed the
+     * number of URLs probed. This is the M5 rule — charging per logical check
+     * is what let a nominal 25 req/s ceiling sustain ~49 req/s.
+     */
+    expect(health?.httpRequests).toBeGreaterThan(getProbes.length);
+
+    /*
+     * A MEASURED zero. No stage records a round above 1, so the honest answer
+     * is 0 — asserted to document the state rather than to bless it, and it
+     * starts failing usefully the day adaptive expansion is wired.
+     */
+    expect(health?.patternsExpanded).toBe(0);
   }, 120_000);
 
   it("refuses a second ingest rather than doubling every population", async () => {

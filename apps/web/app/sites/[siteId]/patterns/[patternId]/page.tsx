@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ApiErrorPanel } from "../../../../../components/api-error";
 import { PageBody, TopBar } from "../../../../../components/app-shell";
+import { DefinitionGrid } from "../../../../../components/definition-grid";
 import {
   Estimate,
   estimateFromSnapshot,
@@ -59,10 +60,32 @@ export default async function PatternDetailPage({
     );
   }
 
-  const { pattern, latestSample, findings, observations } = patternResult.value;
+  const {
+    pattern,
+    latestSample,
+    findings,
+    observations,
+    files,
+    populationFromFiles,
+    observedCount
+  } = patternResult.value;
   const siteName =
     siteResult.status === "fulfilled" ? siteResult.value.site.name : siteId;
   const tone = patternStatusTone(pattern.status);
+
+  /*
+   * The two population figures, compared rather than picked between.
+   *
+   * `pattern.populationCount` is written by the ingest pass; the per-file rows
+   * are written as each file is parsed. They are the same quantity by two
+   * routes, so a mismatch is not a rounding difference — it means a file was
+   * parsed twice or not at all. That is the M6 hazard where a crash between an
+   * in-memory accumulation and its single end-of-run write leaves a run
+   * finishing "clean" with a permanently short population, and it is invisible
+   * unless a screen puts the two numbers next to each other.
+   */
+  const populationDisagrees =
+    files.length > 0 && populationFromFiles !== pattern.populationCount;
 
   return (
     <>
@@ -106,6 +129,16 @@ export default async function PatternDetailPage({
           />
         </div>
 
+        {populationDisagrees && (
+          <p className="mt-4 max-w-prose text-xs text-warning">
+            This pattern records {formatCount(pattern.populationCount)} URLs
+            while its per-file rows sum to {formatCount(populationFromFiles)}.
+            The two are written by different steps, so a disagreement means a
+            file was parsed twice or not at all — treat this pattern&apos;s
+            population, and every estimate scaled by it, as unverified.
+          </p>
+        )}
+
         <h2 className="mt-12 text-lg font-semibold tracking-tight">
           Latest sample
         </h2>
@@ -115,38 +148,51 @@ export default async function PatternDetailPage({
             No sample has been drawn for this pattern yet.
           </p>
         ) : (
-          <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
-            {[
-              { label: "round", value: String(latestSample.round) },
-              {
-                label: "sample size",
-                value: formatCount(latestSample.sampleSize)
-              },
-              {
-                label: "population at draw",
-                value: formatCount(latestSample.populationAtDraw)
-              },
-              { label: "strata", value: String(latestSample.stratumCount) },
-              { label: "method", value: latestSample.method },
-              {
-                label: "k requested",
-                value: formatCount(latestSample.kRequested)
-              },
-              { label: "drawn at", value: formatDateTime(latestSample.drawnAt) }
-            ].map((row) => (
-              <div key={row.label}>
-                <dt className="font-mono text-2xs uppercase tracking-wider text-tertiary">
-                  {row.label}
-                </dt>
-                <dd
-                  className="mt-1 font-mono text-xs tabular-nums text-primary"
-                  data-numeric
-                >
-                  {row.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mt-4">
+            <DefinitionGrid
+              items={[
+                { label: "round", value: String(latestSample.round) },
+                {
+                  label: "sample size",
+                  value: formatCount(latestSample.sampleSize),
+                  title: "URLs this draw selected."
+                },
+                {
+                  /*
+                   * The `n` of the estimate, beside the size that was drawn.
+                   * They differ when a verification pass did not finish, which
+                   * otherwise reads as a smaller sample nobody ordered.
+                   */
+                  label: "observed",
+                  value: formatCount(observedCount),
+                  title:
+                    "URLs actually probed — the n of the estimate. Below the sample size means verification did not finish."
+                },
+                {
+                  label: "population at draw",
+                  value: formatCount(latestSample.populationAtDraw)
+                },
+                { label: "strata", value: String(latestSample.stratumCount) },
+                { label: "method", value: latestSample.method, prose: true },
+                {
+                  label: "k requested",
+                  value: formatCount(latestSample.kRequested)
+                },
+                {
+                  label: "drawn at",
+                  value: formatDateTime(latestSample.drawnAt)
+                }
+              ]}
+            />
+            {observedCount < latestSample.sampleSize && (
+              <p className="mt-3 max-w-prose text-xs text-warning">
+                {formatCount(latestSample.sampleSize - observedCount)} of the{" "}
+                {formatCount(latestSample.sampleSize)} URLs this draw selected
+                have no observation recorded. The estimate below rests on{" "}
+                {formatCount(observedCount)} probes, not the sample size.
+              </p>
+            )}
+          </div>
         )}
 
         <h2 className="mt-12 text-lg font-semibold tracking-tight">Findings</h2>
@@ -239,6 +285,104 @@ export default async function PatternDetailPage({
               })}
             </tbody>
           </table>
+        )}
+
+        <h2 className="mt-12 text-lg font-semibold tracking-tight">
+          Population by file
+        </h2>
+        <p className="mt-1 max-w-prose text-sm text-secondary">
+          {/*
+            COUNTS PER FILE, NEVER URLS. A pattern with 40 million URLs has one
+            row here per file it appears in — this table is the index whose
+            absence forced the legacy engine to re-read every &lt;loc&gt; of
+            every file to resolve a sample.
+          */}
+          Which sitemap files this pattern&apos;s URLs live in, largest
+          contributor first. A sample resolves by opening the files at the top
+          of this list, not by re-reading the sitemap.
+        </p>
+
+        {files.length === 0 ? (
+          <p className="mt-4 text-sm text-secondary">
+            No per-file counts recorded for this pattern.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <caption className="sr-only">
+                Per-file URL counts for this pattern
+              </caption>
+              <thead>
+                <tr className="border-b border-border-strong text-left">
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 pl-3 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                  >
+                    #
+                  </th>
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                  >
+                    File
+                  </th>
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                  >
+                    URLs
+                  </th>
+                  <th
+                    scope="col"
+                    className="py-2 text-right font-mono text-2xs font-medium uppercase tracking-wider text-tertiary"
+                  >
+                    Share
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {files.map((file) => (
+                  <tr
+                    key={file.id}
+                    className="border-b border-border-subtle transition-colors hover:bg-surface"
+                  >
+                    <td
+                      className="py-3 pr-4 pl-3 text-right font-mono text-xs tabular-nums text-tertiary"
+                      data-numeric
+                    >
+                      {file.fileOrdinal}
+                    </td>
+                    <td
+                      className="max-w-[380px] truncate py-3 pr-4 font-mono text-xs text-secondary"
+                      title={file.fileUrl}
+                    >
+                      {file.filename ?? file.fileUrl}
+                    </td>
+                    <td
+                      className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-secondary"
+                      data-numeric
+                    >
+                      {formatCount(file.urlCount)}
+                    </td>
+                    <td
+                      className="py-3 text-right font-mono text-xs tabular-nums text-tertiary"
+                      data-numeric
+                    >
+                      {/*
+                        A share of the summed per-file total, not of
+                        `pattern.populationCount` — dividing by a figure the
+                        rows disagree with would make the column not add to
+                        100% with no way to tell why.
+                      */}
+                      {populationFromFiles === 0
+                        ? "—"
+                        : `${((file.urlCount / populationFromFiles) * 100).toFixed(1)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <h2 className="mt-12 text-lg font-semibold tracking-tight">

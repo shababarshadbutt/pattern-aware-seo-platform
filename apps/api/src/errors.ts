@@ -35,6 +35,28 @@ export class ApiProblem extends Error {
   public static notFound(code: string, message: string): ApiProblem {
     return new ApiProblem(404, code, message);
   }
+
+  /**
+   * A payload the caller must change before retrying.
+   *
+   * Used where the schema cannot express the rule — a bound that depends on
+   * another field after clamping, or a line count inside a string. Distinct
+   * from a zod rejection only in where it is raised, and reported identically.
+   */
+  public static badRequest(code: string, message: string): ApiProblem {
+    return new ApiProblem(400, code, message);
+  }
+
+  /**
+   * A request that is well-formed but conflicts with current state.
+   *
+   * Distinct from a 400: nothing about the payload is wrong, and retrying it
+   * unchanged after the conflict clears will succeed. A duplicate host and a
+   * re-tier during an in-flight run are both this.
+   */
+  public static conflict(code: string, message: string): ApiProblem {
+    return new ApiProblem(409, code, message);
+  }
 }
 
 export function registerErrorHandler(app: ApiInstance, logger: Logger): void {

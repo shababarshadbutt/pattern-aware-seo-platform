@@ -28,12 +28,18 @@ export {
   type AuditSnapshotInsert,
   type AuditSnapshotRow,
   type ConfidenceBandName,
+  countOrganizationSnapshotsBySeverity,
   type EvidenceTier,
   findSnapshotsByPattern,
   ImpossibleClaimError,
   insertAuditSnapshot,
+  listOrganizationSnapshotsByImpact,
   listSnapshotsByImpact,
-  type SeverityClassName
+  listSnapshotsByPatterns,
+  type OrganizationSnapshotRow,
+  type SeverityClassName,
+  type SiteSeverityCount,
+  type SiteSnapshotRow
 } from "./repositories/audit-snapshot.js";
 export {
   createOrganization,
@@ -42,10 +48,17 @@ export {
   type OrganizationRow
 } from "./repositories/organization.js";
 export {
+  countPatterns,
+  countPatternsByDepth,
   countPatternsByStatus,
   findPatternById,
+  type ListPatternsRankedOptions,
   listPatternsByPopulation,
+  listPatternsRanked,
+  type PatternDepthCount,
+  type PatternRankRow,
   type PatternRow,
+  type PatternSort,
   type PatternStatus,
   type PatternStatusCount,
   type PatternUpsert,
@@ -55,12 +68,14 @@ export {
 
 export {
   listPatternFiles,
+  type PatternFileRow,
   type PatternPopulationRow,
   type PatternPopulationUpsert,
   sumPatternPopulation,
   upsertPatternPopulations
 } from "./repositories/pattern-population.js";
 export {
+  countExpandedPatterns,
   findPatternSample,
   findPatternSampleById,
   latestPatternSample,
@@ -71,12 +86,19 @@ export {
 export {
   appendSampleObservations,
   countObservations,
+  countRunObservations,
   type HttpMethodUsed,
+  type HttpStatusClass,
   listObservations,
+  listRunObservations,
   type ObservationTally,
+  type RunObservationRow,
+  type RunRequestSummary,
   type SampleObservationInsert,
   type SampleObservationRow,
-  tallyObservations
+  summariseRunRequests,
+  tallyObservations,
+  tallyRunObservations
 } from "./repositories/sample-observation.js";
 export {
   findRunSamplingHealth,
@@ -87,14 +109,20 @@ export {
 } from "./repositories/sampling-health.js";
 export {
   type CreateSiteInput,
+  countSites,
   createSite,
   findSiteById,
   InvalidSiteUrlError,
+  type ListSitesOptions,
   listSites,
+  SiteHostConflictError,
   type SiteRow,
-  softDeleteSite
+  softDeleteSite,
+  type UpdateSiteInput,
+  updateSite
 } from "./repositories/site.js";
 export {
+  countSitemapFiles,
   type FileParseStatus,
   listSitemapFiles,
   markFileDownloaded,
@@ -109,9 +137,13 @@ export {
   ACTIVE_RUN_STATUSES,
   ActiveRunExistsError,
   findActiveRun,
+  findOrganizationRunById,
   finishRun,
   heartbeatRun,
+  latestRunPerSite,
+  listOrganizationRuns,
   listRuns,
+  type OrganizationRunRow,
   type RunStatus,
   type SitemapRunRow,
   startRun,

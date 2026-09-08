@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCount, formatDateTime } from "./format";
+import { formatBytes, formatCount, formatDateTime } from "./format";
 
 describe("formatDateTime", () => {
   /**
@@ -53,5 +53,28 @@ describe("formatCount", () => {
      */
     expect(formatCount(479.7)).toContain("479.7");
     expect(formatCount(0.45)).toContain("0.45");
+  });
+});
+
+describe("formatBytes", () => {
+  it("shows exact bytes below a kibibyte", () => {
+    /**
+     * "0.1 KiB" would hide the difference between an empty sitemap file and a
+     * small one, and an empty file that parsed cleanly is exactly the case
+     * section 1.5 says must not look like an ordinary success.
+     */
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(512)).toBe("512 B");
+  });
+
+  it("uses binary units, because that is what a file listing shows", () => {
+    expect(formatBytes(1024)).toBe("1.0 KiB");
+    expect(formatBytes(1_048_576)).toBe("1.0 MiB");
+    expect(formatBytes(1_073_741_824)).toBe("1.0 GiB");
+  });
+
+  it("keeps one decimal so a column of sizes stays the same width", () => {
+    expect(formatBytes(1536)).toBe("1.5 KiB");
+    expect(formatBytes(10_485_760)).toBe("10.0 MiB");
   });
 });

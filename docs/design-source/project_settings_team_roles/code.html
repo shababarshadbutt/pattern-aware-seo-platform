@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;450;500&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"secondary":"#c3c0ff","background":"#13121b","surface-container-low":"#1b1b24","outline":"#918fa1","on-tertiary-fixed-variant":"#7b2f00","error-container":"#93000a","secondary-fixed":"#e2dfff","on-error-container":"#ffdad6","surface-container-highest":"#35343e","on-surface":"#e4e1ee","on-tertiary-container":"#ffd2be","on-primary-fixed-variant":"#3323cc","on-primary-fixed":"#0f0069","inverse-on-surface":"#302f39","tertiary-container":"#a44100","on-secondary-container":"#b0aef9","primary-fixed":"#e2dfff","inverse-primary":"#4d44e3","on-surface-variant":"#c7c4d8","primary":"#c3c0ff","on-primary":"#1d00a5","outline-variant":"#464555","on-error":"#690005","surface-container-lowest":"#0e0d16","tertiary-fixed-dim":"#ffb695","error":"#ffb4ab","primary-fixed-dim":"#c3c0ff","on-primary-container":"#dad7ff","surface-container-high":"#2a2933","on-tertiary-fixed":"#351000","on-background":"#e4e1ee","surface-tint":"#c3c0ff","surface-dim":"#13121b","surface-variant":"#35343e","tertiary":"#ffb695","primary-container":"#4f46e5","secondary-container":"#413f82","surface":"#13121b","on-secondary-fixed":"#140f54","surface-container":"#1f1f28","on-secondary-fixed-variant":"#413f82","secondary-fixed-dim":"#c3c0ff","surface-bright":"#393842","on-tertiary":"#571f00","on-secondary":"#2a276a","tertiary-fixed":"#ffdbcc","inverse-surface":"#e4e1ee"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"component-padding-y":"6px","container-margin":"24px","unit":"4px","component-padding-x":"12px","gutter":"12px"},"fontFamily":{"headline-sm":["Geist"],"body-md":["Geist"],"display-sm":["Geist"],"body-sm":["Geist"],"label-xs":["JetBrains Mono"],"data-mono":["JetBrains Mono"]},"fontSize":{"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-sm":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-xs":["11px",{"lineHeight":"12px","fontWeight":"500"}],"data-mono":["13px",{"lineHeight":"16px","fontWeight":"450"}]}}}}</script></head><body class="bg-surface font-body-sm text-body-sm text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-12 px-container-margin flex items-center gap-2 bg-surface-container-lowest"><div class="w-6 h-6 rounded bg-primary-container flex items-center justify-center"><span class="font-label-xs text-label-xs text-on-primary-container font-semibold">SE</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm leading-none text-on-surface">SEO Engine</span><span class="font-label-xs text-label-xs text-outline">Technical SEO v2.4</span></div></div><nav class="flex flex-col gap-1 px-unit py-component-padding-y" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-[16px]">dashboard</span><span class="font-body-sm text-body-sm">Overview</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="projects" href="#"><span class="material-symbols-outlined text-[16px]">folder_open</span><span class="font-body-sm text-body-sm">Projects</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="crawls" href="#"><span class="material-symbols-outlined text-[16px]">radar</span><span class="font-body-sm text-body-sm">Crawls</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="issues" href="#"><span class="material-symbols-outlined text-[16px]">bug_report</span><span class="font-body-sm text-body-sm">Issues</span></a><a aria-current="page" class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg transition-colors bg-primary-container text-on-primary-container font-medium" data-path="tools" href="#"><span class="material-symbols-outlined text-[16px]">build</span><span class="font-body-sm text-body-sm">Tools</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[16px]">monitoring</span><span class="font-body-sm text-body-sm">Analytics</span></a></nav></div><div class="flex flex-col gap-unit p-unit bg-surface-container-lowest"><div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col gap-unit mb-unit"><div class="flex items-center justify-between"><span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Node Cap</span><span class="font-data-mono text-data-mono text-primary">84%</span></div><div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[84%]"></div></div><button class="w-full mt-unit py-component-padding-y px-component-padding-x rounded-lg bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium hover:bg-opacity-90 transition-all">Upgrade Plan</button></div><nav class="flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[16px]">settings</span><span class="font-body-sm text-body-sm">Settings</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentation" href="#"><span class="material-symbols-outlined text-[16px]">menu_book</span><span class="font-body-sm text-body-sm">Documentation</span></a></nav></div></aside><div class="pl-[240px]"><header class="fixed top-0 left-[240px] right-0 h-12 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-container-margin"><div class="flex items-center gap-gutter flex-1 max-w-xl"><div class="flex items-center gap-unit text-outline font-label-xs text-label-xs select-none"><span class="hover:text-on-surface transition-colors cursor-pointer">ENGINE</span><span class="material-symbols-outlined text-[12px]">chevron_right</span><span class="text-on-surface">PRODUCTION</span></div><div class="relative flex items-center flex-1 max-w-md"><span class="material-symbols-outlined absolute left-component-padding-x text-[16px] text-outline pointer-events-none">search</span><input class="w-full h-8 pl-8 pr-component-padding-x bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container-low transition-colors" placeholder="Search projects, URLs or metrics..." type="text"/></div></div><div class="flex items-center gap-gutter"><button class="h-8 px-component-padding-x rounded bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium flex items-center gap-unit hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-[16px]">play_arrow</span><span>Run Test Crawl</span></button><button class="h-8 w-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-12 bg-surface px-container-margin pb-container-margin"><div class="flex flex-col w-full">
+<div class="flex flex-col gap-unit mb-6">
+<div class="flex items-center gap-unit text-outline font-label-xs text-label-xs select-none">
+<span class="hover:text-on-surface transition-colors cursor-pointer">Projects</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="hover:text-on-surface transition-colors cursor-pointer">acme-corp.com</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="hover:text-on-surface transition-colors cursor-pointer">Settings</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary font-medium">Team &amp; Roles</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-1">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Project Settings</h1>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-data-mono text-label-xs flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            acme-corp.com (Prod)
+          </span>
+</div>
+<p class="font-body-sm text-body-sm text-outline">
+          Manage team member access, role-based permissions (RBAC), and project audit logs for ‘acme-corp.com’.
+        </p>
+</div>
+<div class="flex items-center gap-2 self-start md:self-auto">
+<button class="h-8 px-component-padding-x rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm flex items-center gap-unit transition-colors">
+<span class="material-symbols-outlined text-[16px] text-outline">download</span>
+<span>Export Access Audit CSV</span>
+</button>
+<button class="h-8 px-component-padding-x rounded bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium flex items-center gap-unit hover:opacity-95 transition-opacity shadow-sm" id="inviteModalBtn">
+<span class="material-symbols-outlined text-[16px]">person_add</span>
+<span>Invite Member</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-1 mt-4 border-b border-surface-container-highest/40">
+<button class="px-3 py-2 text-outline hover:text-on-surface font-body-sm text-body-sm transition-colors relative flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+        Project Core
+      </button>
+<button class="px-3 py-2 text-outline hover:text-on-surface font-body-sm text-body-sm transition-colors relative flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">hub</span>
+        Integrations
+      </button>
+<button class="px-3 py-2 text-primary font-body-sm text-body-sm font-medium relative flex items-center gap-1.5 after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary">
+<span class="material-symbols-outlined text-[16px]">group</span>
+        Team &amp; Roles
+        <span class="px-1.5 py-0.2 rounded-full bg-primary/10 text-primary font-label-xs text-label-xs">6</span>
+</button>
+<button class="px-3 py-2 text-outline hover:text-on-surface font-body-sm text-body-sm transition-colors relative flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">webhook</span>
+        API &amp; Webhooks
+      </button>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-container-margin items-start">
+<div class="xl:col-span-8 flex flex-col gap-5">
+<div class="bg-surface-container-low rounded-lg p-3 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-2 text-[16px] text-outline pointer-events-none">search</span>
+<input class="w-full h-8 pl-9 pr-3 bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container transition-colors" placeholder="Filter members by name, email, or role..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative">
+<select class="h-8 pl-3 pr-8 bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm appearance-none cursor-pointer focus:outline-none focus:bg-surface-container transition-colors">
+<option>All Roles (Owner, Admin, SEO Eng, Viewer)</option>
+<option>Owner</option>
+<option>Admin</option>
+<option>SEO Engineer</option>
+<option>Viewer</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2 text-[16px] text-outline pointer-events-none">expand_more</span>
+</div>
+<button class="h-8 w-8 rounded bg-surface-container-lowest hover:bg-surface-container text-outline hover:text-on-surface flex items-center justify-center transition-colors" title="Quick filter">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden flex flex-col">
+<div class="px-4 py-3 bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary">badge</span>
+<span class="font-headline-sm text-headline-sm text-on-surface text-[15px]">Active Organization Members</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline uppercase tracking-wider">6 Active Licenses</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest/80 text-outline font-label-xs text-label-xs uppercase tracking-wider select-none">
+<th class="py-2.5 px-4">User</th>
+<th class="py-2.5 px-3">Role</th>
+<th class="py-2.5 px-3">2FA Status</th>
+<th class="py-2.5 px-3">Scoped Permissions</th>
+<th class="py-2.5 px-3">Last Active</th>
+<th class="py-2.5 px-3 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-highest/20 font-body-sm text-body-sm">
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover bg-surface-container-high" data-alt="Close up modern developer portrait of Alex Vance wearing technical black glasses in a dimly lit dark tech workspace with subtle purple ambient rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkZt69LBwaCYDXyzKNjbap8IGho2VWu5IwLqCAx8v3VLxBV4Nl6XWxa47dADYR5gFEsTno3cnU9X3cIZP-OabRlXoaTpey_fim0qtdWk7OyF0hCORYCx20H8_17eY3vRhtfBL5OLOYtEGmjfWvAbn-GO2j7UIUgLsenbc22D9sRfEPoWBvETsWQ1FpPgdzmx-X0WqjXYZyHEHazSZnAk0hj0Db4b4PGVbej75E_oBYN8B7jTWNS3J7pw"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate flex items-center gap-1.5">
+                        Alex Vance
+                        <span class="material-symbols-outlined text-[14px] text-amber-400" title="Project Creator">workspace_premium</span>
+</span>
+<span class="font-data-mono text-label-xs text-outline truncate">alex.vance@acme-corp.com</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary font-label-xs text-label-xs">
+                    Owner
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  Full Root Access (Unrestricted)
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  12 mins ago
+                </td>
+<td class="py-2.5 px-3 text-right">
+<span class="text-outline font-label-xs text-label-xs pr-2">Immutable</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover bg-surface-container-high" data-alt="Portrait of Elena Rostova, a data infrastructure engineer with braided hair wearing neutral minimalist dark sweater illuminated by subtle indigo workstation glow" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJU3d9YAmcH-ij-cB4YQQYqUp62IlI27XLTRivn2Ihdgx4sfp-m9sHt-LdE3gFOADVE5jOfL-XV5bm24tcYdnR1QHh2fc7gcgf3m4iwJG3-dThOosfq3vuybgh5y0sckk_IxVYFfHvtvGMVNfNV-3LuioflP7r6vcXV6-xmmmeFiqkxt6qfQ7gJd1kEX4d-XYE4OvcRBSmBTv87nTFOW_EzbgfStvsUfSV9_ohMpp04ThHMmoKKmnW0w"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate">Elena Rostova</span>
+<span class="font-data-mono text-label-xs text-outline truncate">e.rostova@acme-corp.com</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-xs text-label-xs">
+                    Admin
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  Crawl Nodes, Bot RegEx &amp; Rules
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  Yesterday 18:40
+                </td>
+<td class="py-2.5 px-3 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="px-2 py-1 text-label-xs font-label-xs text-outline hover:text-on-surface bg-surface-container rounded transition-colors">Edit</button>
+<button class="p-1 text-outline hover:text-error rounded transition-colors" title="Revoke access">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover bg-surface-container-high" data-alt="Portrait of Marcus Thorne, senior frontend architect with short beard in modern studio with dark metallic architecture background and soft cool edge light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAejIcIr0u83fxNmM8BCRnT2JeeCKQmsFp8pBA_8XFfK_dx0Jzocz4Lvn8hm9FIReHzXXzC36-9hlGDE6P8zJZiDmbCqeTLgpZDV8q_B3HbvtZBX5f_SMGip_jYFSI7Ntm5iCztT2cmfp5gKYqawYwFJkxOV8LgOQR4FmpAA6mUI_P6bN29g86vqF979uP80E0r-ZUfY-aOxfI2D6t2Y_-xBpUBf4NdGh7i0ujhOZ1PPFCSFCu3gVULdA"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate">Marcus Thorne</span>
+<span class="font-data-mono text-label-xs text-outline truncate">m.thorne@acme-corp.com</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-xs text-label-xs">
+                    SEO Engineer
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  Can Trigger Crawls &amp; Edit Directives
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  3 hrs ago
+                </td>
+<td class="py-2.5 px-3 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="px-2 py-1 text-label-xs font-label-xs text-outline hover:text-on-surface bg-surface-container rounded transition-colors">Edit</button>
+<button class="p-1 text-outline hover:text-error rounded transition-colors" title="Revoke access">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover bg-surface-container-high" data-alt="Portrait of Sarah Jenkins, growth director with confident expression in a sleek glass walled conference office with dark moody ambient grading" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoA9rg_Bc0jLItkBkPFnYbEaRS2DkzOLOBiAW57nWk61J3YcCSlwae6lafO0c24weSpdqKQYDze8r2Fg0YETxnT4qPdAM9z2oHqozEJBq6J17LSwvoZIL1lkqRs4LmOyAiG7qY7Y4VVB7yblUD0Iy4rVhJ-q2jHG9i3r3kMAssAhaRdPlvPML7ZIkQlFYFy0SaE-aBFlyJigMY9GAHs5xOhQvONOP6-yn_xtWreQRT1XvQ2xu9f6v_CQ"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate">Sarah Jenkins</span>
+<span class="font-data-mono text-label-xs text-outline truncate">s.jenkins@acme-corp.com</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-xs text-label-xs">
+                    Analyst
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  Read Analytics &amp; Issue Exports
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  Oct 24, 11:20
+                </td>
+<td class="py-2.5 px-3 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="px-2 py-1 text-label-xs font-label-xs text-outline hover:text-on-surface bg-surface-container rounded transition-colors">Edit</button>
+<button class="p-1 text-outline hover:text-error rounded transition-colors" title="Revoke access">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover bg-surface-container-high" data-alt="Portrait of David K., DevOps engineer in tech hoodie looking at code monitors with dark purple and cyan reflections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsMrpX5fOrg-GYG8ghTOnGVhO7ncyJWS0fjBtPEEsG2OEACSdibz_P2eZTn_kNP50zRgEYW6ltdijcRPw2Hioc3PR5iz5OwB6pSEOUSeM1ICp7OKCFnwwRdDAkmcaG6Yg6pAQ55DQNY5lo1oxH1wwIh5XbvCZnx88vcIo0N646JkqwEJ_eheG3WHl49J2UbJRAEPAf7_WoDuoMsXHj1hPl97vczGzsxG_R8-zM1ru0UV6_03cQN6Hz9A"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-low"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate">David K.</span>
+<span class="font-data-mono text-label-xs text-outline truncate">david.k@acme-corp.com</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container/40 text-secondary font-label-xs text-label-xs">
+                    Admin
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  Node Scaling &amp; Proxy Config
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  Oct 22, 2023
+                </td>
+<td class="py-2.5 px-3 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="px-2 py-1 text-label-xs font-label-xs text-outline hover:text-on-surface bg-surface-container rounded transition-colors">Edit</button>
+<button class="p-1 text-outline hover:text-error rounded transition-colors" title="Revoke access">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-2.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-medium text-on-surface truncate flex items-center gap-1.5">
+                        Guest Auditor
+                        <span class="px-1.5 py-0.2 rounded bg-tertiary-container/30 text-tertiary font-label-xs text-[10px]">Temp Agency</span>
+</span>
+<span class="font-data-mono text-label-xs text-outline truncate">audit-contractor@agency-x.io</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-outline font-label-xs text-label-xs">
+                    Viewer
+                  </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1.5 text-emerald-400 font-data-mono text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Enforced
+                  </span>
+</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-label-xs text-label-xs">
+                  View Only (Expires in 14 days)
+                </td>
+<td class="py-2.5 px-3 font-data-mono text-label-xs text-outline">
+                  Oct 21, 15:12
+                </td>
+<td class="py-2.5 px-3 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="px-2 py-1 text-label-xs font-label-xs text-error hover:bg-error-container/20 rounded transition-colors">Revoke</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden flex flex-col">
+<div class="px-4 py-3 bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-tertiary">hourglass_top</span>
+<span class="font-headline-sm text-headline-sm text-on-surface text-[15px]">Pending Invites &amp; Service Accounts</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline uppercase tracking-wider">1 Pending Request</span>
+</div>
+<div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-container/30">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">smart_toy</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">crawler-bot-svc@acme-corp.com</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-secondary font-label-xs text-label-xs">Service Principal</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">Role: Scoped Crawl Runner • Invited by Elena R. • Expires in 48h</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-7 px-3 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-xs text-label-xs font-medium transition-colors">
+              Resend Invitation
+            </button>
+<button class="h-7 px-2.5 rounded text-error hover:bg-error-container/20 font-label-xs text-label-xs transition-colors">
+              Revoke
+            </button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden flex flex-col">
+<div class="px-4 py-3 bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary">security</span>
+<span class="font-headline-sm text-headline-sm text-on-surface text-[15px]">Granular Permissions Matrix (RBAC)</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">SPEC_REV: v4.2</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest/80 text-outline font-label-xs text-label-xs uppercase tracking-wider">
+<th class="py-2 px-4">Permission Capability</th>
+<th class="py-2 px-2 text-center">Owner</th>
+<th class="py-2 px-2 text-center">Admin</th>
+<th class="py-2 px-2 text-center">SEO Engineer</th>
+<th class="py-2 px-2 text-center">Analyst / Viewer</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-highest/20 font-body-sm text-body-sm">
+<tr class="hover:bg-surface-container/50">
+<td class="py-2 px-4 flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-outline">play_circle</span>
+<span>Trigger On-Demand Crawls</span>
+</td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+</tr>
+<tr class="hover:bg-surface-container/50">
+<td class="py-2 px-4 flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-outline">terminal</span>
+<span>Edit robots.txt Sandbox Directives</span>
+</td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+</tr>
+<tr class="hover:bg-surface-container/50">
+<td class="py-2 px-4 flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-outline">alt_route</span>
+<span>Modify Canonical &amp; Redirect Engine Rules</span>
+</td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+</tr>
+<tr class="hover:bg-surface-container/50">
+<td class="py-2 px-4 flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-outline">key</span>
+<span>Manage API Tokens &amp; Webhooks</span>
+</td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+</tr>
+<tr class="hover:bg-surface-container/50">
+<td class="py-2 px-4 flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-outline">credit_card</span>
+<span>Billing, Quota &amp; Node Provisioning</span>
+</td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-emerald-400">check</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+<td class="py-2 px-2 text-center"><span class="material-symbols-outlined text-[16px] text-outline-variant">close</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="xl:col-span-4 flex flex-col gap-5">
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-surface-container-highest/40 pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">analytics</span>
+<span class="font-headline-sm text-headline-sm text-on-surface text-[15px]">Team Metrics &amp; Seats</span>
+</div>
+<span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 font-data-mono text-label-xs rounded">Compliant</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-outline">Assigned Seats</span>
+<span class="font-data-mono text-on-surface font-semibold">6 <span class="text-outline font-normal">/ 10 Used</span></span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 60%"></div>
+</div>
+<span class="text-outline font-label-xs text-label-xs">4 floating auditor/seat licenses available in Enterprise Tier.</span>
+</div>
+<div class="grid grid-cols-2 gap-2 pt-1">
+<div class="p-2.5 rounded bg-surface-container flex flex-col gap-1">
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">SSO / SAML</span>
+<span class="font-data-mono text-label-xs text-emerald-400 flex items-center gap-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              Okta Enforced
+            </span>
+</div>
+<div class="p-2.5 rounded bg-surface-container flex flex-col gap-1">
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">SCIM Synced</span>
+<span class="font-data-mono text-label-xs text-primary flex items-center gap-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              Automated
+            </span>
+</div>
+</div>
+<div class="p-3 rounded bg-surface-container flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-xs text-label-xs text-outline">MFA Compliance</span>
+<span class="font-headline-sm text-[13px] text-on-surface">100% 2FA Adoption</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-emerald-400">check_circle</span>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between border-b border-surface-container-highest/40 pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">history</span>
+<span class="font-headline-sm text-headline-sm text-on-surface text-[15px]">Recent Access Logs</span>
+</div>
+<button class="text-primary hover:underline font-label-xs text-label-xs">View Full SIEM</button>
+</div>
+<div class="flex flex-col gap-3 relative before:content-[''] before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-surface-container-highest/60">
+<div class="flex items-start gap-3 relative">
+<div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-primary z-10 shrink-0 ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-body-sm text-on-surface"><strong class="font-medium text-primary">Alex V.</strong> updated crawl rate limits</span>
+<span class="font-data-mono text-label-xs text-outline">Target: 45 req/sec • 1h ago</span>
+</div>
+</div>
+<div class="flex items-start gap-3 relative">
+<div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-secondary z-10 shrink-0 ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[14px]">description</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-body-sm text-on-surface"><strong class="font-medium text-secondary">Marcus T.</strong> generated audit report</span>
+<span class="font-data-mono text-label-xs text-outline">Audit #9842 (PDF/CSV) • 4h ago</span>
+</div>
+</div>
+<div class="flex items-start gap-3 relative">
+<div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-tertiary z-10 shrink-0 ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[14px]">person_add</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-body-sm text-on-surface"><strong class="font-medium text-tertiary">Elena R.</strong> invited Sarah J.</span>
+<span class="font-data-mono text-label-xs text-outline">Role: Analyst • Yesterday 14:32</span>
+</div>
+</div>
+<div class="flex items-start gap-3 relative">
+<div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-outline z-10 shrink-0 ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[14px]">vpn_key</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="text-body-sm text-on-surface"><strong class="font-medium text-on-surface">David K.</strong> rotated Bot API Secret</span>
+<span class="font-data-mono text-label-xs text-outline">IP: 198.51.100.44 • Oct 22, 2023</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-tertiary">info</span>
+<span class="font-body-sm text-body-sm font-medium">Enterprise Access Policy</span>
+</div>
+<p class="font-body-sm text-body-sm text-outline leading-relaxed">
+          Need custom role hierarchy, granular path exclusions (e.g. restrict `/checkout` crawl data), or hardware key WebAuthn gating?
+        </p>
+<button class="mt-1 h-7 px-3 self-start rounded bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-xs text-label-xs transition-colors flex items-center gap-1">
+<span>Configure Policy Rules</span>
+<span class="material-symbols-outlined text-[12px]">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" id="inviteModal">
+<div class="bg-surface-container-low rounded-lg w-full max-w-lg p-5 flex flex-col gap-4 shadow-xl border border-surface-container-highest/60">
+<div class="flex items-center justify-between border-b border-surface-container-highest/40 pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary">person_add</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Invite Member to acme-corp.com</h3>
+</div>
+<button class="text-outline hover:text-on-surface transition-colors" id="closeModalBtn">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex flex-col gap-1">
+<label class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Email Address</label>
+<input class="h-9 px-3 bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container transition-colors" placeholder="colleague@acme-corp.com" type="email"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-xs text-label-xs text-outline uppercase tracking-wider">RBAC Role Assignment</label>
+<select class="h-9 px-3 bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container transition-colors">
+<option>SEO Engineer (Can Run Crawls &amp; Edit Rules)</option>
+<option>Admin (Full Project Management)</option>
+<option>Data Engineer (API &amp; Bulk Exports)</option>
+<option>Analyst (Read-only Dashboards)</option>
+<option>Temporary External Auditor (30-day seat)</option>
+</select>
+</div>
+<div class="p-3 bg-surface-container rounded flex flex-col gap-1">
+<span class="font-label-xs text-label-xs text-secondary font-medium uppercase tracking-wider">Security Requirement</span>
+<p class="font-body-sm text-body-sm text-outline">
+            Target domain must authenticate via corporate Okta SAML. 2FA will be automatically required on first login session.
+          </p>
+</div>
+</div>
+<div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-container-highest/40">
+<button class="h-8 px-4 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-colors" id="cancelModalBtn">
+          Cancel
+        </button>
+<button class="h-8 px-4 rounded bg-primary-container text-on-primary-container hover:opacity-95 font-body-sm text-body-sm font-medium transition-opacity">
+          Send Invitation
+        </button>
+</div>
+</div>
+</div>
+<script>
+    (function() {
+      const modal = document.getElementById('inviteModal');
+      const openBtn = document.getElementById('inviteModalBtn');
+      const closeBtn = document.getElementById('closeModalBtn');
+      const cancelBtn = document.getElementById('cancelModalBtn');
+
+      if (openBtn && modal) {
+        openBtn.addEventListener('click', () => {
+          modal.classList.remove('hidden');
+        });
+      }
+
+      function hide() {
+        if (modal) modal.classList.add('hidden');
+      }
+
+      if (closeBtn) closeBtn.addEventListener('click', hide);
+      if (cancelBtn) cancelBtn.addEventListener('click', hide);
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) hide();
+        });
+      }
+    })();
+  </script>
+</div></main></div></body></html>

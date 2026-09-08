@@ -13,7 +13,9 @@
   "dependencies": {
     "@fastify/cors": "^10.1.0",
     "@pattern-aware/database": "workspace:*",
+    "@pattern-aware/sampling": "workspace:*",
     "@pattern-aware/shared": "workspace:*",
+    "@pattern-aware/sitemap": "workspace:*",
     "fastify": "^5.1.0",
     "fastify-type-provider-zod": "^7.0.0",
     "zod": "^4.5.4"

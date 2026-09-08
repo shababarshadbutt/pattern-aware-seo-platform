@@ -1,4 +1,4 @@
-import type { Config } from "@pattern-aware/shared";
+import type { Config, PolicyConfig } from "@pattern-aware/shared";
 
 /**
  * The config the API actually reads — two keys, not the whole environment.
@@ -17,4 +17,26 @@ import type { Config } from "@pattern-aware/shared";
  * `index.ts` still reads the full validated `Config` at the process edge, for
  * the things a process genuinely needs: DATABASE_URL, API_PORT, LOG_LEVEL.
  */
-export type ApiConfig = Pick<Config, "NODE_ENV" | "DEFAULT_ORGANIZATION_SLUG">;
+export type ApiConfig = Pick<
+  Config,
+  | "NODE_ENV"
+  | "DEFAULT_ORGANIZATION_SLUG"
+  | "BASIC_AUTH_USER"
+  | "BASIC_AUTH_PASSWORD"
+>;
+
+/**
+ * `ApiConfig` plus the operational limits the Settings route serves.
+ *
+ * A SEPARATE TYPE, and `ApiConfig` above is deliberately left alone. Only
+ * `buildApp` and `registerSettingsRoutes` need the limits; `org-scope.ts` and
+ * `health.ts` must keep needing exactly two fields, because the narrowness is
+ * the §1.13 fix rather than a stylistic preference.
+ *
+ * Widening `buildApp` costs its callers nothing. The real `Config` is a
+ * structural superset, so `index.ts` still passes what it always did, and a
+ * test spreads `loadPolicyConfig({})` — which parses an empty environment,
+ * since every policy key is defaulted. So the suite still cannot be made to
+ * depend on `REDIS_URL`, which is the invariant that mattered.
+ */
+export type SettingsConfig = ApiConfig & PolicyConfig;

@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import { type Database, internalDatabase } from "../client.js";
+import { sitemapFile } from "../schema/ingestion.js";
 import { patternPopulation } from "../schema/pattern.js";
 import type { SiteScope } from "../scope.js";
 
@@ -87,6 +88,20 @@ export async function upsertPatternPopulations(
 }
 
 /**
+ * One file's contribution to a pattern, named rather than referenced.
+ *
+ * The population row holds a `sitemap_file_id` and nothing a reader could act
+ * on. Which file a pattern's URLs concentrate in is the point of the table —
+ * both for resolution and for anyone asking why a pattern's sample keeps
+ * landing in one place — so the file's URL and ordinal travel with the count.
+ */
+export interface PatternFileRow extends PatternPopulationRow {
+  readonly fileUrl: string;
+  readonly filename: string | null;
+  readonly fileOrdinal: number;
+}
+
+/**
  * The files a pattern's URLs live in, largest contributor first.
  *
  * Ordered by count because resolution reads files in this order: the file
@@ -97,17 +112,39 @@ export async function listPatternFiles(
   db: Database,
   scope: SiteScope,
   patternId: string
-): Promise<readonly PatternPopulationRow[]> {
-  return internalDatabase(db)
-    .select(COLUMNS)
-    .from(patternPopulation)
-    .where(
-      and(
-        eq(patternPopulation.siteId, scope.siteId),
-        eq(patternPopulation.patternId, patternId)
+): Promise<readonly PatternFileRow[]> {
+  return (
+    internalDatabase(db)
+      .select({
+        ...COLUMNS,
+        fileUrl: sitemapFile.url,
+        filename: sitemapFile.filename,
+        fileOrdinal: sitemapFile.fileOrdinal
+      })
+      .from(patternPopulation)
+      /**
+       * Joined on BOTH key columns, not just the file id.
+       *
+       * `sitemap_file` is partitioned by `site_id` with a composite primary key
+       * (ADR-0010); pairing the site id is what keeps the join inside one
+       * partition, and it is the pairing the post-M3 hardening pass added FKs
+       * for after finding a row could reference another site's parent.
+       */
+      .innerJoin(
+        sitemapFile,
+        and(
+          eq(sitemapFile.siteId, patternPopulation.siteId),
+          eq(sitemapFile.id, patternPopulation.sitemapFileId)
+        )
       )
-    )
-    .orderBy(sql`${patternPopulation.urlCount} desc`);
+      .where(
+        and(
+          eq(patternPopulation.siteId, scope.siteId),
+          eq(patternPopulation.patternId, patternId)
+        )
+      )
+      .orderBy(sql`${patternPopulation.urlCount} desc`)
+  );
 }
 
 /**

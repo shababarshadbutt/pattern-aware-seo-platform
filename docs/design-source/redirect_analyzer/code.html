@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Redirect Analyzer - SEO Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-low": "#1b1b24",
+                        "tertiary": "#ffb695",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-secondary": "#2a276a",
+                        "surface-container-highest": "#35343e",
+                        "on-tertiary-fixed": "#351000",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-surface-variant": "#c7c4d8",
+                        "background": "#13121b",
+                        "secondary-fixed": "#e2dfff",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-bright": "#393842",
+                        "inverse-on-surface": "#302f39",
+                        "primary": "#c3c0ff",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "secondary": "#c3c0ff",
+                        "on-surface": "#e4e1ee",
+                        "on-error": "#690005",
+                        "primary-container": "#4f46e5",
+                        "surface-dim": "#13121b",
+                        "error-container": "#93000a",
+                        "inverse-surface": "#e4e1ee",
+                        "outline-variant": "#464555",
+                        "on-tertiary": "#571f00",
+                        "primary-fixed": "#e2dfff",
+                        "surface-container-lowest": "#0e0d16",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "tertiary-container": "#a44100",
+                        "surface": "#13121b",
+                        "on-secondary-fixed": "#140f54",
+                        "on-background": "#e4e1ee",
+                        "surface-tint": "#c3c0ff",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-container": "#b0aef9",
+                        "surface-container-high": "#2a2933",
+                        "on-tertiary-container": "#ffd2be",
+                        "outline": "#918fa1",
+                        "inverse-primary": "#4d44e3",
+                        "surface-variant": "#35343e",
+                        "on-secondary-fixed-variant": "#413f82",
+                        "secondary-container": "#413f82",
+                        "on-primary": "#1d00a5",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container": "#1f1f28"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "component-padding-y": "6px",
+                        "component-padding-x": "12px",
+                        "gutter": "12px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Geist"],
+                        "body-md": ["Geist"],
+                        "display-sm": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "label-xs": ["JetBrains Mono"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-xs": ["11px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "450" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@450;500&display=swap');
+        body { font-family: 'Geist', sans-serif; background-color: #13121b; color: #e4e1ee; }
+        .data-mono { font-family: 'JetBrains Mono', monospace; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+        
+        /* Custom scrollbar for tables */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #13121b; }
+        ::-webkit-scrollbar-thumb { background: #35343e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #464555; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[20px]">search_insights</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-outline">Technical SEO v2.4</p>
+</div>
+</div>
+<ul class="flex-1 space-y-1">
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    Overview
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">folder_open</span>
+                    Projects
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-primary dark:text-primary font-bold border-l-2 border-primary bg-surface-container-low hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">cloud_download</span>
+                    Crawls
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">error_outline</span>
+                    Issues
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">build</span>
+                    Tools
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+                    Analytics
+                </a>
+</li>
+</ul>
+<div class="px-4 mt-auto mb-4">
+<button class="w-full bg-primary-container text-white py-2 rounded-DEFAULT font-body-md text-body-md hover:bg-primary-container/90 transition-colors">Upgrade Plan</button>
+</div>
+<ul class="space-y-1 border-t border-outline-variant pt-4 px-2">
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                    Settings
+                </a>
+</li>
+<li class="px-2">
+<a class="flex items-center gap-3 py-2 px-4 rounded text-on-surface-variant hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                    Documentation
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<div class="ml-[240px] flex-1 flex flex-col h-full bg-background relative">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<div class="flex items-center gap-6 h-full">
+<div class="flex items-center text-outline font-label-xs text-label-xs space-x-2">
+<a class="hover:text-primary transition-colors" href="#">Projects</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">example.com</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Redirect Analyzer</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 text-on-surface-variant">
+<button class="hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</button>
+<button class="hover:text-on-surface transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors font-label-xs text-label-xs">
+<img class="w-6 h-6 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a technical user in a dimly lit studio, sharp focus, cool lighting tones, modern minimal aesthetic, high resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuATKkzg3eHHKZqaok6wNg6dRvjA8R5suUNXIt3cB45Afo7W_PYC95AGXGbLH6y1773LfJud2pdGCKkGZnRUasSVUfklLK1aIEvpmHSk47lvQJQ62hs2i-fqUV8MFdxIAfKH4p8JAxChounsTFeKvswKlADUaT50862GMQWJj3x7ebskJmfwbgGnO-Y_14E1Xlh-91dPFxUaKfztNx78zwmP6-4BjxelqE1aFcyPquFhs7g_PYvzrVnu1A"/>
+                    Profile Settings
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 mt-[48px] overflow-y-auto p-container-margin space-y-gutter relative z-10">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface mb-1">Redirect Analyzer</h2>
+<p class="font-body-sm text-body-sm text-outline">Scan ID: #88392-B • Completed 2 mins ago</p>
+</div>
+<button class="bg-primary-container text-white px-4 py-2 rounded-DEFAULT font-body-sm text-body-sm font-medium hover:bg-primary-container/90 transition-colors flex items-center gap-2 border border-primary-container">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                    Run Audit
+                </button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Distribution Chart (Spans 8 columns) -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-lg p-4">
+<h3 class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-4">Redirect Distribution</h3>
+<div class="flex items-end h-[120px] gap-2">
+<!-- Bars -->
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-on-surface-variant mb-1 opacity-0 group-hover:opacity-100 transition-opacity">12.4k</div>
+<div class="bg-primary/80 hover:bg-primary w-full rounded-t-sm transition-all" style="height: 80%;"></div>
+<div class="text-center font-label-xs text-label-xs text-outline mt-2">301</div>
+</div>
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-on-surface-variant mb-1 opacity-0 group-hover:opacity-100 transition-opacity">2.1k</div>
+<div class="bg-secondary/80 hover:bg-secondary w-full rounded-t-sm transition-all" style="height: 20%;"></div>
+<div class="text-center font-label-xs text-label-xs text-outline mt-2">302</div>
+</div>
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-on-surface-variant mb-1 opacity-0 group-hover:opacity-100 transition-opacity">450</div>
+<div class="bg-tertiary/80 hover:bg-tertiary w-full rounded-t-sm transition-all" style="height: 10%;"></div>
+<div class="text-center font-label-xs text-label-xs text-outline mt-2">307</div>
+</div>
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-on-surface-variant mb-1 opacity-0 group-hover:opacity-100 transition-opacity">12</div>
+<div class="bg-outline/80 hover:bg-outline w-full rounded-t-sm transition-all" style="height: 2%;"></div>
+<div class="text-center font-label-xs text-label-xs text-outline mt-2">308</div>
+</div>
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-error mb-1 opacity-0 group-hover:opacity-100 transition-opacity">84</div>
+<div class="bg-error/80 hover:bg-error w-full rounded-t-sm transition-all" style="height: 35%;"></div>
+<div class="text-center font-label-xs text-label-xs text-error mt-2">Chains</div>
+</div>
+<div class="flex-1 flex flex-col justify-end group">
+<div class="text-center font-data-mono text-data-mono text-error mb-1 opacity-0 group-hover:opacity-100 transition-opacity">3</div>
+<div class="bg-error w-full rounded-t-sm transition-all" style="height: 15%;"></div>
+<div class="text-center font-label-xs text-label-xs text-error font-bold mt-2">Loops</div>
+</div>
+</div>
+</div>
+<!-- Critical Insights (Spans 4 columns) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Loops Card -->
+<div class="bg-[#1a0f12] border border-[#3d181c] rounded-lg p-4 flex-1 flex flex-col justify-center">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded bg-error/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[18px]">sync_problem</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-error">Redirect Loops</h3>
+</div>
+<div class="flex items-end justify-between">
+<span class="font-display-sm text-display-sm text-on-surface">3</span>
+<span class="font-label-xs text-label-xs text-error bg-error/10 px-2 py-1 rounded">Critical</span>
+</div>
+</div>
+<!-- Chains Card -->
+<div class="bg-[#1f1b0a] border border-[#4a421b] rounded-lg p-4 flex-1 flex flex-col justify-center">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded bg-tertiary/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]">linear_scale</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-tertiary">Long Chains</h3>
+</div>
+<div class="flex items-end justify-between">
+<span class="font-display-sm text-display-sm text-on-surface">84</span>
+<span class="font-label-xs text-label-xs text-tertiary bg-tertiary/10 px-2 py-1 rounded">Warning</span>
+</div>
+</div>
+</div>
+<!-- Chain Visualization Widget (Spans 12 columns) -->
+<div class="col-span-12 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Complex Chain Analysis</h3>
+<div class="flex gap-2">
+<button class="p-1 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
+<span class="font-data-mono text-data-mono text-outline">1 / 84</span>
+<button class="p-1 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
+</div>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+<!-- Node 1 -->
+<div class="bg-surface border border-outline-variant rounded p-3 min-w-[200px] shrink-0">
+<div class="font-label-xs text-label-xs text-outline mb-1">Source (Hop 0)</div>
+<div class="font-data-mono text-data-mono text-on-surface truncate">/old-category/products</div>
+</div>
+<!-- Edge 1 -->
+<div class="flex flex-col items-center shrink-0">
+<span class="font-data-mono text-[10px] text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded mb-1 border border-tertiary/20">301</span>
+<div class="w-12 h-px bg-tertiary relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t border-r border-tertiary rotate-45"></div>
+</div>
+</div>
+<!-- Node 2 -->
+<div class="bg-surface border border-outline-variant rounded p-3 min-w-[200px] shrink-0">
+<div class="font-label-xs text-label-xs text-outline mb-1">Intermediate (Hop 1)</div>
+<div class="font-data-mono text-data-mono text-on-surface truncate">/category/products-v1</div>
+</div>
+<!-- Edge 2 -->
+<div class="flex flex-col items-center shrink-0">
+<span class="font-data-mono text-[10px] text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded mb-1 border border-tertiary/20">301</span>
+<div class="w-12 h-px bg-tertiary relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t border-r border-tertiary rotate-45"></div>
+</div>
+</div>
+<!-- Node 3 -->
+<div class="bg-surface border border-outline-variant rounded p-3 min-w-[200px] shrink-0">
+<div class="font-label-xs text-label-xs text-outline mb-1">Intermediate (Hop 2)</div>
+<div class="font-data-mono text-data-mono text-on-surface truncate">/shop/products-v2</div>
+</div>
+<!-- Edge 3 -->
+<div class="flex flex-col items-center shrink-0">
+<span class="font-data-mono text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded mb-1 border border-primary/20">302</span>
+<div class="w-12 h-px bg-primary relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t border-r border-primary rotate-45"></div>
+</div>
+</div>
+<!-- Target Node -->
+<div class="bg-[#122315] border border-[#27482d] rounded p-3 min-w-[200px] shrink-0">
+<div class="font-label-xs text-label-xs text-[#4ade80] mb-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Destination (200 OK)
+                            </div>
+<div class="font-data-mono text-data-mono text-on-surface truncate">/shop/all-products</div>
+</div>
+</div>
+</div>
+<!-- Detailed Data Table (Spans 12 columns) -->
+<div class="col-span-12 bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-[#18181b]">
+<h3 class="font-label-xs text-label-xs text-outline uppercase tracking-wider">All Redirects (15,049)</h3>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-outline">search</span>
+<input class="bg-[#09090b] border border-[#27272a] rounded text-body-sm pl-8 pr-3 py-1 text-on-surface focus:border-primary focus:ring-0 focus:outline-none w-[200px]" placeholder="Filter URLs..." type="text"/>
+</div>
+<button class="bg-transparent border border-[#27272a] text-on-surface px-3 py-1 rounded font-body-sm text-body-sm hover:bg-surface-container-low transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">filter_list</span> Filter
+                            </button>
+<button class="bg-transparent border border-[#27272a] text-on-surface px-3 py-1 rounded font-body-sm text-body-sm hover:bg-surface-container-low transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">download</span> Export
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#18181b] border-b border-outline-variant">
+<th class="p-3 font-label-xs text-label-xs text-outline uppercase font-medium">Source URL</th>
+<th class="p-3 font-label-xs text-label-xs text-outline uppercase font-medium">Type</th>
+<th class="p-3 font-label-xs text-label-xs text-outline uppercase font-medium text-right">Hops</th>
+<th class="p-3 font-label-xs text-label-xs text-outline uppercase font-medium">Final Destination</th>
+<th class="p-3 font-label-xs text-label-xs text-outline uppercase font-medium">Status</th>
+<th class="p-3"></th>
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono text-on-surface-variant divide-y divide-[#27272a]">
+<tr class="hover:bg-[#18181b] transition-colors group">
+<td class="p-3 truncate max-w-[300px]">/old-about-us.html</td>
+<td class="p-3"><span class="bg-primary/10 text-primary px-2 py-0.5 rounded text-[11px] border border-primary/20">301 Permanent</span></td>
+<td class="p-3 text-right">1</td>
+<td class="p-3 truncate max-w-[300px]">/company/about</td>
+<td class="p-3"><span class="text-[#4ade80]">200 OK</span></td>
+<td class="p-3 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button></td>
+</tr>
+<tr class="hover:bg-[#18181b] transition-colors group">
+<td class="p-3 truncate max-w-[300px]">/promo-summer-2023</td>
+<td class="p-3"><span class="bg-secondary/10 text-secondary px-2 py-0.5 rounded text-[11px] border border-secondary/20">302 Temporary</span></td>
+<td class="p-3 text-right">1</td>
+<td class="p-3 truncate max-w-[300px]">/shop/summer-collection</td>
+<td class="p-3"><span class="text-[#4ade80]">200 OK</span></td>
+<td class="p-3 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button></td>
+</tr>
+<tr class="hover:bg-[#18181b] transition-colors group bg-error/5">
+<td class="p-3 truncate max-w-[300px] text-error">/legacy-api/v1/users</td>
+<td class="p-3"><span class="bg-error/10 text-error px-2 py-0.5 rounded text-[11px] border border-error/20">Loop Detected</span></td>
+<td class="p-3 text-right text-error font-bold">∞</td>
+<td class="p-3 truncate max-w-[300px] text-outline">--</td>
+<td class="p-3"><span class="text-error">ERR_TOO_MANY_REDIRECTS</span></td>
+<td class="p-3 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button></td>
+</tr>
+<tr class="hover:bg-[#18181b] transition-colors group bg-tertiary/5">
+<td class="p-3 truncate max-w-[300px]">/blog/old-post-title</td>
+<td class="p-3"><span class="bg-tertiary/10 text-tertiary px-2 py-0.5 rounded text-[11px] border border-tertiary/20">Chain (301 &gt; 301 &gt; 301)</span></td>
+<td class="p-3 text-right text-tertiary font-bold">3</td>
+<td class="p-3 truncate max-w-[300px]">/resources/articles/new-post-title</td>
+<td class="p-3"><span class="text-[#4ade80]">200 OK</span></td>
+<td class="p-3 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button></td>
+</tr>
+<tr class="hover:bg-[#18181b] transition-colors group">
+<td class="p-3 truncate max-w-[300px]">/product/12345</td>
+<td class="p-3"><span class="bg-outline/10 text-outline px-2 py-0.5 rounded text-[11px] border border-outline/20">308 Permanent</span></td>
+<td class="p-3 text-right">1</td>
+<td class="p-3 truncate max-w-[300px]">/p/blue-widget-12345</td>
+<td class="p-3"><span class="text-[#4ade80]">200 OK</span></td>
+<td class="p-3 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

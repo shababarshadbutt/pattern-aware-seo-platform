@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Project Settings - SEO Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#571f00",
+                      "surface-dim": "#13121b",
+                      "on-primary": "#1d00a5",
+                      "inverse-primary": "#4d44e3",
+                      "surface-variant": "#35343e",
+                      "primary-fixed": "#e2dfff",
+                      "surface": "#13121b",
+                      "on-tertiary-fixed": "#351000",
+                      "inverse-on-surface": "#302f39",
+                      "outline": "#918fa1",
+                      "surface-container-lowest": "#0e0d16",
+                      "inverse-surface": "#e4e1ee",
+                      "on-background": "#e4e1ee",
+                      "tertiary-fixed": "#ffdbcc",
+                      "outline-variant": "#464555",
+                      "on-surface": "#e4e1ee",
+                      "error-container": "#93000a",
+                      "on-secondary": "#2a276a",
+                      "surface-container-high": "#2a2933",
+                      "surface-container-low": "#1b1b24",
+                      "on-secondary-container": "#b0aef9",
+                      "primary": "#c3c0ff",
+                      "surface-container-highest": "#35343e",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#413f82",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-secondary-fixed": "#140f54",
+                      "tertiary-container": "#a44100",
+                      "tertiary": "#ffb695",
+                      "surface-container": "#1f1f28",
+                      "on-primary-fixed": "#0f0069",
+                      "on-primary-container": "#dad7ff",
+                      "secondary-fixed": "#e2dfff",
+                      "surface-tint": "#c3c0ff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "background": "#13121b",
+                      "on-tertiary-fixed-variant": "#7b2f00",
+                      "secondary": "#c3c0ff",
+                      "on-tertiary-container": "#ffd2be",
+                      "surface-bright": "#393842",
+                      "secondary-container": "#413f82",
+                      "on-surface-variant": "#c7c4d8",
+                      "error": "#ffb4ab",
+                      "primary-container": "#4f46e5",
+                      "tertiary-fixed-dim": "#ffb695",
+                      "on-error": "#690005",
+                      "secondary-fixed-dim": "#c3c0ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "12px",
+                      "unit": "4px",
+                      "component-padding-x": "12px",
+                      "container-margin": "24px",
+                      "component-padding-y": "6px"
+              },
+              "fontFamily": {
+                      "display-sm": [
+                              "Geist"
+                      ],
+                      "label-xs": [
+                              "JetBrains Mono"
+                      ],
+                      "body-md": [
+                              "Geist"
+                      ],
+                      "headline-sm": [
+                              "Geist"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "display-sm": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-xs": [
+                              "11px",
+                              {
+                                      "lineHeight": "12px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "450"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; background-color: #09090B; color: #e4e1ee; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        /* Strict Fluid Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 12px;
+            padding: 24px;
+        }
+        /* Minimalist-Technical Overrides */
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4F46E5 !important;
+            box-shadow: none !important;
+        }
+        
+        .tab-active {
+            border-bottom: 2px solid #4F46E5;
+            color: #e4e1ee;
+        }
+        .tab-inactive {
+            color: #c7c4d8;
+        }
+        .tab-inactive:hover {
+            color: #e4e1ee;
+        }
+    </style>
+</head>
+<body class="bg-[#09090B] text-on-surface overflow-x-hidden min-h-screen">
+<!-- Shared SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-container-margin z-50">
+<!-- Brand / Header -->
+<div class="px-4 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-white font-bold">SE</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant mt-1">Technical SEO v2.4</p>
+</div>
+</div>
+</div>
+<!-- Main Navigation (Settings is active via intent, falling back to footer) -->
+<ul class="flex flex-col flex-grow gap-1">
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="font-body-md text-body-md">Overview</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+<span class="font-body-md text-body-md">Projects</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">cloud_download</span>
+<span class="font-body-md text-body-md">Crawls</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">error_outline</span>
+<span class="font-body-md text-body-md">Issues</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">build</span>
+<span class="font-body-md text-body-md">Tools</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</a>
+</li>
+</ul>
+<!-- Footer Navigation -->
+<div class="mt-auto pt-4 border-t border-outline-variant/30">
+<ul class="flex flex-col gap-1">
+<li>
+<!-- ACTIVE STATE: Settings -->
+<a class="flex items-center gap-3 py-2 text-primary font-bold border-l-2 border-primary pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 bg-surface-container-low/50" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span class="font-body-md text-body-md">Documentation</span>
+</a>
+</li>
+</ul>
+<div class="px-4 mt-4">
+<button class="w-full bg-primary-container text-white font-body-sm text-body-sm py-2 rounded-[4px] hover:bg-primary-container/90 transition-colors">Upgrade Plan</button>
+</div>
+</div>
+</nav>
+<!-- Shared TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] bg-surface border-b border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<!-- Breadcrumbs / Search -->
+<div class="flex items-center gap-4 flex-1">
+<div class="flex items-center gap-2 font-label-xs text-label-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">search</span>
+<input class="bg-transparent border-none text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0 w-64 p-0" placeholder="Search projects or metrics..." type="text"/>
+</div>
+<div class="h-4 w-px bg-outline-variant/50 mx-2"></div>
+<nav class="flex items-center gap-4">
+<a class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-surface transition-colors" href="#">Projects</a>
+<a class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-surface transition-colors" href="#">Date Range</a>
+</nav>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="bg-transparent border border-[#27272A] text-on-surface font-body-sm text-body-sm px-3 py-1 rounded-[4px] hover:bg-[#18181B] transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                Run Test Crawl
+            </button>
+<div class="flex items-center gap-3 text-on-surface-variant">
+<button class="hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">notifications</span></button>
+<button class="hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">search</span></button>
+</div>
+<div class="flex items-center gap-2 cursor-pointer hover:bg-surface-container-low p-1 rounded transition-colors">
+<div class="w-6 h-6 rounded-full bg-[#18181B] border border-outline-variant overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A small, professional headshot of a user with a neutral expression, minimalist lighting, dark background, technical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB97JdEkgPqLi0vygvkoJvt3Sbn_7ShbfAU3kXPzNjS3woHYeuEvMaKnDf0FOMmdIKsoymcmU0bAdbZyD51_1l7g56ZHjAiD3-5KHCjnN880jblRRZgK2BgIxF8E2E8q9oIhppJSI66fyjSQVQ0yk8Tg9Vlpv4_0APrTYRikgyqaBwFFVpBgpOCuUz1pfIg_cLRgM67pQ2oikRm7SVDWaBVgYIiHHLLlsiiBXEPKK6wnRqWY0T4Ecd_-Q"/>
+</div>
+<span class="font-label-xs text-label-xs text-on-surface-variant">Profile Settings</span>
+</div>
+</div>
+</header>
+<!-- Main Content Workspace -->
+<main class="ml-[240px] mt-[48px] p-container-margin">
+<!-- Page Header -->
+<div class="mb-6 flex justify-between items-end">
+<div>
+<h2 class="font-display-sm text-display-sm font-semibold text-on-surface">Project Settings</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Configure parameters, integrations, and access control for 'acme-corp.com'.</p>
+</div>
+</div>
+<!-- Settings Tabs Navigation -->
+<div class="border-b border-outline-variant mb-6 flex gap-6">
+<button class="pb-2 font-body-sm text-body-sm font-medium tab-active transition-colors">Project Core</button>
+<button class="pb-2 font-body-sm text-body-sm font-medium tab-inactive transition-colors">Integrations</button>
+<button class="pb-2 font-body-sm text-body-sm font-medium tab-inactive transition-colors">Team &amp; Roles</button>
+<button class="pb-2 font-body-sm text-body-sm font-medium tab-inactive transition-colors">API &amp; Webhooks</button>
+</div>
+<!-- Layout Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Main Settings Area (Left 8 Cols) -->
+<div class="col-span-8 flex flex-col gap-6">
+<!-- Project Core Panel -->
+<section class="bg-[#18181B] border border-[#27272A] rounded p-6">
+<h3 class="font-headline-sm text-headline-sm font-semibold mb-4 text-on-surface">Target Configuration</h3>
+<div class="flex flex-col gap-5">
+<!-- Field Group: Domain -->
+<div>
+<label class="block font-label-xs text-label-xs text-on-surface-variant uppercase mb-2">Primary Domain</label>
+<input class="w-full bg-[#09090B] border border-[#27272A] text-on-surface font-data-mono text-data-mono h-[32px] px-3 rounded-[2px]" type="text" value="https://acme-corp.com"/>
+</div>
+<!-- Field Group: Crawl Frequency -->
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block font-label-xs text-label-xs text-on-surface-variant uppercase mb-2">Crawl Frequency</label>
+<select class="w-full bg-[#09090B] border border-[#27272A] text-on-surface font-body-sm text-body-sm h-[32px] px-3 rounded-[2px] appearance-none cursor-pointer">
+<option>Daily</option>
+<option selected="">Weekly (Sunday 00:00 UTC)</option>
+<option>Monthly</option>
+<option>Manual Only</option>
+</select>
+</div>
+<div>
+<label class="block font-label-xs text-label-xs text-on-surface-variant uppercase mb-2">Crawl Depth Limit</label>
+<input class="w-full bg-[#09090B] border border-[#27272A] text-on-surface font-data-mono text-data-mono h-[32px] px-3 rounded-[2px]" type="number" value="5"/>
+</div>
+</div>
+<!-- Field Group: User Agent -->
+<div>
+<label class="block font-label-xs text-label-xs text-on-surface-variant uppercase mb-2">Crawler User Agent</label>
+<select class="w-full bg-[#09090B] border border-[#27272A] text-on-surface font-data-mono text-data-mono h-[32px] px-3 rounded-[2px] appearance-none cursor-pointer">
+<option>SEOEngineBot/2.4 (+http://seoengine.com/bot)</option>
+<option>Googlebot/2.1 (+http://www.google.com/bot.html)</option>
+<option>Googlebot-Smartphone/2.1</option>
+<option>Bingbot/2.0</option>
+</select>
+</div>
+<!-- Advanced Toggles -->
+<div class="pt-4 mt-2 border-t border-[#27272A]">
+<label class="flex items-center gap-3 cursor-pointer">
+<input checked="" class="w-4 h-4 bg-[#09090B] border-[#27272A] rounded-[2px] text-primary-container focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Respect robots.txt directives</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer mt-3">
+<input class="w-4 h-4 bg-[#09090B] border-[#27272A] rounded-[2px] text-primary-container focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Execute JavaScript during crawl (Puppeteer)</span>
+</label>
+</div>
+</div>
+<div class="mt-6 flex justify-end gap-3">
+<button class="bg-transparent text-on-surface font-body-sm text-body-sm px-4 py-2 hover:bg-[#27272A] transition-colors rounded-[4px]">Discard Changes</button>
+<button class="bg-primary-container text-white font-body-sm text-body-sm px-4 py-2 rounded-[4px] hover:bg-primary-container/90 transition-colors">Save Configuration</button>
+</div>
+</section>
+</div>
+<!-- Contextual Information Rail (Right 4 Cols) -->
+<div class="col-span-4 flex flex-col gap-6">
+<!-- Status/Meta Card -->
+<div class="bg-[#18181B] border border-[#27272A] rounded p-5">
+<h4 class="font-label-xs text-label-xs text-on-surface-variant uppercase mb-4 tracking-wider">Project Metadata</h4>
+<dl class="flex flex-col gap-3 font-body-sm text-body-sm">
+<div class="flex justify-between items-center pb-2 border-b border-[#27272A]/50">
+<dt class="text-on-surface-variant">Project ID</dt>
+<dd class="font-data-mono text-data-mono text-on-surface">PRJ-8X9Y2Z</dd>
+</div>
+<div class="flex justify-between items-center pb-2 border-b border-[#27272A]/50">
+<dt class="text-on-surface-variant">Created</dt>
+<dd class="text-on-surface">Oct 12, 2023</dd>
+</div>
+<div class="flex justify-between items-center pb-2 border-b border-[#27272A]/50">
+<dt class="text-on-surface-variant">Last Crawl</dt>
+<dd class="text-on-surface">2 hours ago</dd>
+</div>
+<div class="flex justify-between items-center">
+<dt class="text-on-surface-variant">Status</dt>
+<dd>
+<span class="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded-[2px] font-label-xs text-label-xs">Active</span>
+</dd>
+</div>
+</dl>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple tab switching logic for demonstration
+        document.querySelectorAll('.border-b button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.border-b button').forEach(b => {
+                    b.classList.remove('tab-active');
+                    b.classList.add('tab-inactive');
+                });
+                e.target.classList.add('tab-active');
+                e.target.classList.remove('tab-inactive');
+            });
+        });
+    </script>
+</body></html>

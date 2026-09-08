@@ -9,10 +9,10 @@ import {
 } from "@pattern-aware/database";
 import {
   classifyOutcome,
-  confidenceBandFor,
   DEFAULT_CONFIDENCE_LEVEL,
   ESTIMATOR_VERSION,
   estimateStratified,
+  measureProportion,
   RATIFIED_SEVERITY_TABLE,
   scoreImpact
 } from "@pattern-aware/sampling";
@@ -187,51 +187,39 @@ function buildSnapshot(
     return undefined;
   }
 
-  const estimate = estimateStratified([
+  const observations = [
     {
       label: "all",
       population: sample.populationAtDraw,
       sampled: sampleSize,
       hits: tally.count
     }
-  ]);
+  ];
+
+  /**
+   * The whole measurement — interval, band and evidence tier — comes from the
+   * one shared composition, NOT from re-composing `estimateStratified` and
+   * `confidenceBandFor` here. The sample-plan tool calls the same function, so
+   * the two cannot answer the same question differently; see
+   * `measureProportion`'s docblock for why the composition rather than the
+   * arithmetic is the thing worth sharing.
+   */
+  const measurement = measureProportion(observations);
 
   const impact = scoreImpact(
     {
       outcome: { httpStatus: tally.httpStatus, isSoft404: tally.isSoft404 },
-      estimate
+      estimate: estimateStratified(observations)
     },
     { severityTable: RATIFIED_SEVERITY_TABLE }
   );
-
-  const band = confidenceBandFor({
-    pointEstimate: estimate.pointEstimate,
-    ciLow: estimate.ciLow,
-    ciHigh: estimate.ciHigh,
-    populationCount: estimate.populationCount,
-    isCounted: estimate.isCounted
-  });
 
   return {
     patternId: payload.patternId,
     patternSampleId: payload.patternSampleId,
     sitemapRunId: payload.sitemapRunId,
     httpStatus: tally.httpStatus,
-    /**
-     * `counted` only when the sample covered the population. The CHECK
-     * constraint enforces the same rule, so this is the application agreeing
-     * with the schema rather than the schema catching the application.
-     */
-    evidenceTier: estimate.isCounted ? "counted" : "estimated",
-    observedCount: estimate.observedCount,
-    sampleSize: estimate.sampleSize,
-    populationCount: estimate.populationCount,
-    pointEstimate: estimate.pointEstimate,
-    ciLow: estimate.ciLow,
-    ciHigh: estimate.ciHigh,
-    confidenceLevel: estimate.confidenceLevel,
-    confidenceBand: band,
-    estimatorVersion: ESTIMATOR_VERSION,
+    ...measurement,
     severityClass: classifyOutcome({
       httpStatus: tally.httpStatus,
       isSoft404: tally.isSoft404

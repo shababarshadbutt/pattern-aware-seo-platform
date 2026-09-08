@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./extraction": {
+      "types": "./dist/extraction/index.d.ts",
+      "default": "./dist/extraction/index.js"
     }
   },
   "files": [
@@ -23,8 +27,7 @@
   "dependencies": {
     "@pattern-aware/sampling": "workspace:^",
     "@pattern-aware/shared": "workspace:^",
-    "sax": "^1.6.1",
-    "undici": "^8.10.1"
+    "sax": "^1.6.1"
   },
   "devDependencies": {
     "@types/sax": "^1.2.7"

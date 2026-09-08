@@ -30,7 +30,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Workspace packages ship TypeScript sources compiled by tsc, not bundled, so
   // Next needs to be told they are first-party rather than node_modules.
-  transpilePackages: ["@pattern-aware/shared"]
+  transpilePackages: ["@pattern-aware/shared"],
+  // A self-contained `.next/standalone` server with only the node_modules it
+  // actually traced, so the Docker runtime stage doesn't carry the whole
+  // monorepo's node_modules for a single Next app.
+  output: "standalone"
 };
 
 export default nextConfig;

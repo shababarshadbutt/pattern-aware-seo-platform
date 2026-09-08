@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   confidenceBandTone,
+  enforcementTone,
+  fileParseStatusTone,
   patternStatusTone,
   runStatusTone,
   severityTone,
   siteActiveTone,
-  TONE_VAR
+  sitemapFileTone,
+  TONE_VAR,
+  toolAvailabilityTone
 } from "./status";
 
 /**
@@ -111,5 +115,89 @@ describe("TONE_VAR", () => {
     for (const tone of ["healthy", "warning", "critical", "unknown"] as const) {
       expect(TONE_VAR[tone]).toMatch(/^var\(--status-[a-z]+\)$/u);
     }
+  });
+});
+
+describe("fileParseStatusTone", () => {
+  it("separates a file we could not read from one deliberately skipped", () => {
+    /**
+     * The distinction is product logic, not shading. A `failed` file means the
+     * run's pattern populations are SHORT by whatever it held, so its counts
+     * are wrong rather than merely partial. `skipped` also undercounts, but
+     * somebody chose it — a guard fired — so it warns instead of alarming.
+     */
+    expect(fileParseStatusTone("failed")).toBe("critical");
+    expect(fileParseStatusTone("skipped")).toBe("warning");
+    expect(fileParseStatusTone("skipped")).not.toBe("healthy");
+  });
+
+  it("does not report an in-flight file as healthy", () => {
+    // No measurement yet is not a good result — the same rule the rest of
+    // this file follows.
+    expect(fileParseStatusTone("pending")).toBe("unknown");
+    expect(fileParseStatusTone("downloading")).toBe("unknown");
+    expect(fileParseStatusTone("parsing")).toBe("unknown");
+    expect(fileParseStatusTone("parsed")).toBe("healthy");
+  });
+});
+
+describe("sitemapFileTone", () => {
+  it("refuses to call a parsed-but-empty file healthy", () => {
+    /**
+     * THE §1.5 CASE. An accepted file that yielded zero URLs is
+     * indistinguishable from a legitimately empty one unless something says
+     * so, and an HTML error page parses as valid, URL-less XML — which is how
+     * M2 found this the first time. `parse_status` cannot express it, because
+     * the parse genuinely succeeded, so the tone has to consider the count.
+     */
+    expect(sitemapFileTone("parsed", 0)).toBe("warning");
+    expect(sitemapFileTone("parsed", 0)).not.toBe("healthy");
+  });
+
+  it("leaves a file that actually yielded URLs healthy", () => {
+    expect(sitemapFileTone("parsed", 5700)).toBe("healthy");
+  });
+
+  it("does not let a zero count soften a real failure", () => {
+    // A failed file has no URLs either, and it is still critical — the empty
+    // check must not swallow the more serious state.
+    expect(sitemapFileTone("failed", 0)).toBe("critical");
+    expect(sitemapFileTone("pending", 0)).toBe("unknown");
+  });
+});
+
+describe("enforcementTone", () => {
+  it("warns about an unapplied limit without calling it a failure", () => {
+    /**
+     * The platform is not broken when a limit is inert — it is running on
+     * defaults while a control someone set does nothing. And not `unknown`,
+     * which means "no measurement": whether a limit is enforced is a fact this
+     * codebase knows exactly.
+     */
+    expect(enforcementTone("not_enforced")).toBe("warning");
+    expect(enforcementTone("not_enforced")).not.toBe("critical");
+    expect(enforcementTone("not_enforced")).not.toBe("unknown");
+    expect(enforcementTone("in_force")).toBe("healthy");
+  });
+});
+
+describe("toolAvailabilityTone", () => {
+  it("does not call an unbuilt capability a failure", () => {
+    /**
+     * The Tools grid renders seven cards this platform cannot offer. None of
+     * them is a defect — they are capabilities deliberately never built — and
+     * colouring them red reports a broken product to anyone who reads the grid
+     * before the text. Same inversion `patternStatusTone` carries a warning
+     * about, where a host refusing us was being called critical.
+     */
+    expect(toolAvailabilityTone("unavailable")).toBe("unknown");
+    expect(toolAvailabilityTone("unavailable")).not.toBe("critical");
+  });
+
+  it("warns about a computation nothing in the pipeline runs", () => {
+    // The expansion planner: real, tested, and never executed by a stage. A
+    // reader about to act on it has to be caught, so it is not `healthy`.
+    expect(toolAvailabilityTone("advisory")).toBe("warning");
+    expect(toolAvailabilityTone("operational")).toBe("healthy");
   });
 });

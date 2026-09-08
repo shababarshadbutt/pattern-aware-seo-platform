@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;450;500&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"secondary":"#c3c0ff","background":"#13121b","surface-container-low":"#1b1b24","outline":"#918fa1","on-tertiary-fixed-variant":"#7b2f00","error-container":"#93000a","secondary-fixed":"#e2dfff","on-error-container":"#ffdad6","surface-container-highest":"#35343e","on-surface":"#e4e1ee","on-tertiary-container":"#ffd2be","on-primary-fixed-variant":"#3323cc","on-primary-fixed":"#0f0069","inverse-on-surface":"#302f39","tertiary-container":"#a44100","on-secondary-container":"#b0aef9","primary-fixed":"#e2dfff","inverse-primary":"#4d44e3","on-surface-variant":"#c7c4d8","primary":"#c3c0ff","on-primary":"#1d00a5","outline-variant":"#464555","on-error":"#690005","surface-container-lowest":"#0e0d16","tertiary-fixed-dim":"#ffb695","error":"#ffb4ab","primary-fixed-dim":"#c3c0ff","on-primary-container":"#dad7ff","surface-container-high":"#2a2933","on-tertiary-fixed":"#351000","on-background":"#e4e1ee","surface-tint":"#c3c0ff","surface-dim":"#13121b","surface-variant":"#35343e","tertiary":"#ffb695","primary-container":"#4f46e5","secondary-container":"#413f82","surface":"#13121b","on-secondary-fixed":"#140f54","surface-container":"#1f1f28","on-secondary-fixed-variant":"#413f82","secondary-fixed-dim":"#c3c0ff","surface-bright":"#393842","on-tertiary":"#571f00","on-secondary":"#2a276a","tertiary-fixed":"#ffdbcc","inverse-surface":"#e4e1ee"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"component-padding-y":"6px","container-margin":"24px","unit":"4px","component-padding-x":"12px","gutter":"12px"},"fontFamily":{"headline-sm":["Geist"],"body-md":["Geist"],"display-sm":["Geist"],"body-sm":["Geist"],"label-xs":["JetBrains Mono"],"data-mono":["JetBrains Mono"]},"fontSize":{"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-sm":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-xs":["11px",{"lineHeight":"12px","fontWeight":"500"}],"data-mono":["13px",{"lineHeight":"16px","fontWeight":"450"}]}}}}</script></head><body class="bg-surface font-body-sm text-body-sm text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-12 px-container-margin flex items-center gap-2 bg-surface-container-lowest"><div class="w-6 h-6 rounded bg-primary-container flex items-center justify-center"><span class="font-label-xs text-label-xs text-on-primary-container font-semibold">SE</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm leading-none text-on-surface">SEO Engine</span><span class="font-label-xs text-label-xs text-outline">Technical SEO v2.4</span></div></div><nav class="flex flex-col gap-1 px-unit py-component-padding-y" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-[16px]">dashboard</span><span class="font-body-sm text-body-sm">Overview</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="projects" href="#"><span class="material-symbols-outlined text-[16px]">folder_open</span><span class="font-body-sm text-body-sm">Projects</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="crawls" href="#"><span class="material-symbols-outlined text-[16px]">radar</span><span class="font-body-sm text-body-sm">Crawls</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="issues" href="#"><span class="material-symbols-outlined text-[16px]">bug_report</span><span class="font-body-sm text-body-sm">Issues</span></a><a aria-current="page" class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg transition-colors bg-primary-container text-on-primary-container font-medium" data-path="tools" href="#"><span class="material-symbols-outlined text-[16px]">build</span><span class="font-body-sm text-body-sm">Tools</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[16px]">monitoring</span><span class="font-body-sm text-body-sm">Analytics</span></a></nav></div><div class="flex flex-col gap-unit p-unit bg-surface-container-lowest"><div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col gap-unit mb-unit"><div class="flex items-center justify-between"><span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Node Cap</span><span class="font-data-mono text-data-mono text-primary">84%</span></div><div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[84%]"></div></div><button class="w-full mt-unit py-component-padding-y px-component-padding-x rounded-lg bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium hover:bg-opacity-90 transition-all">Upgrade Plan</button></div><nav class="flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[16px]">settings</span><span class="font-body-sm text-body-sm">Settings</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentation" href="#"><span class="material-symbols-outlined text-[16px]">menu_book</span><span class="font-body-sm text-body-sm">Documentation</span></a></nav></div></aside><div class="pl-[240px]"><header class="fixed top-0 left-[240px] right-0 h-12 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-container-margin"><div class="flex items-center gap-gutter flex-1 max-w-xl"><div class="flex items-center gap-unit text-outline font-label-xs text-label-xs select-none"><span class="hover:text-on-surface transition-colors cursor-pointer">ENGINE</span><span class="material-symbols-outlined text-[12px]">chevron_right</span><span class="text-on-surface">PRODUCTION</span></div><div class="relative flex items-center flex-1 max-w-md"><span class="material-symbols-outlined absolute left-component-padding-x text-[16px] text-outline pointer-events-none">search</span><input class="w-full h-8 pl-8 pr-component-padding-x bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container-low transition-colors" placeholder="Search projects, URLs or metrics..." type="text"/></div></div><div class="flex items-center gap-gutter"><button class="h-8 px-component-padding-x rounded bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium flex items-center gap-unit hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-[16px]">play_arrow</span><span>Run Test Crawl</span></button><button class="h-8 w-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-12 bg-surface px-container-margin pb-container-margin"><div class="flex flex-col w-full">
+<!-- Breadcrumb and Context Meta Bar -->
+<div class="flex items-center justify-between pb-gutter border-b border-surface-container-high/40">
+<div class="flex items-center gap-2 font-label-xs text-label-xs tracking-wide">
+<span class="text-outline uppercase hover:text-on-surface transition-colors cursor-pointer">Projects</span>
+<span class="material-symbols-outlined text-[13px] text-outline">chevron_right</span>
+<span class="text-outline uppercase hover:text-on-surface transition-colors cursor-pointer">acme-corp.com</span>
+<span class="material-symbols-outlined text-[13px] text-outline">chevron_right</span>
+<span class="text-outline uppercase">Settings</span>
+<span class="material-symbols-outlined text-[13px] text-outline">chevron_right</span>
+<span class="text-primary font-medium tracking-normal">Integrations</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-2 py-1 bg-surface-container-lowest rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+<span class="font-data-mono text-label-xs text-on-surface-variant">PIPELINE: ACTIVE</span>
+</div>
+<div class="font-data-mono text-label-xs text-outline">
+        ENV: <span class="text-on-surface">PROD-US-EAST-1</span>
+</div>
+</div>
+</div>
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between pt-gutter pb-6 gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Project Settings</h1>
+<span class="px-2 py-0.5 bg-surface-container-high rounded text-on-surface-variant font-data-mono text-label-xs">ID: prj_acme_8920a</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+        Configure third-party data connectors, search engine integrations, and alerting endpoints for <code class="text-primary font-data-mono px-1.5 py-0.5 bg-surface-container-low rounded">acme-corp.com</code>.
+      </p>
+</div>
+<!-- Global CTA set -->
+<div class="flex items-center gap-2 shrink-0">
+<button class="h-8 px-component-padding-x rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm flex items-center gap-2 transition-all" onclick="testAllConnections(this)">
+<span class="material-symbols-outlined text-[16px]">network_ping</span>
+<span>Test All Connections</span>
+</button>
+<button class="h-8 px-component-padding-x rounded bg-primary-container hover:bg-primary-container/90 text-on-primary-container font-body-sm text-body-sm font-medium flex items-center gap-2 shadow-sm transition-all">
+<span class="material-symbols-outlined text-[16px]">add_link</span>
+<span>Add Integration</span>
+</button>
+</div>
+</div>
+<!-- Tabs Navigation Header -->
+<div class="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg self-start mb-6">
+<a class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">tune</span>
+<span>Project Core</span>
+</a>
+<a class="px-3 py-1.5 rounded bg-surface-container text-on-surface font-body-sm text-body-sm font-medium shadow-sm flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px] text-primary">hub</span>
+<span>Integrations</span>
+<span class="ml-1 px-1.5 py-0.2 rounded-full bg-primary/20 text-primary font-data-mono text-[10px] leading-tight">8</span>
+</a>
+<a class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">group</span>
+<span>Team &amp; Roles</span>
+</a>
+<a class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined text-[15px]">webhook</span>
+<span>API &amp; Webhooks</span>
+</a>
+</div>
+<!-- Main 12-Column Content Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Left / Center Heavy Content Column (8 cols) -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<!-- SECTION 1: Search Engine Consoles -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">search_check</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Search Engine Console Integrations</h2>
+</div>
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">3 Connected</span>
+</div>
+<div class="flex flex-col gap-2">
+<!-- GSC Card -->
+<div class="bg-surface-container rounded-lg p-4 transition-all hover:bg-surface-container-high/60">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[20px]">troubleshoot</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">Google Search Console</span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-label-xs text-label-xs">
+<span class="w-1 h-1 rounded-full bg-emerald-400"></span>Connected
+                    </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-outline font-data-mono text-[10px]">OAuth 2.0</span>
+</div>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>Property: <code class="font-data-mono text-primary text-label-xs bg-surface-container-lowest px-1 rounded">sc-domain:acme-corp.com</code></span>
+<span class="text-outline/50">•</span>
+<span>Permissions: <span class="text-on-surface font-medium">Full Read</span></span>
+</div>
+</div>
+</div>
+<!-- Action button cluster -->
+<div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+<button class="h-7 px-2.5 rounded bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+<span class="text-[12px]">Sync Now</span>
+</button>
+<button class="h-7 px-2.5 rounded bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[14px]">key</span>
+<span class="text-[12px]">Re-authenticate</span>
+</button>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-surface-container-highest/40 flex flex-wrap items-center justify-between font-label-xs text-label-xs text-outline gap-2">
+<div class="flex items-center gap-4">
+<span>Sync Frequency: <span class="font-data-mono text-on-surface">Hourly (Next: 46m)</span></span>
+<span>Last payload: <span class="font-data-mono text-on-surface">14 mins ago</span></span>
+</div>
+<div class="flex items-center gap-1 text-emerald-400 font-data-mono">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+<span>Coverage: 148,290 URLs verified</span>
+</div>
+</div>
+</div>
+<!-- Bing Webmaster Card -->
+<div class="bg-surface-container rounded-lg p-4 transition-all hover:bg-surface-container-high/60">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">manage_search</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">Bing Webmaster Tools</span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-label-xs text-label-xs">
+<span class="w-1 h-1 rounded-full bg-emerald-400"></span>Connected
+                    </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>API Token: <code class="font-data-mono text-on-surface text-label-xs bg-surface-container-lowest px-1 rounded">bin_••••••••••••94f1</code></span>
+<span class="text-outline/50">•</span>
+<span>IndexNow Protocol: <span class="text-emerald-400 font-medium font-data-mono text-label-xs">ENABLED</span></span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+<button class="h-7 px-2.5 rounded bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[14px]">tune</span>
+<span class="text-[12px]">Configure</span>
+</button>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-surface-container-highest/40 flex items-center justify-between font-label-xs text-label-xs text-outline">
+<span>Last sync: <span class="font-data-mono text-on-surface">3 hours ago</span></span>
+<span class="font-data-mono text-outline">API quota: 1,280 / 10,000 reqs</span>
+</div>
+</div>
+<!-- GA4 Card -->
+<div class="bg-surface-container rounded-lg p-4 transition-all hover:bg-surface-container-high/60">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-tertiary text-[20px]">analytics</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">Google Analytics 4 (GA4)</span>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-label-xs text-label-xs">
+<span class="w-1 h-1 rounded-full bg-emerald-400"></span>Active Stream
+                    </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 font-body-sm text-body-sm text-on-surface-variant">
+<span>Measurement ID: <code class="font-data-mono text-primary text-label-xs bg-surface-container-lowest px-1 rounded">G-89X24N89</code></span>
+<span class="text-outline/50">•</span>
+<span>Attribution: Organic Sessions, First User Default Channel</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+<span class="font-data-mono text-label-xs text-on-surface-variant px-2 py-1 bg-surface-container-lowest rounded">Stream: Web-Prod</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: Cloud Storage & Data Export Pipelines -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">cloud_sync</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Cloud Storage &amp; Data Export Pipelines</h2>
+</div>
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Parquet / JSONL Streaming</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<!-- BigQuery Card -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col justify-between gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">database</span>
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">Google BigQuery</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Auto-exports indexed crawl snapshots, link graphs, and header anomaly logs directly after crawl finish.
+              </p>
+<div class="p-2 bg-surface-container-lowest rounded flex flex-col gap-1 font-data-mono text-label-xs">
+<span class="text-outline">TARGET DATASET:</span>
+<span class="text-primary truncate">seo_intelligence_prod.crawls_partitioned</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-surface-container-highest/40 font-label-xs text-label-xs text-outline">
+<span>Auto-Partition: <span class="text-on-surface">DAY(_crawl_time)</span></span>
+<span class="text-emerald-400 font-data-mono">Ready</span>
+</div>
+</div>
+<!-- AWS S3 / Cloudflare R2 Card -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col justify-between gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-[20px]">folder_zip</span>
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">AWS S3 / Cloudflare R2</span>
+</div>
+<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-label-xs text-label-xs font-data-mono">ACTIVE</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Raw HTML payloads, compressed response headers, and DOM-diff bundles preserved for regression training.
+              </p>
+<div class="p-2 bg-surface-container-lowest rounded flex flex-col gap-1 font-data-mono text-label-xs">
+<span class="text-outline">BUCKET TARGET:</span>
+<span class="text-on-surface truncate">acme-seo-crawler-dumps-us-east-1</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-surface-container-highest/40 font-label-xs text-label-xs text-outline">
+<span>Format: <span class="font-data-mono text-on-surface">Snappy.Parquet</span></span>
+<span class="font-data-mono text-on-surface">3.8 TB stored</span>
+</div>
+</div>
+<!-- Google Cloud Storage (Available / Inactive) -->
+<div class="col-span-1 md:col-span-2 bg-surface-container/60 rounded-lg p-3.5 flex items-center justify-between border border-dashed border-outline-variant/40">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-lowest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Google Cloud Storage (GCS) Coldline</span>
+<span class="font-body-sm text-body-sm text-outline">Offload long-term multi-year historical logs for compliance and enterprise auditing.</span>
+</div>
+</div>
+<button class="h-7 px-3 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">add</span>
+<span>Connect Bucket</span>
+</button>
+</div>
+</div>
+</section>
+<!-- SECTION 3: Notification & Alerting Connectors -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">notifications_active</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Notification &amp; Alerting Connectors</h2>
+</div>
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Zero-Latency Webhooks</span>
+</div>
+<div class="bg-surface-container rounded-lg divide-y divide-surface-container-highest/40">
+<!-- Slack Connector -->
+<div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">tag</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Slack Bot Alerting</span>
+<code class="font-data-mono text-label-xs text-primary bg-surface-container-lowest px-1.5 py-0.5 rounded">#seo-engineering-alerts</code>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Triggers on Critical 4xx/5xx spikes (&gt;50 URLs/hr), canonical loops detected, or robots.txt disallow regressions.
+                </p>
+</div>
+</div>
+<div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+<button class="h-7 px-2.5 rounded bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm flex items-center gap-1.5 transition-colors" onclick="triggerTestNotification(this)">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span class="text-[12px]">Send Test</span>
+</button>
+<button class="h-7 w-7 rounded bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+</div>
+</div>
+<!-- PagerDuty Sev-1 Trigger -->
+<div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error text-[20px]">warning</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-on-surface font-semibold">PagerDuty / Webhook</span>
+<span class="px-1.5 py-0.5 rounded bg-error-container/40 text-error font-label-xs text-label-xs font-data-mono">SEV-1 ONLY</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Direct escalation on site-wide homepage noindex tags, DNS failure during crawl, or wholesale render dropout.
+                </p>
+</div>
+</div>
+<div class="flex items-center gap-3 self-end md:self-auto shrink-0">
+<span class="font-data-mono text-label-xs text-outline">Service: SEO-Production-Watcher</span>
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+</div>
+</div>
+<!-- Linear / Jira Issue Sync -->
+<div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[20px]">check_box</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Linear Issue Tracker</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-on-surface-variant font-data-mono text-label-xs">Team: ENG-SEO</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Automatically files indexed triage tickets with stack traces for orphaned pages and structured schema parse errors.
+                </p>
+</div>
+</div>
+<div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+<span class="font-label-xs text-label-xs text-outline">Auto-assign: <span class="text-on-surface font-data-mono">@seo-oncall</span></span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: Crawler & Proxy Network -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-[18px]">dns</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Crawler &amp; Distributed Proxy Network</h2>
+</div>
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Cluster Status</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<!-- BrightData / Oxylabs Node Pool -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Residential Proxy Pool</span>
+<span class="font-data-mono text-label-xs text-emerald-400">99.8% Success</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between font-label-xs text-label-xs">
+<span class="text-outline">Bandwidth Allocation</span>
+<span class="font-data-mono text-on-surface">1.2 TB / 5.0 TB (24%)</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 24%"></div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-surface-container-highest/40 font-label-xs text-label-xs text-outline">
+<span>Active rotating exit nodes: <span class="font-data-mono text-on-surface">24 IP targets</span></span>
+<span>Provider: <span class="text-on-surface">BrightData + Oxylabs</span></span>
+</div>
+</div>
+<!-- Headless Chrome Cluster -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Headless Chrome Cluster</span>
+<span class="font-data-mono text-label-xs text-primary">k8s-us-central1</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex flex-col">
+<span class="font-display-sm text-display-sm text-on-surface font-data-mono">16</span>
+<span class="font-label-xs text-label-xs text-outline">Worker Pods</span>
+</div>
+<div class="h-8 w-px bg-surface-container-highest"></div>
+<div class="flex flex-col">
+<span class="font-display-sm text-display-sm text-on-surface font-data-mono">120<span class="text-body-sm font-normal text-outline">/s</span></span>
+<span class="font-label-xs text-label-xs text-outline">Render Rate</span>
+</div>
+<div class="h-8 w-px bg-surface-container-highest"></div>
+<div class="flex flex-col">
+<span class="font-display-sm text-display-sm text-emerald-400 font-data-mono">312<span class="text-body-sm font-normal text-outline">ms</span></span>
+<span class="font-label-xs text-label-xs text-outline">Avg DOM Ready</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-surface-container-highest/40 font-label-xs text-label-xs text-outline">
+<span>Puppeteer Core: <span class="font-data-mono text-on-surface">v22.4.0</span></span>
+<span class="text-emerald-400">All Nodes Healthy</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Sidebar Panel (4 cols) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+<!-- INTEGRATION METRICS Card -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col gap-4 shadow-sm">
+<div class="flex items-center justify-between border-b border-surface-container-highest/40 pb-2.5">
+<span class="font-label-xs text-label-xs uppercase tracking-wider text-outline">Integration Health &amp; Metrics</span>
+<span class="material-symbols-outlined text-outline text-[16px]">sensors</span>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-container-lowest p-3 rounded flex flex-col">
+<span class="font-label-xs text-label-xs text-outline">ACTIVE CONNECTORS</span>
+<span class="font-data-mono text-headline-sm text-on-surface mt-1">8 <span class="text-label-xs text-outline font-normal">/ 12</span></span>
+<span class="font-label-xs text-[10px] text-emerald-400 mt-0.5">66.7% coverage</span>
+</div>
+<div class="bg-surface-container-lowest p-3 rounded flex flex-col">
+<span class="font-label-xs text-label-xs text-outline">INGESTION SPEED</span>
+<span class="font-data-mono text-headline-sm text-primary mt-1">4.2 <span class="text-label-xs text-outline font-normal">MB/s</span></span>
+<span class="font-label-xs text-[10px] text-on-surface-variant mt-0.5">Steady stream</span>
+</div>
+</div>
+<!-- Telemetry Activity Mini-Graph SVG -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-xs text-label-xs">
+<span class="text-outline">Sync Throughput (Past 6 Hours)</span>
+<span class="font-data-mono text-on-surface">Peak: 8.9 MB/s</span>
+</div>
+<div class="h-14 bg-surface-container-lowest rounded p-2 flex items-end">
+<svg class="w-full h-full text-primary" preserveaspectratio="none" viewbox="0 0 200 40">
+<path d="M0,35 L20,32 L40,28 L60,34 L80,18 L100,12 L120,24 L140,8 L160,19 L180,15 L200,4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+<path d="M0,35 L20,32 L40,28 L60,34 L80,18 L100,12 L120,24 L140,8 L160,19 L180,15 L200,4 L200,40 L0,40 Z" fill="currentColor" opacity="0.08"></path>
+</svg>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm pt-1">
+<span class="text-on-surface-variant">Last Global Sync:</span>
+<span class="font-data-mono text-on-surface">14 minutes ago</span>
+</div>
+</div>
+<!-- AUTHENTICATION AUDIT Card -->
+<div class="bg-surface-container rounded-lg p-4 flex flex-col gap-3.5 shadow-sm">
+<div class="flex items-center justify-between border-b border-surface-container-highest/40 pb-2.5">
+<span class="font-label-xs text-label-xs uppercase tracking-wider text-outline">Authentication Audit</span>
+<span class="material-symbols-outlined text-outline text-[16px]">verified_user</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="p-3 bg-surface-container-lowest rounded flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-body-sm text-body-sm">
+<span class="text-on-surface font-medium">Google Search Console</span>
+<span class="text-emerald-400 font-data-mono text-label-xs">VALID</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline">
+              OAuth token renewal: <span class="text-on-surface font-data-mono">In 48 days</span> (Auto-rotation enabled)
+            </span>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden mt-1">
+<div class="h-full bg-emerald-400 rounded-full" style="width: 72%"></div>
+</div>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded flex flex-col gap-1">
+<div class="flex items-center justify-between font-body-sm text-body-sm">
+<span class="text-on-surface font-medium">AWS IAM Access Key</span>
+<span class="text-emerald-400 font-data-mono text-label-xs">VALID</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline">
+              Key ID: <code class="font-data-mono text-on-surface">AKIA••••••••••39G</code>
+</span>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded flex flex-col gap-1">
+<div class="flex items-center justify-between font-body-sm text-body-sm">
+<span class="text-on-surface font-medium">Slack OAuth Bot Token</span>
+<span class="text-emerald-400 font-data-mono text-label-xs">PERMANENT</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline">
+              Workspace: <span class="text-on-surface">Acme Global Tech</span>
+</span>
+</div>
+</div>
+<button class="w-full py-1.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm rounded transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">shield</span>
+<span>Review Credential Scopes</span>
+</button>
+</div>
+<!-- Quick Setup Guide / Context Box -->
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-2 text-primary font-headline-sm text-body-md font-semibold">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+<span>CLI Direct Integration</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          Need to pipe local Staging crawls or headless CI/CD runs into this dataset? Authenticate using the SEO Engine CLI agent:
+        </p>
+<div class="bg-surface-container-lowest p-2.5 rounded font-data-mono text-label-xs text-on-surface select-all overflow-x-auto">
+          npx @seo-engine/cli push --project=acme-corp --token=env:SEO_ENGINE_KEY
+        </div>
+</div>
+</div>
+</div>
+<!-- Toast Notification Simulator Script -->
+<div class="fixed bottom-4 right-4 bg-surface-container-highest text-on-surface px-4 py-2.5 rounded-lg shadow-xl font-body-sm text-body-sm flex items-center gap-2 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-200 z-50" id="toastNotification">
+<span class="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
+<span id="toastMessage">Test alert dispatched to Slack channel.</span>
+</div>
+<script>
+    function triggerTestNotification(btn) {
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[14px] animate-spin">refresh</span><span class="text-[12px]">Sending...</span>';
+      
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        showToast('Test notification payload sent to #seo-engineering-alerts (200 OK)');
+      }, 700);
+    }
+
+    function testAllConnections(btn) {
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span><span>Testing 8 Connectors...</span>';
+      
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        showToast('All 8 integrations verified active. Latency: 42ms.');
+      }, 1200);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      const msg = document.getElementById('toastMessage');
+      msg.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+  </script>
+</div></main></div></body></html>

@@ -1,8 +1,8 @@
 import { createReadStream } from "node:fs";
 import type { Readable } from "node:stream";
 
+import { LocObserver } from "../extraction/loc-observer.js";
 import type { PatternAccumulator } from "../extraction/pattern-accumulator.js";
-import { parseLoc } from "../extraction/url-path.js";
 import { type StreamLocsResult, streamLocs } from "../parser/loc-stream.js";
 
 /** One sitemap file to read. */
@@ -73,9 +73,17 @@ export async function parseSitemapStream(
   accumulator: PatternAccumulator,
   options: ParseFileOptions
 ): Promise<ParseFileResult> {
-  let matchedUrls = 0;
-  let foreignUrls = 0;
-  let unparseableUrls = 0;
+  /*
+   * The loc-to-observation rules live in `LocObserver`, shared with the
+   * pattern-extraction tool. What stays here is the part that genuinely
+   * belongs to a stream: the early stop. `LocObserver` has no `maxUrls`
+   * because a caller folding a pasted list has nothing to stop reading.
+   */
+  const observer = new LocObserver(accumulator, {
+    baseUrl: options.baseUrl,
+    expectedHost: options.expectedHost,
+    fileId: file.fileId
+  });
 
   const streamOptions =
     file.isGzip === undefined ? {} : { isGzip: file.isGzip };
@@ -83,36 +91,12 @@ export async function parseSitemapStream(
   const stream = await streamLocs(
     source,
     (loc, ordinal) => {
-      const parsed = parseLoc(loc, options.baseUrl, options.expectedHost);
+      observer.observe(loc, ordinal);
 
-      if (parsed.kind === "foreign") {
-        foreignUrls += 1;
-
-        return;
-      }
-
-      if (parsed.kind === "unparseable") {
-        unparseableUrls += 1;
-
-        return;
-      }
-
-      /**
-       * The PATH is hashed, not the full URL.
-       *
-       * Both are reproducible, but the path is what a re-read can recompute:
-       * resolving a sampled candidate later means reading this file at this
-       * ordinal and running `parseLoc` again, so the value hashed at collection
-       * has to be the value derivable at resolution. It is also shorter, and
-       * this runs once per URL.
-       *
-       * The query string is included, because two URLs differing only by query
-       * are genuinely different URLs even though they share a pattern.
-       */
-      accumulator.observe(parsed.segments, file.fileId, ordinal, parsed.path);
-      matchedUrls += 1;
-
-      if (options.maxUrls !== undefined && matchedUrls >= options.maxUrls) {
+      if (
+        options.maxUrls !== undefined &&
+        observer.matchedUrls >= options.maxUrls
+      ) {
         return false;
       }
 
@@ -123,9 +107,9 @@ export async function parseSitemapStream(
 
   return {
     fileId: file.fileId,
-    matchedUrls,
-    foreignUrls,
-    unparseableUrls,
+    matchedUrls: observer.matchedUrls,
+    foreignUrls: observer.foreignUrls,
+    unparseableUrls: observer.unparseableUrls,
     stream
   };
 }

@@ -1,89 +1,17 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Breadcrumbs } from "./breadcrumbs";
-import {
-  AnalyticsIcon,
-  CrawlIcon,
-  DashboardIcon,
-  DocsIcon,
-  FolderIcon,
-  IssuesIcon,
-  SettingsIcon,
-  ToolsIcon
-} from "./icons";
+import { NavRail } from "./nav-rail";
 
 /**
- * The persistent 240px navigation rail, per DESIGN.md section 6.
+ * The persistent 240px navigation rail and the content column beside it, per
+ * DESIGN.md section 6.
  *
- * The item list mirrors the Stitch design exactly — Overview, Projects,
- * Crawls, Issues, Tools, Analytics — at the project owner's explicit
- * direction, recorded in ADR-0027. Note for anyone extending this: "Crawls"
- * is the design's label, not a description of what this platform does. The
- * product samples patterns rather than crawling every URL, so a screen built
- * under that item still must not acquire crawl-everything behaviour; see the
- * ADR and the sampling rules in CLAUDE.md.
- *
- * Exactly one item has a screen today. The rest render disabled rather than
- * as links to a 404 — a rail item that navigates nowhere is a worse lie than
- * one that says plainly it is not built yet.
+ * A Server Component: only the rail's rows need the pathname to resolve the
+ * active item, so only those are a Client Component (see `nav-rail.tsx`). The
+ * item list, its labels, and the reason "Analyses" is spelled that way rather
+ * than the design's "Crawls" live there too.
  */
-const NAV_ITEMS = [
-  { label: "Overview", icon: DashboardIcon, href: "/" },
-  { label: "Projects", icon: FolderIcon },
-  { label: "Crawls", icon: CrawlIcon },
-  { label: "Issues", icon: IssuesIcon },
-  { label: "Tools", icon: ToolsIcon },
-  { label: "Analytics", icon: AnalyticsIcon }
-] as const;
-
-const FOOTER_ITEMS = [
-  { label: "Settings", icon: SettingsIcon },
-  { label: "Documentation", icon: DocsIcon }
-] as const;
-
-function NavRow({
-  label,
-  icon: Icon,
-  href
-}: {
-  readonly label: string;
-  readonly icon: (props: {
-    readonly className?: string | undefined;
-  }) => ReactNode;
-  readonly href?: string;
-}) {
-  if (!href) {
-    return (
-      <span
-        aria-disabled="true"
-        className="flex cursor-not-allowed items-center gap-3 py-2 pl-4 text-tertiary"
-        title={`${label} is not built yet`}
-      >
-        <Icon />
-        <span>{label}</span>
-      </span>
-    );
-  }
-
-  /*
-   * Active state is fixed on Overview rather than derived from the pathname.
-   * `usePathname` would make the whole rail a Client Component for a single
-   * boolean, and every route that exists — the sites list and both drill-down
-   * levels — sits under Overview, so a computed value would produce this same
-   * answer on every page the app can currently render.
-   */
-  return (
-    <Link
-      className="flex items-center gap-3 border-l-2 border-accent bg-surface py-2 pl-4 font-medium text-accent-text"
-      href={href}
-    >
-      <Icon />
-      <span>{label}</span>
-    </Link>
-  );
-}
-
 export function AppShell({ children }: { readonly children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
@@ -104,17 +32,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-1">
-          {NAV_ITEMS.map((item) => (
-            <NavRow key={item.label} {...item} />
-          ))}
-        </div>
-
-        <div className="mt-auto flex flex-col gap-1">
-          {FOOTER_ITEMS.map((item) => (
-            <NavRow key={item.label} {...item} />
-          ))}
-        </div>
+        <NavRail />
       </nav>
 
       {/* Offset by the rail's width; the rail is fixed so it does not scroll. */}

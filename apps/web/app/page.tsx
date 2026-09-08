@@ -52,8 +52,21 @@ export default async function SitesPage() {
         <h1 className="text-xl font-semibold tracking-tight">Sites</h1>
         <p className="mt-2 max-w-prose text-sm text-secondary">
           Every site being monitored. Pick one to see its patterns and sampling
-          confidence.
+          confidence, or open the{" "}
+          <Link className="text-accent-text hover:underline" href="/projects">
+            Projects portfolio
+          </Link>{" "}
+          for each site&rsquo;s latest run and findings side by side.
         </p>
+        {/*
+          THE DUPLICATION IS REAL AND FLAGGED RATHER THAN HIDDEN. ADR-0028 ruled
+          Projects a duplicate of Overview; with the portfolio built (ADR-0037)
+          the relationship is the other way round — this table is now a strict
+          subset of that screen. Folding it in, or re-scoping Overview to a
+          fleet dashboard, is a deliberate decision about what the landing
+          screen is for, so it is recorded as owed rather than made in passing
+          while building something else.
+        */}
 
         <div className="mt-8">
           <StatCards stats={statsFor(sites)} />

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Engine - Sitemap Analyzer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-low": "#1b1b24",
+                        "tertiary": "#ffb695",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-secondary": "#2a276a",
+                        "surface-container-highest": "#35343e",
+                        "on-tertiary-fixed": "#351000",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-surface-variant": "#c7c4d8",
+                        "background": "#13121b",
+                        "secondary-fixed": "#e2dfff",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-bright": "#393842",
+                        "inverse-on-surface": "#302f39",
+                        "primary": "#c3c0ff",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "secondary": "#c3c0ff",
+                        "on-surface": "#e4e1ee",
+                        "on-error": "#690005",
+                        "primary-container": "#4f46e5",
+                        "surface-dim": "#13121b",
+                        "error-container": "#93000a",
+                        "inverse-surface": "#e4e1ee",
+                        "outline-variant": "#464555",
+                        "on-tertiary": "#571f00",
+                        "primary-fixed": "#e2dfff",
+                        "surface-container-lowest": "#0e0d16",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "tertiary-container": "#a44100",
+                        "surface": "#13121b",
+                        "on-secondary-fixed": "#140f54",
+                        "on-background": "#e4e1ee",
+                        "surface-tint": "#c3c0ff",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-container": "#b0aef9",
+                        "surface-container-high": "#2a2933",
+                        "on-tertiary-container": "#ffd2be",
+                        "outline": "#918fa1",
+                        "inverse-primary": "#4d44e3",
+                        "surface-variant": "#35343e",
+                        "on-secondary-fixed-variant": "#413f82",
+                        "secondary-container": "#413f82",
+                        "on-primary": "#1d00a5",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container": "#1f1f28"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "component-padding-y": "6px",
+                        "component-padding-x": "12px",
+                        "gutter": "12px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Geist"],
+                        "body-md": ["Geist"],
+                        "display-sm": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "label-xs": ["JetBrains Mono"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-xs": ["11px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "450" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #09090b; color: #e4e1ee; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+        .data-table-header { background-color: #18181b; }
+        .data-table-row:hover { background-color: #18181b; }
+        
+        /* Custom scrollbar for data tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #464555; }
+    </style>
+</head>
+<body class="font-body-md text-body-md antialiased h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin z-50">
+<div class="px-container-margin mb-8 flex items-center gap-3">
+<img alt="SEO Platform Logo" class="w-8 h-8 rounded-DEFAULT object-cover" data-alt="A sleek, minimalist geometric logo representing a search engine spider or web crawler. The design uses sharp lines and metallic gradients against a pitch-black background. High technical precision, sharp vector art style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoapGrlfHVa6c0UFKDOz25LU0B402sLIfBhvbWKl-RKJmzlW_PTZE1fD09LAX9-JoKLOw7sPuVLyzVare-mk3NaRg8aJFM44tFBxEDukguAw6hdBAvrneMlFj9mLW2MQmLhmO_fqMkiXr03UiYs52XIVJ7kALMCln_wbEIOeNo3uKF9JILQC_qomT6e9R-DqR9RYLCgI7kjxdp-tOLMnuKKn-iH8P5Nq8R3PwAejWmwMMnwSxUivL8cA"/>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface leading-tight">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-outline tracking-wider uppercase mt-1">Technical SEO v2.4</p>
+</div>
+</div>
+<ul class="flex-1 space-y-1">
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Overview</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="folder_open">folder_open</span>
+<span class="font-body-md text-body-md">Projects</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-primary dark:text-primary font-bold border-l-2 border-primary bg-surface-container-low py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="prowler" data-weight="fill" style="font-variation-settings: 'FILL' 1;">cloud_download</span>
+<span class="font-body-md text-body-md">Crawls</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="error_outline">error_outline</span>
+<span class="font-body-md text-body-md">Issues</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="build">build</span>
+<span class="font-body-md text-body-md">Tools</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="analytics">analytics</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</li>
+</ul>
+<div class="px-container-margin mt-auto">
+<button class="w-full bg-surface-container-low border border-outline-variant text-on-surface font-body-sm text-body-sm py-2 rounded-DEFAULT hover:bg-surface-bright transition-colors mb-4 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+                Upgrade Plan
+            </button>
+<ul class="space-y-1">
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="settings">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</li>
+<li class="pl-4 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors py-2 flex items-center gap-3 rounded-r-full mr-4">
+<span class="material-symbols-outlined text-[18px]" data-icon="description">description</span>
+<span class="font-body-sm text-body-sm">Documentation</span>
+</li>
+</ul>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<a class="hover:text-on-surface transition-colors" href="#">Projects</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<a class="hover:text-on-surface transition-colors" href="#">example.com</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Sitemap Analyzer</span>
+</div>
+<div class="h-4 w-px bg-outline-variant mx-2"></div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span>
+<input class="bg-[#09090b] border border-[#27272A] rounded-DEFAULT h-[28px] pl-8 pr-3 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-0 w-[200px] placeholder-outline" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</button>
+<div class="flex items-center gap-2 cursor-pointer group">
+<img alt="User Avatar" class="w-6 h-6 rounded-full object-cover border border-outline-variant group-hover:border-primary-container transition-colors" data-alt="A small, circular avatar portrait of a technical professional, subtle futuristic lighting. Professional high contrast dark UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBA0UnmvTjOmLGkK1rCUvCnXMaHscibtXW3ZJqZ0rTHG463qQG-zqpL_YTnUM0-3AmVogYOOWP6sH22Q0pWqwEPXpzJ9APdZNmQgs4zE48ZujewhTYrPIeuaXl9mg1k-SNMXt7Q0Xore8aiQpbzuq6blQfHJNFhJcCvPV8kKW893JI3pfdVR7WlmEMpG2CzvznGk8dIds4pAkRAXOuNI-7971zc461WHwunK4C0sYkRIzjHRgxsAEqziA"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary-container transition-colors">Profile Settings</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] mt-[48px] p-container-margin w-full h-[calc(100vh-48px)] overflow-y-auto bg-[#09090b]">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface mb-1">Sitemap Analyzer</h2>
+<p class="font-body-sm text-body-sm text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> Last scan: 2 hours ago
+                </p>
+</div>
+<button class="bg-primary-container text-white px-4 py-2 rounded-DEFAULT font-body-sm text-body-sm flex items-center gap-2 hover:bg-inverse-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">upload</span> Upload Sitemap
+            </button>
+</div>
+<!-- Summary Stats Bento Grid -->
+<div class="grid grid-cols-4 gap-gutter mb-6">
+<div class="bg-surface-container-lowest border border-[#27272A] rounded-lg p-4 relative overflow-hidden">
+<p class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-2">Total Sitemaps</p>
+<p class="font-display-sm text-display-sm text-on-surface">14</p>
+<span class="material-symbols-outlined absolute -right-2 -bottom-2 text-[64px] text-surface-container-high opacity-20">lan</span>
+</div>
+<div class="bg-surface-container-lowest border border-[#27272A] rounded-lg p-4">
+<p class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-2">URLs Submitted</p>
+<div class="flex items-baseline gap-2">
+<p class="font-display-sm text-display-sm text-on-surface">12,450</p>
+<span class="font-data-mono text-data-mono text-primary flex items-center">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +50
+                    </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-[#27272A] rounded-lg p-4">
+<p class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-2">URLs Discovered</p>
+<div class="flex items-baseline gap-2">
+<p class="font-display-sm text-display-sm text-on-surface">11,890</p>
+<span class="font-data-mono text-data-mono text-error flex items-center">
+<span class="material-symbols-outlined text-[14px]">trending_down</span> -12
+                    </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-[#27272A] rounded-lg p-4 flex flex-col justify-between">
+<p class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-2">Indexability</p>
+<div class="flex items-center gap-4">
+<p class="font-display-sm text-display-sm text-on-surface">94%</p>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-[#10B981] w-[94%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Health Overview Bar -->
+<div class="mb-6">
+<h3 class="font-label-xs text-label-xs text-outline uppercase tracking-wider mb-3">Sitemap Health Overview</h3>
+<div class="h-2 flex rounded-sm overflow-hidden bg-surface-container-high">
+<div class="bg-[#10B981]" style="width: 85%" title="Valid: 85%"></div>
+<div class="bg-[#F59E0B]" style="width: 10%" title="Warning: 10%"></div>
+<div class="bg-[#EF4444]" style="width: 5%" title="Invalid: 5%"></div>
+</div>
+<div class="flex justify-between mt-2 font-data-mono text-data-mono text-outline">
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-sm bg-[#10B981]"></div> Valid (10,582)</div>
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-sm bg-[#F59E0B]"></div> Warnings (1,245)</div>
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-sm bg-[#EF4444]"></div> Invalid (623)</div>
+</div>
+</div>
+<!-- Main Data Table: Sitemaps -->
+<div class="border border-[#27272A] rounded-lg overflow-hidden bg-surface-container-lowest mb-6">
+<div class="grid grid-cols-12 gap-4 px-4 py-3 data-table-header border-b border-[#27272A]">
+<div class="col-span-4 font-label-xs text-label-xs text-outline uppercase">Sitemap URL</div>
+<div class="col-span-2 font-label-xs text-label-xs text-outline uppercase">Type</div>
+<div class="col-span-1 font-label-xs text-label-xs text-outline uppercase text-right">URLs</div>
+<div class="col-span-2 font-label-xs text-label-xs text-outline uppercase text-center">Status</div>
+<div class="col-span-2 font-label-xs text-label-xs text-outline uppercase text-right">Last Modified</div>
+<div class="col-span-1 font-label-xs text-label-xs text-outline uppercase text-right">Errors</div>
+</div>
+<div class="divide-y divide-[#27272A]">
+<!-- Row 1 -->
+<div class="grid grid-cols-12 gap-4 px-4 py-3 items-center data-table-row transition-colors cursor-pointer border-l-2 border-primary-container bg-surface-container-low">
+<div class="col-span-4 font-body-sm text-body-sm text-on-surface truncate" title="https://example.com/sitemap-index.xml">/sitemap-index.xml</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline">Index</div>
+<div class="col-span-1 font-data-mono text-data-mono text-on-surface text-right">13</div>
+<div class="col-span-2 flex justify-center">
+<span class="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded-sm font-label-xs text-label-xs border border-[#10B981]/20">Success</span>
+</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline text-right">2023-10-24 14:30</div>
+<div class="col-span-1 font-data-mono text-data-mono text-outline text-right">-</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-12 gap-4 px-4 py-3 items-center data-table-row transition-colors cursor-pointer">
+<div class="col-span-4 font-body-sm text-body-sm text-on-surface truncate">/products-sitemap.xml</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline">XML</div>
+<div class="col-span-1 font-data-mono text-data-mono text-on-surface text-right">5,420</div>
+<div class="col-span-2 flex justify-center">
+<span class="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded-sm font-label-xs text-label-xs border border-[#10B981]/20">Success</span>
+</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline text-right">2023-10-24 14:15</div>
+<div class="col-span-1 font-data-mono text-data-mono text-outline text-right">-</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-12 gap-4 px-4 py-3 items-center data-table-row transition-colors cursor-pointer">
+<div class="col-span-4 font-body-sm text-body-sm text-on-surface truncate">/blog-sitemap.xml</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline">XML</div>
+<div class="col-span-1 font-data-mono text-data-mono text-on-surface text-right">1,240</div>
+<div class="col-span-2 flex justify-center">
+<span class="bg-[#F59E0B]/10 text-[#F59E0B] px-2 py-0.5 rounded-sm font-label-xs text-label-xs border border-[#F59E0B]/20">Warning</span>
+</div>
+<div class="col-span-2 font-data-mono text-data-mono text-outline text-right">2023-10-23 09:00</div>
+<div class="col-span-1 font-data-mono text-data-mono text-[#F59E0B] text-right">12</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
