@@ -1,8 +1,19 @@
 import { and, eq, sql } from "drizzle-orm";
 
+import { chunkRows } from "../chunk.js";
 import { type Database, internalDatabase } from "../client.js";
+import { sitemapFile } from "../schema/ingestion.js";
 import { patternPopulation } from "../schema/pattern.js";
 import type { SiteScope } from "../scope.js";
+
+/**
+ * `siteId, patternId, sitemapFileId, urlCount` — one bind parameter each.
+ * A run with thousands of patterns spread across thousands of files produces
+ * far more than 16,383 rows (the point at which 4 columns hits Postgres's
+ * 65,535-parameter ceiling), so this is chunked rather than a single
+ * `.values(entireArray)` call. See `chunk.ts`.
+ */
+const COLUMNS_PER_ROW = 4;
 
 /**
  * Which files hold a pattern's URLs, and how many each holds.
@@ -61,29 +72,59 @@ export async function upsertPatternPopulations(
     return 0;
   }
 
-  await internalDatabase(db)
-    .insert(patternPopulation)
-    .values(
-      rows.map((population) => ({
-        siteId: scope.siteId,
-        patternId: population.patternId,
-        sitemapFileId: population.sitemapFileId,
-        urlCount: population.urlCount
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [
-        patternPopulation.siteId,
-        patternPopulation.patternId,
-        patternPopulation.sitemapFileId
-      ],
-      set: {
-        urlCount: sql`excluded.url_count`,
-        updatedAt: sql`now()`
-      }
-    });
+  const values = rows.map((population) => ({
+    siteId: scope.siteId,
+    patternId: population.patternId,
+    sitemapFileId: population.sitemapFileId,
+    urlCount: population.urlCount
+  }));
+
+  const chunks = chunkRows(values, COLUMNS_PER_ROW);
+  const conn = internalDatabase(db);
+
+  /**
+   * One transaction across every chunk, not because a partial write here is
+   * unsafe to resume from (each row is independently idempotent via
+   * `onConflictDoUpdate` on its own key), but so a crash mid-write leaves
+   * either the old figures or the new ones, never a torn mix of both for a
+   * single ingest pass — the same "no half-written aggregate" property
+   * `upsertPatterns` needs for its own correctness (see there), applied here
+   * for consistency rather than because a bug was found without it.
+   */
+  await conn.transaction(async (tx) => {
+    for (const chunk of chunks) {
+      await tx
+        .insert(patternPopulation)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: [
+            patternPopulation.siteId,
+            patternPopulation.patternId,
+            patternPopulation.sitemapFileId
+          ],
+          set: {
+            urlCount: sql`excluded.url_count`,
+            updatedAt: sql`now()`
+          }
+        });
+    }
+  });
 
   return rows.length;
+}
+
+/**
+ * One file's contribution to a pattern, named rather than referenced.
+ *
+ * The population row holds a `sitemap_file_id` and nothing a reader could act
+ * on. Which file a pattern's URLs concentrate in is the point of the table —
+ * both for resolution and for anyone asking why a pattern's sample keeps
+ * landing in one place — so the file's URL and ordinal travel with the count.
+ */
+export interface PatternFileRow extends PatternPopulationRow {
+  readonly fileUrl: string;
+  readonly filename: string | null;
+  readonly fileOrdinal: number;
 }
 
 /**
@@ -97,17 +138,39 @@ export async function listPatternFiles(
   db: Database,
   scope: SiteScope,
   patternId: string
-): Promise<readonly PatternPopulationRow[]> {
-  return internalDatabase(db)
-    .select(COLUMNS)
-    .from(patternPopulation)
-    .where(
-      and(
-        eq(patternPopulation.siteId, scope.siteId),
-        eq(patternPopulation.patternId, patternId)
+): Promise<readonly PatternFileRow[]> {
+  return (
+    internalDatabase(db)
+      .select({
+        ...COLUMNS,
+        fileUrl: sitemapFile.url,
+        filename: sitemapFile.filename,
+        fileOrdinal: sitemapFile.fileOrdinal
+      })
+      .from(patternPopulation)
+      /**
+       * Joined on BOTH key columns, not just the file id.
+       *
+       * `sitemap_file` is partitioned by `site_id` with a composite primary key
+       * (ADR-0010); pairing the site id is what keeps the join inside one
+       * partition, and it is the pairing the post-M3 hardening pass added FKs
+       * for after finding a row could reference another site's parent.
+       */
+      .innerJoin(
+        sitemapFile,
+        and(
+          eq(sitemapFile.siteId, patternPopulation.siteId),
+          eq(sitemapFile.id, patternPopulation.sitemapFileId)
+        )
       )
-    )
-    .orderBy(sql`${patternPopulation.urlCount} desc`);
+      .where(
+        and(
+          eq(patternPopulation.siteId, scope.siteId),
+          eq(patternPopulation.patternId, patternId)
+        )
+      )
+      .orderBy(sql`${patternPopulation.urlCount} desc`)
+  );
 }
 
 /**

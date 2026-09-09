@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Engine - Canonical Conflict Issue Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#571f00",
+                      "surface-dim": "#13121b",
+                      "on-primary": "#1d00a5",
+                      "inverse-primary": "#4d44e3",
+                      "surface-variant": "#35343e",
+                      "primary-fixed": "#e2dfff",
+                      "surface": "#13121b",
+                      "on-tertiary-fixed": "#351000",
+                      "inverse-on-surface": "#302f39",
+                      "outline": "#918fa1",
+                      "surface-container-lowest": "#0e0d16",
+                      "inverse-surface": "#e4e1ee",
+                      "on-background": "#e4e1ee",
+                      "tertiary-fixed": "#ffdbcc",
+                      "outline-variant": "#464555",
+                      "on-surface": "#e4e1ee",
+                      "error-container": "#93000a",
+                      "on-secondary": "#2a276a",
+                      "surface-container-high": "#2a2933",
+                      "surface-container-low": "#1b1b24",
+                      "on-secondary-container": "#b0aef9",
+                      "primary": "#c3c0ff",
+                      "surface-container-highest": "#35343e",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#413f82",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-secondary-fixed": "#140f54",
+                      "tertiary-container": "#a44100",
+                      "tertiary": "#ffb695",
+                      "surface-container": "#1f1f28",
+                      "on-primary-fixed": "#0f0069",
+                      "on-primary-container": "#dad7ff",
+                      "secondary-fixed": "#e2dfff",
+                      "surface-tint": "#c3c0ff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "background": "#13121b",
+                      "on-tertiary-fixed-variant": "#7b2f00",
+                      "secondary": "#c3c0ff",
+                      "on-tertiary-container": "#ffd2be",
+                      "surface-bright": "#393842",
+                      "secondary-container": "#413f82",
+                      "on-surface-variant": "#c7c4d8",
+                      "error": "#ffb4ab",
+                      "primary-container": "#4f46e5",
+                      "tertiary-fixed-dim": "#ffb695",
+                      "on-error": "#690005",
+                      "secondary-fixed-dim": "#c3c0ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "12px",
+                      "unit": "4px",
+                      "component-padding-x": "12px",
+                      "container-margin": "24px",
+                      "component-padding-y": "6px"
+              },
+              "fontFamily": {
+                      "display-sm": [
+                              "Geist"
+                      ],
+                      "label-xs": [
+                              "JetBrains Mono"
+                      ],
+                      "body-md": [
+                              "Geist"
+                      ],
+                      "headline-sm": [
+                              "Geist"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "display-sm": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-xs": [
+                              "11px",
+                              {
+                                      "lineHeight": "12px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "450"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #13121b; /* background */
+            color: #e4e1ee; /* on-background */
+        }
+        /* Custom scrollbar for data tables */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #13121b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #35343e; /* surface-variant */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #464555; /* outline-variant */
+        }
+      </style>
+</head>
+<body class="font-body-md text-body-md antialiased overflow-hidden flex h-screen w-full">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-lowest text-primary font-body-md text-body-md fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant flex flex-col h-full py-container-margin z-50">
+<!-- Brand / Header -->
+<div class="px-4 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-on-primary-container font-bold font-data-mono text-data-mono">
+                SE
+            </div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant">Technical SEO v2.4</p>
+</div>
+</div>
+<!-- Main Navigation Tabs -->
+<ul class="flex-1 flex flex-col gap-1 w-full">
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">dashboard</span>
+<span>Overview</span>
+</a>
+</li>
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">folder_open</span>
+<span>Projects</span>
+</a>
+</li>
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">cloud_download</span>
+<span>Crawls</span>
+</a>
+</li>
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-primary font-bold border-l-2 border-primary pl-4 bg-surface-container-low hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px; font-variation-settings: 'FILL' 1;">error_outline</span>
+<span>Issues</span>
+</a>
+</li>
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">build</span>
+<span>Tools</span>
+</a>
+</li>
+<li class="w-full">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">analytics</span>
+<span>Analytics</span>
+</a>
+</li>
+</ul>
+<!-- Footer / Utility Navigation -->
+<div class="mt-auto flex flex-col gap-1 w-full border-t border-outline-variant pt-4 mt-4">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 w-full" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">description</span>
+<span>Documentation</span>
+</a>
+<div class="px-4 mt-4">
+<button class="w-full py-2 bg-primary-container text-on-primary-container rounded font-body-sm text-body-sm font-semibold hover:bg-inverse-primary transition-colors cursor-pointer active:scale-95">
+                    Upgrade Plan
+                </button>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[240px] flex flex-col h-full bg-background relative overflow-y-auto">
+<!-- TopNavBar -->
+<header class="bg-surface text-primary font-label-xs text-label-xs fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<!-- Breadcrumbs / Left Nav -->
+<div class="flex items-center gap-4 h-full">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<a class="hover:text-on-surface transition-colors" href="#">Issues</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Canonical Conflict</span>
+</div>
+</div>
+<!-- Global Search & Actions -->
+<div class="flex items-center gap-6">
+<!-- Search -->
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[16px] group-focus-within:text-primary">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant rounded h-8 pl-8 pr-3 font-data-mono text-data-mono text-on-surface focus:border-primary-container focus:outline-none focus:ring-0 w-64 transition-colors placeholder:text-outline-variant" placeholder="Search URLs, Projects..." type="text"/>
+</div>
+<!-- Global Actions -->
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+</button>
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors ml-2 pl-4 border-l border-outline-variant">
+<img alt="User Avatar" class="w-6 h-6 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn744Vooy1SxU7Bb4g8VZAtJ8_9AYjSbcyVoHKNglTsrXM4PJg3Fx9yUW1eq8pVaOwnKFp3m_cXa898H_xwO5uibBUNdz0Db-JLQL7zUSm8HUgoB9lRxqlq4r5NOz9My0KA1IU35WfKBeHDhQ87M4Dh9hznyo7gLNl98k_3tpMBiMk2Omm_A20NYqrR_7VaR-VxVudVwE4kofl0RHW1aWAmvTCvpz_nF0gPyIBwV5O-nePlGLw427BhQ"/>
+<span class="font-body-sm text-body-sm">Profile Settings</span>
+<span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="mt-[48px] p-container-margin flex flex-col gap-6 max-w-7xl mx-auto w-full">
+<!-- Issue Header Bento -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Main Title & Meta -->
+<div class="col-span-12 md:col-span-8 bg-surface-container p-6 rounded-lg border border-outline-variant flex flex-col gap-4">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-error-container/20 text-error px-2 py-1 rounded font-label-xs text-label-xs border border-error-container/30 uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                                    Critical
+                                </span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-label-xs text-label-xs border border-outline-variant uppercase">
+                                    Indexability
+                                </span>
+</div>
+<h2 class="font-display-sm text-display-sm text-on-surface m-0">Canonical Conflict</h2>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 border border-outline-variant text-on-surface rounded font-body-sm text-body-sm hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">ios_share</span>
+                                Export
+                            </button>
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded font-body-sm text-body-sm font-semibold hover:bg-inverse-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">checklist</span>
+                                Mark as Fixed
+                            </button>
+</div>
+</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm max-w-3xl leading-relaxed mt-2">
+<strong>Overview:</strong> This issue occurs when a page specifies a canonical URL that points to a different URL, but the target URL itself either points back to the original page (a loop), points to a third page (a chain), or returns a non-200 HTTP status code. This confuses search engines and can result in neither page being indexed or ranked properly.
+                    </div>
+<div class="text-on-surface-variant font-body-sm text-body-sm max-w-3xl leading-relaxed">
+<strong>Recommended Fix:</strong> Ensure that the <code>rel="canonical"</code> link element consistently points to the single, definitive version of a page that returns a 200 (OK) status code. Break any canonical chains or loops by pointing all duplicate variants directly to the final destination URL.
+                    </div>
+</div>
+<!-- Stats & Sparkline -->
+<div class="col-span-12 md:col-span-4 bg-surface-container p-6 rounded-lg border border-outline-variant flex flex-col justify-between">
+<div>
+<div class="font-label-xs text-label-xs text-on-surface-variant uppercase mb-1">Affected URLs</div>
+<div class="font-display-sm text-display-sm text-error flex items-baseline gap-2">
+                            1,432
+                            <span class="font-label-xs text-label-xs text-error-container flex items-center">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +12%
+                            </span>
+</div>
+</div>
+<div class="mt-6">
+<div class="font-label-xs text-label-xs text-on-surface-variant uppercase mb-2 flex justify-between">
+<span>Crawl History</span>
+<span>Last 30 Days</span>
+</div>
+<!-- Placeholder for sparkline SVG -->
+<div class="w-full h-16 bg-surface-container-lowest border border-outline-variant rounded flex items-end relative overflow-hidden">
+<!-- Faux Sparkline bars for visual effect -->
+<div class="w-full h-full flex items-end justify-between px-1 pb-1 gap-1 opacity-50">
+<div class="w-full bg-outline-variant h-[20%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[25%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[30%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[28%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[35%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[40%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[38%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[45%] rounded-t-sm"></div>
+<div class="w-full bg-outline-variant h-[60%] rounded-t-sm"></div>
+<div class="w-full bg-error-container h-[85%] rounded-t-sm"></div>
+<div class="w-full bg-error-container h-[90%] rounded-t-sm"></div>
+<div class="w-full bg-error h-[100%] rounded-t-sm shadow-[0_0_8px_rgba(255,180,171,0.5)]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table Section -->
+<div class="bg-surface-container rounded-lg border border-outline-variant flex flex-col flex-1 overflow-hidden">
+<!-- Table Toolbar -->
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline-variant text-[16px]">filter_alt</span>
+<select class="bg-surface-container-lowest border border-outline-variant rounded h-8 pl-8 pr-8 font-body-sm text-body-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-0 appearance-none cursor-pointer">
+<option>Status: All</option>
+<option>Status: 301</option>
+<option>Status: 404</option>
+<option>Status: 500</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-outline-variant text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline-variant text-[16px]">filter_alt</span>
+<select class="bg-surface-container-lowest border border-outline-variant rounded h-8 pl-8 pr-8 font-body-sm text-body-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-0 appearance-none cursor-pointer">
+<option>Target Status: All</option>
+<option>Target Status: 404</option>
+<option>Target Status: Non-200</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-outline-variant text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline-variant text-[16px]">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant rounded h-8 pl-8 pr-3 font-data-mono text-data-mono text-on-surface focus:border-primary-container focus:outline-none focus:ring-0 w-64 transition-colors placeholder:text-outline-variant text-[12px]" placeholder="Filter URLs..." type="text"/>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left whitespace-nowrap">
+<thead class="bg-[#18181B] border-b border-outline-variant sticky top-0">
+<tr>
+<th class="px-4 py-3 font-label-xs text-label-xs text-on-surface-variant uppercase font-semibold tracking-wider">Source URL</th>
+<th class="px-4 py-3 font-label-xs text-label-xs text-on-surface-variant uppercase font-semibold tracking-wider">Canonical Target</th>
+<th class="px-4 py-3 font-label-xs text-label-xs text-on-surface-variant uppercase font-semibold tracking-wider">Target Status</th>
+<th class="px-4 py-3 font-label-xs text-label-xs text-on-surface-variant uppercase font-semibold tracking-wider">Last Crawled</th>
+<th class="px-4 py-3 font-label-xs text-label-xs text-on-surface-variant uppercase font-semibold tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-data-mono text-data-mono text-on-surface">
+<!-- Row 1 -->
+<tr class="hover:bg-[#18181B] transition-colors group">
+<td class="px-4 py-3 truncate max-w-[250px]" title="https://example.com/products/shoes/red-sneaker?color=red">
+                                    https://example.com/products/shoes/red-sneaker?color=red
+                                </td>
+<td class="px-4 py-3 text-outline truncate max-w-[250px]" title="https://example.com/products/shoes/red-sneaker-v2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-outline-variant">link</span>
+                                        https://example.com/products/shoes/red-sneaker-v2
+                                    </div>
+</td>
+<td class="px-4 py-3">
+<span class="bg-error-container/20 text-error px-2 py-1 rounded-[2px] font-label-xs text-label-xs border border-error-container/30">
+                                        404 Not Found
+                                    </span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">
+                                    2 hours ago
+                                </td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-primary-container font-body-sm text-body-sm font-medium flex items-center justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Inspect <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#18181B] transition-colors group">
+<td class="px-4 py-3 truncate max-w-[250px]" title="https://example.com/blog/category/seo/page/2">
+                                    https://example.com/blog/category/seo/page/2
+                                </td>
+<td class="px-4 py-3 text-outline truncate max-w-[250px]" title="https://example.com/blog/category/seo/">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-outline-variant">link</span>
+                                        https://example.com/blog/category/seo/
+                                    </div>
+</td>
+<td class="px-4 py-3">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded-[2px] font-label-xs text-label-xs border border-outline-variant">
+                                        301 Redirect
+                                    </span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">
+                                    4 hours ago
+                                </td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-primary-container font-body-sm text-body-sm font-medium flex items-center justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Inspect <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#18181B] transition-colors group">
+<td class="px-4 py-3 truncate max-w-[250px]" title="https://example.com/about-us-old">
+                                    https://example.com/about-us-old
+                                </td>
+<td class="px-4 py-3 text-outline truncate max-w-[250px]" title="https://example.com/about">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-error">sync_problem</span>
+                                        https://example.com/about (Chain)
+                                    </div>
+</td>
+<td class="px-4 py-3">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded-[2px] font-label-xs text-label-xs border border-outline-variant">
+                                        301 Redirect
+                                    </span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">
+                                    5 hours ago
+                                </td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-primary-container font-body-sm text-body-sm font-medium flex items-center justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Inspect <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-[#18181B] transition-colors group">
+<td class="px-4 py-3 truncate max-w-[250px]" title="https://example.com/app/dashboard">
+                                    https://example.com/app/dashboard
+                                </td>
+<td class="px-4 py-3 text-outline truncate max-w-[250px]" title="https://example.com/login">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-outline-variant">link</span>
+                                        https://example.com/login
+                                    </div>
+</td>
+<td class="px-4 py-3">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded-[2px] font-label-xs text-label-xs border border-outline-variant">
+                                        302 Found
+                                    </span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">
+                                    6 hours ago
+                                </td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-primary-container font-body-sm text-body-sm font-medium flex items-center justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Inspect <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-[#18181B] transition-colors group">
+<td class="px-4 py-3 truncate max-w-[250px]" title="https://example.com/promotions/summer-sale">
+                                    https://example.com/promotions/summer-sale
+                                </td>
+<td class="px-4 py-3 text-outline truncate max-w-[250px]" title="https://example.com/promotions/expired">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-outline-variant">link</span>
+                                        https://example.com/promotions/expired
+                                    </div>
+</td>
+<td class="px-4 py-3">
+<span class="bg-error-container/20 text-error px-2 py-1 rounded-[2px] font-label-xs text-label-xs border border-error-container/30">
+                                        410 Gone
+                                    </span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">
+                                    12 hours ago
+                                </td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-primary-container font-body-sm text-body-sm font-medium flex items-center justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Inspect <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</button>
+</td>
+</tr>
+<!-- Padding rows for layout -->
+<tr class="hover:bg-[#18181B] transition-colors"><td class="px-4 py-3 text-transparent select-none">.</td><td></td><td></td><td></td><td></td></tr>
+<tr class="hover:bg-[#18181B] transition-colors"><td class="px-4 py-3 text-transparent select-none">.</td><td></td><td></td><td></td><td></td></tr>
+<tr class="hover:bg-[#18181B] transition-colors"><td class="px-4 py-3 text-transparent select-none">.</td><td></td><td></td><td></td><td></td></tr>
+</tbody>
+</table>
+</div>
+<!-- Table Pagination -->
+<div class="p-3 border-t border-outline-variant bg-surface-container-high flex justify-between items-center text-on-surface-variant font-body-sm text-body-sm">
+<div>Showing 1 to 50 of 1,432 entries</div>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-variant transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-primary text-primary bg-primary/10 font-data-mono text-[12px]">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-variant transition-colors font-data-mono text-[12px]">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-variant transition-colors font-data-mono text-[12px]">3</button>
+<span class="w-8 h-8 flex items-center justify-center font-data-mono text-[12px]">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-variant transition-colors font-data-mono text-[12px]">29</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-outline-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="h-8 w-full"></div> <!-- Bottom padding -->
+</div>
+</main>
+</body></html>

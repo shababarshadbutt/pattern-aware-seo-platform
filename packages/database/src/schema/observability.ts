@@ -157,6 +157,24 @@ export const auditSnapshot = pgTable(
     // number of single redirects.
     index("idx_audit_snapshot_site_impact").on(t.siteId, t.impactScore.desc()),
 
+    /**
+     * ONE CLAIM PER OUTCOME PER DRAW, and this is what makes a redelivered
+     * `estimate` job a safe no-op rather than a duplicate row.
+     *
+     * `estimate` writes one row per distinct `http_status` tallied from a
+     * draw's observations (the docblock above calls this out: "ONE SNAPSHOT
+     * ROW PER OUTCOME, not per pattern"), so the natural key is the draw plus
+     * the outcome, not the draw alone. `insertAuditSnapshot` upserts on this
+     * key with `ON CONFLICT DO NOTHING` — a retried job re-computes the same
+     * claim and finds it already there, rather than appending a second row
+     * that would double-count in every rollup reading this table.
+     */
+    uniqueIndex("uq_audit_snapshot_sample_status").on(
+      t.siteId,
+      t.patternSampleId,
+      t.httpStatus
+    ),
+
     check(
       "ck_audit_snapshot_counts_sane",
       sql`

@@ -1,4 +1,8 @@
-import type { AuditSnapshotSummary, ConfidenceBandName } from "../lib/api";
+import type {
+  ConfidenceBandName,
+  ImpactMeasurement,
+  SampledMeasurement
+} from "../lib/api";
 import { formatCount } from "../lib/format";
 import { confidenceBandTone, TONE_VAR } from "../lib/status";
 
@@ -96,9 +100,19 @@ export function Estimate(props: EstimateProps) {
   );
 }
 
-/** Build `<Estimate>` props straight from a published finding. */
+/**
+ * Build `<Estimate>` props straight from any measurement.
+ *
+ * Takes `SampledMeasurement` rather than `AuditSnapshotSummary` so the
+ * sample-plan tool flows through this same adapter. WIDENED RATHER THAN
+ * DUPLICATED, deliberately: this module is the only one permitted to read the
+ * estimate-bearing fields (ADR-0008, enforced by `lib/adr-0008-guard.test.ts`),
+ * and a second adapter would be a second chance to render an estimate without
+ * its interval. A published finding is a measurement plus a severity and the
+ * ids that locate it, so nothing is lost by narrowing the parameter.
+ */
 export function estimateFromSnapshot(
-  snapshot: AuditSnapshotSummary
+  snapshot: SampledMeasurement
 ): EstimateProps {
   if (snapshot.evidenceTier === "blocked") {
     return { tier: "blocked", populationCount: snapshot.populationCount };
@@ -134,10 +148,15 @@ export function estimateFromSnapshot(
  * is exactly what ADR-0008 exists to prevent. The band is reused rather than
  * recomputed: weighting by a constant cannot change how wide the interval is
  * relative to its point.
+ *
+ * Takes `ImpactMeasurement` — the seven fields it actually reads — rather than
+ * a whole `AuditSnapshotSummary`. WIDENED RATHER THAN DUPLICATED, for the
+ * reason `estimateFromSnapshot` records above: a pattern's ROLLED-UP impact is
+ * the same shape as one finding's, and a second adapter for it would be a
+ * second chance to render an estimate without its interval. A snapshot still
+ * satisfies this structurally, so every existing call site is untouched.
  */
-export function impactFromSnapshot(
-  snapshot: AuditSnapshotSummary
-): EstimateProps {
+export function impactFromSnapshot(snapshot: ImpactMeasurement): EstimateProps {
   if (snapshot.evidenceTier === "blocked") {
     return { tier: "blocked", populationCount: snapshot.populationCount };
   }

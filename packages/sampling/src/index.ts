@@ -47,6 +47,11 @@ export {
   scorePatternImpact
 } from "./impact-score.js";
 export {
+  type Measurement,
+  measureProportion,
+  planExpansionFor
+} from "./measurement.js";
+export {
   allocateAcrossStrata,
   DEFAULT_SAMPLE_BUDGET,
   firstRoundSampleSize,

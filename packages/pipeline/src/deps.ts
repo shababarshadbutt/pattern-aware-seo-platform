@@ -1,7 +1,10 @@
 import type { Database, SiteScope } from "@pattern-aware/database";
 import type { SampleBudget } from "@pattern-aware/sampling";
 import type { Logger } from "@pattern-aware/shared";
-import type { SitemapFileStore } from "@pattern-aware/sitemap";
+import type {
+  OversizeThresholds,
+  SitemapFileStore
+} from "@pattern-aware/sitemap";
 import type {
   HostCircuitBreaker,
   HostRateLimiter,
@@ -35,6 +38,36 @@ export type EnqueueStage = (
   payload: Record<string, unknown>
 ) => Promise<void>;
 
+/**
+ * One thing worth timing or counting inside the `verify` stage.
+ *
+ * Deliberately does NOT carry a "have we resolved this file before" flag:
+ * "already resolved once" only means something relative to whatever window
+ * the caller considers "the same run" (a whole benchmark process, a single
+ * site's run, etc.), and `runVerify` itself has no such notion — it only
+ * ever sees one pattern's one job. A caller that wants cross-call
+ * repetition (e.g. scripts/benchmark-scale.ts, per
+ * docs/reports/phase-2b-prior-art-analysis.md §11) tracks its own
+ * `Set<fileOrdinal>` across the `resolveCandidates` events it receives.
+ * Keeping that bookkeeping out of this event is what keeps `resolveAll`
+ * stateless.
+ */
+export type VerifyTelemetryEvent =
+  | {
+      readonly kind: "resolveCandidates";
+      readonly fileOrdinal: number;
+      readonly durationMs: number;
+    }
+  | {
+      readonly kind: "verifyProbe";
+      readonly durationMs: number;
+    }
+  | {
+      readonly kind: "candidateFileSpread";
+      readonly patternId: string;
+      readonly distinctFiles: number;
+    };
+
 export interface PipelineDeps {
   readonly db: Database;
   readonly store: SitemapFileStore;
@@ -61,6 +94,18 @@ export interface PipelineDeps {
   /** Injected for tests; falls through to undici in deployment. */
   readonly probeFetch?: ProbeOptions["fetch"];
   /**
+   * Report how far a long-running stage has gotten, as a fraction in [0, 1].
+   *
+   * OPTIONAL, and its absence changes nothing about correctness — no stage's
+   * result depends on whether progress was reported. `ingest` is the one
+   * caller (its per-file loop is the only stage-internal work worth
+   * surfacing mid-flight); `apps/worker` wires this to BullMQ's
+   * `job.updateProgress`, a fresh closure per job since progress belongs to
+   * one job, not to the whole site the way `enqueue` does. Test callers can
+   * simply omit it.
+   */
+  readonly reportProgress?: (fraction: number) => Promise<void>;
+  /**
    * The sampling budget, INJECTED rather than read from global config.
    *
    * A stage that called `getConfig()` would drag the whole validated
@@ -72,6 +117,30 @@ export interface PipelineDeps {
    * this from config once at startup, where reading config belongs.
    */
   readonly sampleBudget?: SampleBudget;
+  /**
+   * How big a run is allowed to get before `ingest` stops discovering more
+   * files rather than continuing indefinitely, INJECTED the same way as
+   * `sampleBudget` and for the same reason.
+   *
+   * Phase 2A wires only the file-count hard limit into `ingest.ts` — a
+   * caller that omits this falls back to `@pattern-aware/sitemap`'s
+   * `DEFAULT_OVERSIZE_THRESHOLDS`, which leaves the URL-based limits at
+   * `Infinity` so they cannot fire on this round's behalf. The worker
+   * supplies the real configured value at startup.
+   */
+  readonly oversizeThresholds?: OversizeThresholds;
+  /**
+   * Read-only timing/counting hook for verify-stage instrumentation.
+   *
+   * OPTIONAL and side-effect-only on whatever the caller does with the
+   * events — nothing in `runVerify`/`resolveAll` branches on whether this is
+   * present, and no return value feeds back into pipeline behavior or the
+   * observations written to the database. Built for
+   * scripts/benchmark-scale.ts (see docs/reports/phase-2b-prior-art-analysis.md
+   * §11) to measure candidate-resolution time/repetition separately from
+   * HTTP-probe time; `apps/worker` omits it.
+   */
+  readonly onVerifyTelemetry?: (event: VerifyTelemetryEvent) => void;
 }
 
 /**

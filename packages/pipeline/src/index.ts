@@ -11,9 +11,12 @@ export {
   type EnqueueStage,
   type PipelineDeps,
   type SitemapFetcher,
-  type SitemapResponse
+  type SitemapResponse,
+  type VerifyTelemetryEvent
 } from "./deps.js";
 export {
+  type AttachRequestPayload,
+  attachRequestPayloadSchema,
   type DiscoverPayload,
   discoverPayloadSchema,
   type EstimatePayload,
@@ -29,6 +32,7 @@ export {
   verifyPayloadSchema
 } from "./payloads.js";
 export {
+  ATTACH_REQUESTS_QUEUE,
   InvalidQueueNameError,
   isPipelineStage,
   isSiteTier,

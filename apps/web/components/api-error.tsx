@@ -9,7 +9,7 @@
 export function ApiErrorPanel({ message }: { readonly message: string }) {
   return (
     <div
-      className="rounded-sm border px-4 py-3 text-sm"
+      className="rounded-md border px-4 py-3 text-sm"
       style={{
         borderColor: "var(--status-critical)",
         color: "var(--status-critical)",

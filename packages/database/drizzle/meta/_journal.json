@@ -50,6 +50,13 @@
       "when": 1788359123758,
       "tag": "0006_impact_score_numeric",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788898225962,
+      "tag": "0007_audit_snapshot_idempotent_upsert",
+      "breakpoints": true
     }
   ]
 }

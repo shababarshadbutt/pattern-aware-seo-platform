@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_audit_snapshot_sample_status" ON "audit_snapshot" USING btree ("site_id","pattern_sample_id","http_status");

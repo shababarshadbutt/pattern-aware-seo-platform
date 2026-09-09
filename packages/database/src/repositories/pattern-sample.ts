@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 
 import { type Database, internalDatabase } from "../client.js";
 import { patternSample } from "../schema/sampling.js";
@@ -181,4 +181,52 @@ export async function findPatternSampleById(
     .limit(1);
 
   return row;
+}
+
+/**
+ * How many of a run's patterns needed more than one draw.
+ *
+ * The figure exists because an expansion is a statement about the SAMPLE PLAN,
+ * not about the site: a pattern reaching round 2 is one whose first-round
+ * budget was set too low to reach an actionable interval, and a site whose
+ * patterns keep needing a second draw is telling you the sizing heuristic is
+ * wrong. That signal is invisible unless it is counted — which is why
+ * `sampling_health` has a column for it — and it is the operational counterpart
+ * to M3's recorded tuning observation about `firstRoundSampleSize`.
+ *
+ * `count(distinct pattern_id)` rather than `count(*)`: a pattern expanded twice
+ * is one expanded pattern, and counting draws would report a single stubborn
+ * pattern as a fleet-wide budgeting problem.
+ *
+ * THIS RETURNS ZERO TODAY, AND THAT ZERO IS CORRECT. `recordPatternSample` has
+ * exactly one pipeline caller (`stages/ingest.ts`), which passes no `round`, so
+ * every draw is round 1; `packages/sampling`'s expansion planner has no caller
+ * in `packages/pipeline` and `PIPELINE_STAGES` has no expansion stage. What
+ * this query changes is that the zero becomes MEASURED rather than merely
+ * unwritten, and it starts reporting real numbers the day adaptive expansion is
+ * wired. Do not "fix" it by making it count something else.
+ *
+ * KNOWN COST: no index is keyed on `sitemap_run_id` here, so this is a
+ * partition scan filtered by run — bounded by patterns per run, the same order
+ * as `countPatternsByStatus`, and never by population.
+ */
+export async function countExpandedPatterns(
+  db: Database,
+  scope: SiteScope,
+  sitemapRunId: string
+): Promise<number> {
+  const [row] = await internalDatabase(db)
+    .select({
+      count: sql<string>`count(distinct ${patternSample.patternId})::bigint`
+    })
+    .from(patternSample)
+    .where(
+      and(
+        eq(patternSample.siteId, scope.siteId),
+        eq(patternSample.sitemapRunId, sitemapRunId),
+        gt(patternSample.round, 1)
+      )
+    );
+
+  return Number(row?.count ?? 0);
 }

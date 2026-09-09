@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 
 import {
+  finishRun,
   markFileDownloaded,
   type SiteScope,
   upsertSitemapFiles
@@ -12,6 +13,7 @@ import {
   type PipelineDeps,
   type SitemapResponse
 } from "../deps.js";
+import { sniffGzip } from "../gzip-sniff.js";
 import {
   type DiscoverPayload,
   discoverPayloadSchema,
@@ -74,7 +76,25 @@ export async function runDiscover(
     Readable.from(response.body)
   );
 
-  const rootElement = await detectRootElement(deps, payload);
+  /**
+   * Sniffed from the bytes just written, NOT from `content-encoding`.
+   *
+   * Undici's `fetch` already decompressed `response.body` by the time it
+   * reached `deps.store.put` above, but leaves the header saying "gzip" — so
+   * trusting it here would mark an already-plain file as gzip and fail the
+   * next stage's gunzip with `Z_DATA_ERROR`. The magic number on disk cannot
+   * lie about what is actually stored, regardless of the URL's suffix or what
+   * the server claimed while sending it. Used for every read of the entry
+   * document below, and for the single-file case's own `is_gzip` column.
+   */
+  const entryIsGzip = await sniffGzip(
+    await deps.store.open({
+      runId: payload.sitemapRunId,
+      fileId: ENTRY_FILE_ID
+    })
+  );
+
+  const rootElement = await detectRootElement(deps, payload, entryIsGzip);
 
   if (rootElement === "urlset") {
     /**
@@ -91,7 +111,7 @@ export async function runDiscover(
           // The entry document IS the file here, and its bytes are already stored
           // under ordinal 0.
           fileOrdinal: ENTRY_FILE_ID,
-          isGzip: isGzip(payload.sitemapUrl, response)
+          isGzip: entryIsGzip
         }
       ]
     );
@@ -114,10 +134,17 @@ export async function runDiscover(
       "discovered a single-file sitemap"
     );
 
+    await deps.enqueue("ingest", {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId,
+      baseUrl: payload.baseUrl,
+      expectedHost: payload.expectedHost
+    });
+
     return { rootElement, fileCount: 1, suspiciouslyEmpty: false };
   }
 
-  const children = await readIndexChildren(deps, payload);
+  const children = await readIndexChildren(deps, payload, entryIsGzip);
 
   if (children.length === 0) {
     /**
@@ -126,6 +153,11 @@ export async function runDiscover(
      * looks like once it has parsed successfully, and what a generator that
      * wrote its index before its files looks like. Either way the run would
      * otherwise report zero URLs as a fact about the client's site.
+     *
+     * CANCELLED HERE, not left for a caller to notice. Moving this decision
+     * into the stage itself (rather than a script driving it manually) is
+     * what makes the queue-driven path and a manual run behave identically —
+     * one code path, not two that can drift.
      */
     deps.logger.warn(
       {
@@ -137,6 +169,11 @@ export async function runDiscover(
       },
       "sitemap index parsed successfully but names no child sitemaps — treating as suspicious, not as an empty site"
     );
+
+    await finishRun(deps.db, scope, payload.sitemapRunId, {
+      status: "degraded",
+      statusReason: "SUSPICIOUSLY_EMPTY_INDEX"
+    });
 
     return { rootElement, fileCount: 0, suspiciouslyEmpty: true };
   }
@@ -150,6 +187,11 @@ export async function runDiscover(
      * are stored but which holds no page URLs and is therefore not a file here.
      * Keeping 0 reserved means a child can never collide with the entry
      * document in the store.
+     *
+     * `is_gzip` here is still a SUFFIX GUESS — a child is only a named URL
+     * until `ingest` downloads it, so there are no bytes to sniff yet. `ingest`
+     * corrects this the same way, from the bytes it actually writes, before
+     * parsing; see `ingestOneFile`.
      */
     children.map((url, position) => ({
       url,
@@ -168,6 +210,13 @@ export async function runDiscover(
     "discovered sitemap index children"
   );
 
+  await deps.enqueue("ingest", {
+    siteId: payload.siteId,
+    sitemapRunId: payload.sitemapRunId,
+    baseUrl: payload.sitemapUrl,
+    expectedHost: new URL(payload.sitemapUrl).host
+  });
+
   return {
     rootElement,
     fileCount: files.length,
@@ -183,12 +232,6 @@ function assertUsableResponse(response: SitemapResponse, url: string): void {
   }
 }
 
-function isGzip(url: string, response: SitemapResponse): boolean {
-  const encoding = response.headers.get("content-encoding") ?? "";
-
-  return url.endsWith(".gz") || encoding.includes("gzip");
-}
-
 /**
  * Which kind of document is this, at the cost of one element?
  *
@@ -199,7 +242,8 @@ function isGzip(url: string, response: SitemapResponse): boolean {
  */
 async function detectRootElement(
   deps: PipelineDeps,
-  payload: DiscoverPayload
+  payload: DiscoverPayload,
+  isGzipStored: boolean
 ): Promise<"urlset" | "sitemapindex"> {
   const source = await deps.store.open({
     runId: payload.sitemapRunId,
@@ -208,7 +252,7 @@ async function detectRootElement(
 
   const result = await streamLocs(source, () => false, {
     includeIndexLocs: true,
-    ...(payload.sitemapUrl.endsWith(".gz") ? { isGzip: true } : {})
+    ...(isGzipStored ? { isGzip: true } : {})
   });
 
   if (result.rootElement === "unknown") {
@@ -223,7 +267,8 @@ async function detectRootElement(
 /** Every child sitemap URL an index names. */
 async function readIndexChildren(
   deps: PipelineDeps,
-  payload: DiscoverPayload
+  payload: DiscoverPayload,
+  isGzipStored: boolean
 ): Promise<readonly string[]> {
   const source = await deps.store.open({
     runId: payload.sitemapRunId,
@@ -239,7 +284,7 @@ async function readIndexChildren(
     },
     {
       includeIndexLocs: true,
-      ...(payload.sitemapUrl.endsWith(".gz") ? { isGzip: true } : {})
+      ...(isGzipStored ? { isGzip: true } : {})
     }
   );
 

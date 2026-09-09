@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AppShell } from "../components/app-shell";
 import "./globals.css";
 
 /*
@@ -18,16 +19,20 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 /*
- * The UI sans is Switzer (Fontshare), which is not on Google Fonts and has to
- * be self-hosted via next/font/local. The font files are not vendored yet, so
- * `--font-switzer` is intentionally unset and globals.css falls back to
- * ui-sans-serif / system-ui.
+ * UI sans, per DESIGN.md section 2.
  *
- * DELIBERATELY NOT substituting Inter or Roboto in the meantime: DESIGN.md
- * section 9 bans both by name, and a "temporary" default is exactly how a spec
- * quietly stops being true. Vendor the Switzer woff2 files in D0 and add a
- * localFont() call here.
+ * The previous spec named Switzer, which is not on Google Fonts; its files
+ * were never vendored, so `--font-switzer` stayed unset and every screen
+ * silently fell back to system sans — the single largest visual gap between
+ * the shipped app and its own design document. The Stitch design (ADR-0027)
+ * specifies Geist, which `next/font/google` serves self-hosted with no
+ * third-party request, so the UI face is now actually the one the spec names.
  */
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: "Pattern-Aware SEO Platform",
@@ -40,12 +45,16 @@ export default function RootLayout({
 }: {
   readonly children: ReactNode;
 }) {
-  // Dark is the default experience, not a toggle off a light baseline
-  // (DESIGN.md section 1). The attribute is set explicitly rather than left to
-  // prefers-color-scheme so the default is the designed one.
+  /*
+   * No `data-theme`: the design is dark only (ADR-0027), so there is one
+   * palette and nothing to switch between. `color-scheme: dark` in globals.css
+   * tells the browser to match its own form controls and scrollbars to it.
+   */
   return (
-    <html lang="en" data-theme="dark" className={jetBrainsMono.variable}>
-      <body className="min-h-screen">{children}</body>
+    <html className={`${geist.variable} ${jetBrainsMono.variable}`} lang="en">
+      <body className="min-h-screen text-base">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

@@ -9,13 +9,24 @@ import {
   type ZodTypeProvider
 } from "fastify-type-provider-zod";
 
-import type { ApiConfig } from "./api-config.js";
+import type { SettingsConfig } from "./api-config.js";
+import {
+  BASIC_AUTH_REALM,
+  checkBasicAuth,
+  resolveBasicAuthCredentials
+} from "./basic-auth.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerIssueRoutes } from "./routes/issues.js";
 import { registerPatternRoutes } from "./routes/patterns.js";
+import { registerProjectRoutes } from "./routes/projects.js";
+import { registerRunRoutes } from "./routes/runs.js";
+import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerSiteRoutes } from "./routes/sites.js";
+import { registerToolRoutes } from "./routes/tools.js";
+import type { RunTrigger } from "./run-trigger.js";
 
-export type { ApiConfig } from "./api-config.js";
+export type { ApiConfig, SettingsConfig } from "./api-config.js";
 
 /**
  * This API's Fastify instance type.
@@ -44,11 +55,19 @@ export type ApiInstance = FastifyInstance<
  * Takes `db` as a parameter for the same reason: a test can hand this a
  * scoped test-harness database instead of the real pool, and nothing here
  * reaches for global state to find one.
+ *
+ * `runTrigger` is OPTIONAL and separate from `config` for the reason
+ * `run-trigger.ts` documents: `REDIS_URL` has no default, so folding it into
+ * `SettingsConfig` would force every existing caller of `buildApp` — this
+ * suite included — to also hold a Redis URL. Omitted, `POST
+ * /sites/:siteId/runs` answers 503 instead of requiring Redis to exist for a
+ * process that has never needed it.
  */
 export function buildApp(
-  config: ApiConfig,
+  config: SettingsConfig,
   logger: Logger,
-  db: Database
+  db: Database,
+  runTrigger?: RunTrigger
 ): ApiInstance {
   const app = Fastify({
     loggerInstance: logger
@@ -75,9 +94,49 @@ export function buildApp(
   // be narrowed to a configured origin list when auth lands.
   void app.register(cors, { origin: true });
 
+  /*
+   * Deployment stopgap, not the real auth ADR-0026 defers: HTTP Basic Auth in
+   * front of every route but /health, so a deployment reachable from the
+   * public internet isn't a bare, unauthenticated POST /sites. Off entirely
+   * (and this hook never runs) when BASIC_AUTH_USER/PASSWORD are unset, which
+   * is the case for local dev and for a deployment sitting behind its own
+   * VPN/private network instead.
+   */
+  const basicAuthCredentials = resolveBasicAuthCredentials(config);
+
+  if (basicAuthCredentials !== undefined) {
+    app.addHook("onRequest", async (request, reply) => {
+      if (request.url === "/health") {
+        return;
+      }
+
+      if (
+        !checkBasicAuth(request.headers.authorization, basicAuthCredentials)
+      ) {
+        reply.header("www-authenticate", BASIC_AUTH_REALM);
+        await reply.code(401).send({ error: { message: "Unauthorized" } });
+      }
+    });
+  }
+
   registerHealthRoutes(app, config);
-  registerSiteRoutes(app, db, config);
+  registerSiteRoutes(app, db, config, runTrigger);
   registerPatternRoutes(app, db, config);
+  // Fleet-wide, organization-scoped reads — see ADR-0028.
+  registerIssueRoutes(app, db, config);
+  // The fleet portfolio read model — see ADR-0037.
+  registerProjectRoutes(app, db, config);
+  registerRunRoutes(app, db, config);
+  // Read-only platform settings, and the honest record of which of its limits
+  // anything actually applies — see policy-manifest.ts.
+  registerSettingsRoutes(app, db, config);
+  /*
+   * Calculators over the sampling and extraction logic the pipeline runs. NO
+   * `db` ARGUMENT, deliberately: the one POST here computes and returns, and
+   * cannot mutate anything because the handler holds no handle to write
+   * through. See routes/tools.ts.
+   */
+  registerToolRoutes(app, config);
 
   return app;
 }

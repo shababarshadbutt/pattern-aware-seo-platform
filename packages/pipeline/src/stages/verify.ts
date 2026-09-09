@@ -1,5 +1,6 @@
 import {
   appendSampleObservations,
+  countObservations,
   listSitemapFiles,
   type SampleObservationInsert,
   type SiteScope,
@@ -21,6 +22,7 @@ import {
   type VerifyPayload,
   verifyPayloadSchema
 } from "../payloads.js";
+import { checkRunCompletion } from "./finalize-trigger.js";
 
 /**
  * Stage 3: resolve one pattern's sample to real URLs and probe them.
@@ -43,7 +45,10 @@ import {
  */
 export type PatternOutcome =
   | PatternVerdict
-  | { readonly kind: "unresolvable"; readonly reason: "SAMPLE_UNRESOLVABLE" };
+  | {
+      readonly kind: "unresolvable";
+      readonly reason: "SAMPLE_UNRESOLVABLE" | "ALREADY_VERIFIED";
+    };
 
 export interface VerifyResult {
   readonly verdict: PatternOutcome;
@@ -65,6 +70,51 @@ export async function runVerify(
   );
 
   assertScopeMatchesPayload(scope, payload, "verify");
+
+  /**
+   * REDELIVERY GUARD. BullMQ is at-least-once, not exactly-once: a `verify`
+   * job can be handed to a worker again after it already ran to completion —
+   * an ack lost right as a process crashed, a stalled-lock reclaim. Re-probing
+   * would send the same real HTTP requests at the client's origin a second
+   * time, which is exactly the cost this platform's whole design exists to
+   * bound. Observations already existing for this draw means a previous
+   * attempt already probed and wrote them, so this attempt skips straight to
+   * making sure `estimate` still gets enqueued — which is itself a safe
+   * no-op if that attempt already did it too (see `insertAuditSnapshot`'s
+   * upsert).
+   */
+  const alreadyObserved = await countObservations(
+    deps.db,
+    scope,
+    payload.patternSampleId
+  );
+
+  if (alreadyObserved > 0) {
+    deps.logger.info(
+      {
+        sitemapRunId: payload.sitemapRunId,
+        patternId: payload.patternId,
+        patternSampleId: payload.patternSampleId,
+        alreadyObserved
+      },
+      "verify job redelivered after observations were already recorded; skipping re-probe"
+    );
+
+    await deps.enqueue("estimate", {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId,
+      patternId: payload.patternId,
+      patternSampleId: payload.patternSampleId
+    });
+
+    return {
+      verdict: { kind: "unresolvable", reason: "ALREADY_VERIFIED" },
+      probed: 0,
+      escalated: 0,
+      requestCount: 0,
+      observationsWritten: 0
+    };
+  }
 
   const files = await listSitemapFiles(deps.db, scope, payload.sitemapRunId);
   const fileByOrdinal = new Map(
@@ -96,6 +146,18 @@ export async function runVerify(
       "SAMPLE_UNRESOLVABLE"
     );
 
+    /**
+     * THE ONE PATH THAT REACHES A TERMINAL STATUS WITHOUT EVER ENQUEUING
+     * `estimate`. Every other way a pattern finishes goes through `estimate`,
+     * which runs this same check on its own way out — but this branch returns
+     * before that would ever happen, so if this happens to be the run's last
+     * unfinished pattern, nothing else would ever notice completion.
+     */
+    await checkRunCompletion(deps, scope, {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId
+    });
+
     return {
       verdict: { kind: "unresolvable", reason: "SAMPLE_UNRESOLVABLE" },
       probed: 0,
@@ -104,6 +166,8 @@ export async function runVerify(
       observationsWritten: 0
     };
   }
+
+  const probeStart = performance.now();
 
   const result = await verifyPattern(
     {
@@ -120,6 +184,11 @@ export async function runVerify(
       ...(deps.probeFetch === undefined ? {} : { fetch: deps.probeFetch })
     }
   );
+
+  deps.onVerifyTelemetry?.({
+    kind: "verifyProbe",
+    durationMs: performance.now() - probeStart
+  });
 
   const observationsWritten = await recordObservations(
     deps,
@@ -201,6 +270,12 @@ async function resolveAll(
     byFile.set(candidate.fileId, [...existing, candidate]);
   }
 
+  deps.onVerifyTelemetry?.({
+    kind: "candidateFileSpread",
+    patternId: payload.patternId,
+    distinctFiles: byFile.size
+  });
+
   const resolved: ResolvedCandidate[] = [];
 
   for (const [fileOrdinal, candidates] of byFile) {
@@ -219,6 +294,8 @@ async function resolveAll(
       continue;
     }
 
+    const resolveStart = performance.now();
+
     try {
       const fromFile = await resolveCandidates(
         deps.store,
@@ -231,8 +308,26 @@ async function resolveAll(
         }
       );
 
+      deps.onVerifyTelemetry?.({
+        kind: "resolveCandidates",
+        fileOrdinal,
+        durationMs: performance.now() - resolveStart
+      });
+
       resolved.push(...fromFile);
     } catch (error) {
+      /**
+       * Reported even though resolution failed: the file was genuinely opened
+       * and streamed (or attempted) before the error surfaced, so the wall
+       * time is real cost the benchmark wants to see, not a call that never
+       * happened.
+       */
+      deps.onVerifyTelemetry?.({
+        kind: "resolveCandidates",
+        fileOrdinal,
+        durationMs: performance.now() - resolveStart
+      });
+
       /**
        * A resolution failure is a data-integrity finding, not a transient one:
        * it means the file's URLs have shifted since ingestion, so retrying will

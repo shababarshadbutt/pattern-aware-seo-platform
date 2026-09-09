@@ -1,9 +1,11 @@
 import {
+  countExpandedPatterns,
   countPatternsByStatus,
   finishRun,
   listSitemapFiles,
   listSnapshotsByImpact,
   type SiteScope,
+  summariseRunRequests,
   upsertSamplingHealth
 } from "@pattern-aware/database";
 
@@ -97,6 +99,37 @@ export async function runFinalize(
     filesFailed
   });
 
+  /**
+   * The operational figures, RE-DERIVED from the rows rather than passed in.
+   *
+   * `runVerify` already counts requests and escalations per pattern, but the
+   * pipeline dispatches every stage as an independent job (`runner.ts`), so a
+   * stage's return value reaches the worker and never another stage. Finalize
+   * could not read those counters even in principle — it may not be in the same
+   * process.
+   *
+   * That is not a workaround. Deriving is the MORE accurate of the two:
+   * `ProbeResult.requestCount` resets per profile-ladder rung and `probeUrl`
+   * returns only the last rung, so the in-memory counter under-counts a retried
+   * probe. The rows do not.
+   *
+   * These three were literal zeros until ADR-0034, which meant `sampling_health`
+   * reported a platform that sent no requests and escalated nothing, on every
+   * real run — visible only because the demo seed wrote its own figures and made
+   * the screens above look populated.
+   */
+  const requests = await summariseRunRequests(
+    deps.db,
+    scope,
+    payload.sitemapRunId
+  );
+
+  const patternsExpanded = await countExpandedPatterns(
+    deps.db,
+    scope,
+    payload.sitemapRunId
+  );
+
   await upsertSamplingHealth(deps.db, scope, {
     sitemapRunId: payload.sitemapRunId,
     // The window is the run itself: a run is the unit these figures describe,
@@ -108,8 +141,24 @@ export async function runFinalize(
     patternsBlocked,
     patternsNeedsReview,
     samplesDrawn: patternsMeasured + patternsNeedsReview + patternsBlocked,
-    httpRequests: 0,
-    getEscalations: 0,
+    /*
+     * A MEASURED zero until adaptive expansion is wired: no stage records a
+     * round above 1 today. The query is correct and the zero is true — see
+     * `countExpandedPatterns`, which says so at more length so nobody later
+     * "fixes" it by counting something else.
+     */
+    patternsExpanded,
+    httpRequests: requests.httpRequests,
+    getEscalations: requests.getEscalations,
+    /*
+     * STILL ZERO, AND STILL NOT A MEASUREMENT. `HostCircuitBreaker` keeps its
+     * state in a private Map inside one worker process and counts nothing, and
+     * no table records an opening — so there is no figure for this stage to
+     * derive, unlike the two above. The interface renders it as "not measured"
+     * rather than as 0 for that reason; making the column nullable is the right
+     * fix the day some run can produce the number and another cannot, and is
+     * recorded in ADR-0034 rather than done here.
+     */
     circuitBreaks: 0
   });
 
@@ -142,6 +191,15 @@ export async function runFinalize(
       patternsBlocked,
       patternsNeedsReview,
       patternsLowConfidence,
+      patternsExpanded,
+      httpRequests: requests.httpRequests,
+      getEscalations: requests.getEscalations,
+      /*
+       * The width of the bound on `httpRequests`: each of these probes cost one
+       * request or two and the row cannot say which. Logged because no column
+       * holds it, so this is the only place the slack is visible.
+       */
+      noResponseProbes: requests.noResponseProbes,
       filesTotal: files.length,
       filesFailed
     },

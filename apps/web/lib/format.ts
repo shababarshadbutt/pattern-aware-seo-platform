@@ -21,3 +21,29 @@ export function formatDateTime(iso: string): string {
 export function formatCount(value: number): string {
   return value.toLocaleString("en-US");
 }
+
+/**
+ * A byte size, in binary units.
+ *
+ * KiB rather than kB, because the figure it labels is a downloaded sitemap's
+ * `byte_size` and 1024 is what a reader comparing it against a file on disk
+ * will see. Fixed to one decimal above the byte range so a column of sizes
+ * stays the same width under tabular numerals; exact bytes below 1 KiB,
+ * because "0.1 KiB" hides the difference between an empty file and a small one.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${formatCount(bytes)} B`;
+  }
+
+  const units = ["KiB", "MiB", "GiB", "TiB"] as const;
+  let value = bytes / 1024;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${value.toFixed(1)} ${units[unit]}`;
+}

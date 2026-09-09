@@ -1,9 +1,11 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { type Database, internalDatabase } from "../client.js";
 import { isCheckViolation, pgConstraintName } from "../pg-errors.js";
 import { auditSnapshot } from "../schema/observability.js";
-import type { SiteScope } from "../scope.js";
+import { pattern } from "../schema/pattern.js";
+import type { OrganizationScope, SiteScope } from "../scope.js";
+import { organizationSiteIds } from "./site.js";
 
 /**
  * The immutable record of one published claim.
@@ -141,6 +143,13 @@ export class ImpossibleClaimError extends Error {
  * Translates a CHECK violation into {@link ImpossibleClaimError} rather than
  * letting a raw SQLSTATE escape, so the failure names what actually went wrong
  * instead of arriving as an opaque driver error four layers up.
+ *
+ * Upserts on `(site_id, pattern_sample_id, http_status)` — one claim per
+ * outcome per draw — and does nothing on conflict. This is what makes a
+ * redelivered `estimate` job (BullMQ is at-least-once, not exactly-once) a
+ * safe no-op instead of a second row: the row already there is byte-for-byte
+ * what a re-run of `buildSnapshot` would write again, since both are pure
+ * functions of the same tallied observations.
  */
 /**
  * Coerce the numeric columns the driver hands back as strings.
@@ -203,13 +212,43 @@ export async function insertAuditSnapshot(
         impactScore: input.impactScore.toFixed(3),
         ...(input.strata === undefined ? {} : { strata: input.strata })
       })
+      .onConflictDoNothing({
+        target: [
+          auditSnapshot.siteId,
+          auditSnapshot.patternSampleId,
+          auditSnapshot.httpStatus
+        ]
+      })
       .returning(COLUMNS);
 
-    if (row === undefined) {
-      throw new Error("audit_snapshot insert returned no row");
+    if (row !== undefined) {
+      return toRow(row);
     }
 
-    return toRow(row);
+    /**
+     * Conflicted: this exact (draw, outcome) claim already exists, which is
+     * either a redelivered `estimate` job or a genuine second caller. Read it
+     * back rather than treat the conflict as an error — see the function's
+     * docblock on why this is a safe no-op rather than a defect.
+     */
+    const existing = await findSnapshotBySampleAndStatus(
+      db,
+      scope,
+      input.patternSampleId,
+      input.httpStatus
+    );
+
+    if (existing === undefined) {
+      // The insert conflicted, so a row exists — but it is not visible in this
+      // scope, which means the caller is holding a scope for a different site
+      // than the sample belongs to. The same shape `recordPatternSample`
+      // guards against.
+      throw new Error(
+        `audit_snapshot for pattern_sample ${input.patternSampleId} status ${input.httpStatus} conflicted on insert but is not visible in scope ${scope.siteId}`
+      );
+    }
+
+    return existing;
   } catch (error) {
     if (isCheckViolation(error)) {
       throw new ImpossibleClaimError(pgConstraintName(error), error);
@@ -217,6 +256,28 @@ export async function insertAuditSnapshot(
 
     throw error;
   }
+}
+
+/** One claim, by the natural key `insertAuditSnapshot` upserts on. */
+async function findSnapshotBySampleAndStatus(
+  db: Database,
+  scope: SiteScope,
+  patternSampleId: string,
+  httpStatus: number
+): Promise<AuditSnapshotRow | undefined> {
+  const [row] = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(auditSnapshot)
+    .where(
+      and(
+        eq(auditSnapshot.siteId, scope.siteId),
+        eq(auditSnapshot.patternSampleId, patternSampleId),
+        eq(auditSnapshot.httpStatus, httpStatus)
+      )
+    )
+    .limit(1);
+
+  return row === undefined ? undefined : toRow(row);
 }
 
 /**
@@ -251,6 +312,20 @@ export async function findSnapshotsByPattern(
 }
 
 /**
+ * One of a site's own findings, carrying the pattern it describes.
+ *
+ * A site's findings list can say "this site" because the screen names it, but
+ * it cannot say "this pattern" — a row reading only `404, ~5,600` is not
+ * actionable, and the pattern id it links on is a UUID no reader recognises.
+ * So the template travels, the same way {@link OrganizationSnapshotRow} sends
+ * it for the fleet list; the site name does not, because the screen is the
+ * site.
+ */
+export interface SiteSnapshotRow extends AuditSnapshotRow {
+  readonly patternTemplate: string;
+}
+
+/**
  * A site's findings, worst first.
  *
  * Ranked on `impact_score`, which is derived from the POINT estimate and never
@@ -262,7 +337,7 @@ export async function listSnapshotsByImpact(
   db: Database,
   scope: SiteScope,
   options: { readonly sitemapRunId?: string; readonly limit?: number } = {}
-): Promise<readonly AuditSnapshotRow[]> {
+): Promise<readonly SiteSnapshotRow[]> {
   const conditions = [eq(auditSnapshot.siteId, scope.siteId)];
 
   if (options.sitemapRunId !== undefined) {
@@ -270,13 +345,219 @@ export async function listSnapshotsByImpact(
   }
 
   const rows = await internalDatabase(db)
-    .select(COLUMNS)
+    .select({ ...COLUMNS, patternTemplate: pattern.template })
     .from(auditSnapshot)
+    /**
+     * Joined on BOTH key columns, as the fleet query is.
+     *
+     * `pattern` is partitioned by `site_id` with a composite primary key
+     * (ADR-0010), so pairing the site id is what keeps the join inside one
+     * partition — and it is the same pairing the post-M3 hardening pass added
+     * FKs for, after finding a row could carry one site's `site_id` while
+     * pointing at another site's parent.
+     */
+    .innerJoin(
+      pattern,
+      and(
+        eq(pattern.siteId, auditSnapshot.siteId),
+        eq(pattern.id, auditSnapshot.patternId)
+      )
+    )
     .where(and(...conditions))
-    // Ordered in SQL on the numeric column, so the ordering is numeric even
-    // though the values arrive as strings.
-    .orderBy(desc(auditSnapshot.impactScore))
+    /**
+     * `NULLS LAST`, to match the index — not for semantics.
+     *
+     * Ordered in SQL on the numeric column, so the ordering is numeric even
+     * though the values arrive as strings.
+     *
+     * `impact_score` is NOT NULL, so the null placement cannot change a
+     * result. It is spelled out because `idx_audit_snapshot_site_impact` is
+     * `(site_id, impact_score DESC NULLS LAST)` while a bare `ORDER BY ... DESC`
+     * means DESC NULLS FIRST — a mismatch that stops the index satisfying the
+     * ordering. `EXPLAIN` confirms the difference on a single site: with it,
+     * a plain `Index Scan` the `LIMIT` can stop early; without it, an
+     * `Index Scan` plus a `Sort` of every matching row.
+     */
+    .orderBy(sql`${auditSnapshot.impactScore} desc nulls last`)
     .limit(options.limit ?? 100);
 
+  return rows.map((row) => ({
+    ...toRow(row),
+    patternTemplate: row.patternTemplate
+  }));
+}
+
+/**
+ * Every published claim about each of several patterns, in one round trip.
+ *
+ * The pattern explorer needs each row's findings to roll them into a total, and
+ * doing that with {@link findSnapshotsByPattern} per row would issue one query
+ * per pattern on the page. Bounded by the caller's page size rather than by a
+ * `limit` of its own: a page of patterns has a few findings each, and silently
+ * truncating would under-report a total that is supposed to be the SUM of a
+ * pattern's findings.
+ *
+ * Returns early on an empty list rather than issuing `pattern_id = ANY('{}')`,
+ * which scans a partition to find nothing.
+ *
+ * NOT ORDERED — the caller groups these by pattern and hands each group to
+ * `scorePatternImpact`, which does not care about order.
+ */
+export async function listSnapshotsByPatterns(
+  db: Database,
+  scope: SiteScope,
+  patternIds: readonly string[]
+): Promise<readonly AuditSnapshotRow[]> {
+  if (patternIds.length === 0) {
+    return [];
+  }
+
+  const rows = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(auditSnapshot)
+    .where(
+      and(
+        eq(auditSnapshot.siteId, scope.siteId),
+        inArray(auditSnapshot.patternId, [...patternIds])
+      )
+    );
+
   return rows.map(toRow);
+}
+
+/**
+ * One finding, carrying the labels a cross-site list needs to be readable.
+ *
+ * A site's own findings list can say "this pattern" because the screen already
+ * names the site and the pattern. A fleet-wide list cannot: a row that says
+ * only `404, ~5,600` is unattributable, so the site name and pattern template
+ * travel with it.
+ */
+export interface OrganizationSnapshotRow extends AuditSnapshotRow {
+  readonly siteName: string;
+  readonly patternTemplate: string;
+}
+
+/**
+ * Every site's findings in one organization, worst first.
+ *
+ * The fleet-level counterpart to {@link listSnapshotsByImpact}, and it inherits
+ * that function's ranking rule rather than restating it: `impact_score` is
+ * derived from the POINT estimate, never from a bound, because ranking on an
+ * upper bound floats the least-understood patterns to the top — a wide interval
+ * means thin evidence, not a big problem.
+ *
+ * CROSS-SITE, WITHIN ONE ORGANIZATION, AND THAT DISTINCTION IS THE WHOLE POINT
+ * (ADR-0028). The site ids come from `organizationSiteIds`, which can only
+ * return sites belonging to the caller's own `OrganizationScope` — so the query
+ * cannot reach another tenant's rows even if its predicate were wrong. This is
+ * not the cross-ORGANIZATION fleet auto-attach the action plan leaves open, and
+ * must not become it: nothing here accepts an organization id from a caller.
+ *
+ * Returns early on an organization with no sites rather than issuing
+ * `site_id = ANY('{}')`, which scans every partition to find nothing.
+ */
+export async function listOrganizationSnapshotsByImpact(
+  db: Database,
+  scope: OrganizationScope,
+  options: { readonly limit?: number } = {}
+): Promise<readonly OrganizationSnapshotRow[]> {
+  const siteNames = await organizationSiteIds(db, scope);
+
+  if (siteNames.size === 0) {
+    return [];
+  }
+
+  const rows = await internalDatabase(db)
+    .select({ ...COLUMNS, patternTemplate: pattern.template })
+    .from(auditSnapshot)
+    /**
+     * Joined on BOTH key columns, not just `pattern_id`.
+     *
+     * `pattern` is partitioned by `site_id` with a composite primary key
+     * (ADR-0010), so pairing the site id is what lets the join prune to one
+     * partition — and it is the same pairing the post-M3 hardening added FKs
+     * for, after finding a row could carry one site's `site_id` while pointing
+     * at another site's parent.
+     */
+    .innerJoin(
+      pattern,
+      and(
+        eq(pattern.siteId, auditSnapshot.siteId),
+        eq(pattern.id, auditSnapshot.patternId)
+      )
+    )
+    .where(inArray(auditSnapshot.siteId, [...siteNames.keys()]))
+    /**
+     * Matches the index's null placement, as above.
+     *
+     * KNOWN LIMIT AT FLEET SCALE, measured rather than assumed. Partition
+     * pruning works — `EXPLAIN` touches only the named sites' partitions — but
+     * `site_id = ANY(...)` is served by BITMAP index scans, and a bitmap scan
+     * never preserves index order, so this plan sorts the matched rows instead
+     * of merging pre-ordered ones. The ordering is free only when `site_id` is
+     * a single constant.
+     *
+     * Fine at present scale and correct at any scale. The fix when a fleet
+     * makes it matter is top-k per site — one index-ordered `LIMIT n` query
+     * per partition, merged in application code — which is a different shape,
+     * not a tweak, and is not worth its round trips for the handful of sites
+     * that exist today. See ADR-0028.
+     */
+    .orderBy(sql`${auditSnapshot.impactScore} desc nulls last`)
+    .limit(options.limit ?? 100);
+
+  return rows.map((row) => ({
+    ...toRow(row),
+    patternTemplate: row.patternTemplate,
+    // Non-null by construction: the id came from this very map.
+    siteName: siteNames.get(row.siteId) ?? row.siteId
+  }));
+}
+
+export interface SiteSeverityCount {
+  readonly siteId: string;
+  readonly severityClass: SeverityClassName;
+  readonly count: number;
+}
+
+/**
+ * Findings per site per severity class, for the fleet portfolio.
+ *
+ * COUNTS OF FINDINGS, NOT SUMS OF THEIR VOLUMES, and the distinction is the
+ * reason this is safe to put in a KPI card. Each `audit_snapshot` row is a
+ * published finding — a counted thing — while the number of URLs it covers is
+ * an ESTIMATE carrying an interval. Adding those volumes up across a fleet
+ * would manufacture a precise-looking total out of uncertain parts, which
+ * DESIGN.md bans outright; counting the rows does not.
+ *
+ * Grouped in SQL rather than tallied from `listOrganizationSnapshotsByImpact`.
+ * That query is capped at a limit, so counting its result would report the
+ * severity mix of the top hundred findings while labelling it the fleet's —
+ * the same class of error as a paginated table describing itself as a census.
+ *
+ * Cross-site within one organization via `organizationSiteIds`, exactly as its
+ * neighbours (ADR-0028); the ids can only be this caller's own.
+ */
+export async function countOrganizationSnapshotsBySeverity(
+  db: Database,
+  scope: OrganizationScope
+): Promise<readonly SiteSeverityCount[]> {
+  const siteNames = await organizationSiteIds(db, scope);
+
+  if (siteNames.size === 0) {
+    return [];
+  }
+
+  const rows = await internalDatabase(db)
+    .select({
+      siteId: auditSnapshot.siteId,
+      severityClass: auditSnapshot.severityClass,
+      count: sql<number>`count(*)::int`
+    })
+    .from(auditSnapshot)
+    .where(inArray(auditSnapshot.siteId, [...siteNames.keys()]))
+    .groupBy(auditSnapshot.siteId, auditSnapshot.severityClass);
+
+  return rows;
 }

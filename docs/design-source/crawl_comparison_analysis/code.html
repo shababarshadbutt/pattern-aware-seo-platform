@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Crawl Comparison &amp; Analysis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#1f1f28",
+                    "on-error-container": "#ffdad6",
+                    "inverse-surface": "#e4e1ee",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "inverse-primary": "#4d44e3",
+                    "surface-container-highest": "#35343e",
+                    "on-surface": "#e4e1ee",
+                    "surface-variant": "#35343e",
+                    "surface": "#13121b",
+                    "surface-dim": "#13121b",
+                    "error": "#ffb4ab",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "on-background": "#e4e1ee",
+                    "surface-tint": "#c3c0ff",
+                    "secondary-fixed-dim": "#c3c0ff",
+                    "secondary-fixed": "#e2dfff",
+                    "tertiary": "#ffb695",
+                    "surface-container-lowest": "#0e0d16",
+                    "surface-container-low": "#1b1b24",
+                    "on-primary-fixed": "#0f0069",
+                    "on-secondary": "#2a276a",
+                    "on-primary-container": "#dad7ff",
+                    "on-secondary-fixed": "#140f54",
+                    "error-container": "#93000a",
+                    "secondary-container": "#413f82",
+                    "outline": "#918fa1",
+                    "outline-variant": "#464555",
+                    "surface-bright": "#393842",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "on-primary": "#1d00a5",
+                    "background": "#13121b",
+                    "on-tertiary-container": "#ffd2be",
+                    "surface-container-high": "#2a2933",
+                    "secondary": "#c3c0ff",
+                    "on-tertiary-fixed": "#351000",
+                    "primary": "#c3c0ff",
+                    "on-secondary-fixed-variant": "#413f82",
+                    "on-secondary-container": "#b0aef9",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "tertiary-fixed": "#ffdbcc",
+                    "on-surface-variant": "#c7c4d8",
+                    "inverse-on-surface": "#302f39",
+                    "on-error": "#690005",
+                    "primary-fixed": "#e2dfff",
+                    "tertiary-container": "#a44100",
+                    "on-tertiary": "#571f00",
+                    "primary-container": "#4f46e5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "component-padding-y": "6px",
+                    "unit": "4px",
+                    "component-padding-x": "12px",
+                    "gutter": "12px"
+            },
+            "fontFamily": {
+                    "label-xs": [
+                            "JetBrains Mono"
+                    ],
+                    "headline-sm": [
+                            "Geist"
+                    ],
+                    "data-mono": [
+                            "JetBrains Mono"
+                    ],
+                    "body-md": [
+                            "Geist"
+                    ],
+                    "display-sm": [
+                            "Geist"
+                    ],
+                    "body-sm": [
+                            "Geist"
+                    ]
+            },
+            "fontSize": {
+                    "label-xs": [
+                            "11px",
+                            {
+                                    "lineHeight": "12px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-sm": [
+                            "18px",
+                            {
+                                    "lineHeight": "24px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "data-mono": [
+                            "13px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "450"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-sm": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "18px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .table-header-cell {
+            @apply bg-[#18181B] py-component-padding-y px-component-padding-x border-b border-[#27272A] font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider text-left;
+        }
+        .table-row-cell {
+            @apply py-component-padding-y px-component-padding-x border-b border-[#27272A] font-body-sm text-body-sm text-on-surface;
+        }
+        .table-row-data-cell {
+            @apply py-component-padding-y px-component-padding-x border-b border-[#27272A] font-data-mono text-data-mono text-on-surface;
+        }
+        .table-row:hover td {
+            @apply bg-[#18181B];
+        }
+        .metric-card {
+            @apply bg-surface-container border border-[#27272A] rounded p-4;
+        }
+        .status-badge-error {
+            @apply bg-[rgba(239,68,68,0.1)] text-[#EF4444] px-2 py-0.5 rounded-sm font-label-xs text-label-xs inline-flex items-center;
+        }
+        .status-badge-success {
+            @apply bg-[rgba(16,185,129,0.1)] text-[#10B981] px-2 py-0.5 rounded-sm font-label-xs text-label-xs inline-flex items-center;
+        }
+        .status-badge-info {
+            @apply bg-[rgba(59,130,246,0.1)] text-[#3B82F6] px-2 py-0.5 rounded-sm font-label-xs text-label-xs inline-flex items-center;
+        }
+        .timeline-container {
+            position: relative;
+            height: 120px;
+            width: 100%;
+            background-color: #13121b;
+            border: 1px solid #27272A;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 24px;
+        }
+        .timeline-grid {
+            position: absolute;
+            bottom: 24px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 24px);
+            background-size: 50px 100%;
+            background-image: linear-gradient(to right, #27272A 1px, transparent 1px);
+            opacity: 0.5;
+        }
+        .timeline-axis {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 24px;
+            border-top: 1px solid #27272A;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12px;
+            align-items: center;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: calc(100% - 24px);
+            width: 100%;
+            padding: 0 12px;
+            gap: 2px;
+            z-index: 10;
+        }
+        .bar {
+            flex: 1;
+            background-color: #4F46E5;
+            min-width: 4px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s ease;
+        }
+        .bar:hover {
+            background-color: #6366F1;
+        }
+        .diff-indicator-up {
+            @apply text-[#10B981] font-data-mono text-data-mono;
+        }
+        .diff-indicator-down {
+            @apply text-[#EF4444] font-data-mono text-data-mono;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen overflow-hidden flex font-body-md">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin z-50">
+<div class="px-4 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                SEO Engine
+            </h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant mt-1">Technical SEO v2.4</p>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="font-body-md text-body-md">Overview</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+<span class="font-body-md text-body-md">Projects</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-primary dark:text-primary font-bold border-l-2 border-primary hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">cloud_download</span>
+<span class="font-body-md text-body-md">Crawls</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">error_outline</span>
+<span class="font-body-md text-body-md">Issues</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">build</span>
+<span class="font-body-md text-body-md">Tools</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="font-body-md text-body-md">Analytics</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="px-4 mt-auto">
+<button class="w-full bg-primary-container text-white rounded-[4px] py-2 mb-6 font-body-md text-body-md hover:bg-primary-fixed transition-colors">
+                Upgrade Plan
+            </button>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 py-2 pl-4 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span class="font-body-md text-body-md">Documentation</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-[240px] flex-1 flex flex-col h-full bg-surface">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface dark:bg-surface fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<div class="flex items-center gap-6">
+<!-- Breadcrumbs replacing standard search for navigation context -->
+<div class="flex items-center gap-2 font-label-xs text-label-xs text-on-surface-variant">
+<span class="hover:text-on-surface cursor-pointer">Projects</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="hover:text-on-surface cursor-pointer">example.com</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-bold">Crawl Comparison</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</button>
+</div>
+<div class="h-4 w-px bg-[#27272A]"></div>
+<div class="flex items-center gap-2 cursor-pointer group">
+<div class="w-6 h-6 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden flex items-center justify-center">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A small, professional user avatar, a sleek abstract geometric icon representing a highly technical user profile, isolated on a dark background. The icon is rendered in minimalist high-contrast monochrome with subtle glowing edges." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8_OvQa_nGVI5E6t9ZFtWyqhcU9vjgz7fQzVQw-lFmEF13JxjbhlT6VqKAwRs7gCrcF02Sl_HwAX7pbFWi5Wa_H9bmSYgNt-oPeMgbgiY-kipEkVDgBOY9PFrkF30hPVTamZHwRO3fX02GpMAY8fnbQ9-W7lLqjm4Q7REhGauozjvlXjp-W5WjCgnUuwILyGeQ76t0IoDxHDwgbO9S9FJRsRZ5ayG2Ivy4SCFMjPW3sqYyN0ROwyyB7Q"/>
+</div>
+<span class="font-label-xs text-label-xs text-on-surface-variant group-hover:text-on-surface transition-colors">Profile Settings</span>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto mt-[48px] p-container-margin pb-12">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface mb-2">Crawl Comparison &amp; Analysis</h2>
+<div class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2 bg-[#18181B] px-3 py-1 rounded border border-[#27272A]">
+<span class="material-symbols-outlined text-[14px] text-primary">cloud_download</span>
+<span class="font-data-mono">Crawl #42</span>
+<span class="text-on-surface">(Current)</span>
+</div>
+<span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+<div class="flex items-center gap-2 bg-[#18181B] px-3 py-1 rounded border border-[#27272A] opacity-75">
+<span class="material-symbols-outlined text-[14px]">cloud_download</span>
+<span class="font-data-mono">Crawl #41</span>
+<span class="text-on-surface-variant">(Previous)</span>
+</div>
+<span class="ml-4 text-outline font-label-xs">Completed: Today, 14:32 UTC</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-1.5 border border-[#27272A] rounded font-body-md text-body-md text-on-surface hover:bg-[#18181B] transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                        Export PDF
+                    </button>
+<button class="px-4 py-1.5 bg-primary-container text-white rounded font-body-md text-body-md hover:bg-primary-fixed transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                        New Crawl
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout for Summary & Timeline -->
+<div class="grid grid-cols-12 gap-gutter mb-8">
+<!-- Delta Summary Column -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+<div class="metric-card h-full flex flex-col justify-between relative overflow-hidden">
+<!-- Subtle background texture -->
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #4F46E5 0, #4F46E5 1px, transparent 0, transparent 50%); background-size: 8px 8px;"></div>
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wide mb-4 relative z-10">Delta Summary</h3>
+<div class="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
+<div class="flex justify-between items-center border-b border-[#27272A] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#EF4444] text-[18px]">error</span>
+<span class="font-body-md text-body-md">New Errors</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono font-bold">1,432</span>
+<span class="diff-indicator-down flex items-center bg-[rgba(239,68,68,0.1)] px-1 rounded-sm">
+<span class="material-symbols-outlined text-[12px]">arrow_upward</span>
+                                        234
+                                    </span>
+</div>
+</div>
+<div class="flex justify-between items-center border-b border-[#27272A] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#10B981] text-[18px]">check_circle</span>
+<span class="font-body-md text-body-md">Resolved Issues</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono font-bold">1,284</span>
+<span class="diff-indicator-up flex items-center bg-[rgba(16,185,129,0.1)] px-1 rounded-sm">
+<span class="material-symbols-outlined text-[12px]">arrow_downward</span>
+                                        1,284
+                                    </span>
+</div>
+</div>
+<div class="flex justify-between items-center pb-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#3B82F6] text-[18px]">link</span>
+<span class="font-body-md text-body-md">New URLs Discovered</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono font-bold">145,892</span>
+<span class="text-[#3B82F6] font-data-mono text-data-mono flex items-center bg-[rgba(59,130,246,0.1)] px-1 rounded-sm">
+<span class="material-symbols-outlined text-[12px]">add</span>
+                                        12,450
+                                    </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Crawl Timeline Column -->
+<div class="col-span-12 lg:col-span-8">
+<div class="metric-card h-full flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wide">Crawl Timeline (URLs Scanned)</h3>
+<span class="font-label-xs text-label-xs text-outline">Duration: 4h 12m</span>
+</div>
+<div class="timeline-container mt-auto">
+<div class="timeline-grid"></div>
+<div class="bar-chart" id="timeline-bars">
+<!-- Bars will be generated by JS -->
+</div>
+<div class="timeline-axis font-label-xs text-label-xs text-on-surface-variant">
+<span>10:20</span>
+<span>11:20</span>
+<span>12:20</span>
+<span>13:20</span>
+<span>14:32</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Comparison Table Section -->
+<div class="bg-surface-container border border-[#27272A] rounded overflow-hidden">
+<div class="p-4 border-b border-[#27272A] flex justify-between items-center bg-[#13121B]">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Issue Delta Analysis</h3>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
+<input class="bg-[#09090B] border border-[#27272A] text-on-surface font-body-sm rounded h-8 pl-8 pr-3 w-64 focus:border-primary focus:ring-0 outline-none placeholder:text-on-surface-variant" placeholder="Filter issues..." type="text"/>
+</div>
+<select class="bg-[#09090B] border border-[#27272A] text-on-surface font-body-sm rounded h-8 px-3 focus:border-primary focus:ring-0 outline-none">
+<option>All Changes</option>
+<option>New Issues Only</option>
+<option>Resolved Only</option>
+</select>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr>
+<th class="table-header-cell w-12"></th>
+<th class="table-header-cell">Issue Type</th>
+<th class="table-header-cell">Category</th>
+<th class="table-header-cell text-right">Previous (#41)</th>
+<th class="table-header-cell text-right">Current (#42)</th>
+<th class="table-header-cell text-right">Delta</th>
+<th class="table-header-cell text-center">Status</th>
+</tr>
+</thead>
+<tbody id="comparison-table-body">
+<!-- Rows generated by JS for cleaner HTML, simulating data density -->
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-[#27272A] flex justify-between items-center bg-[#13121B]">
+<span class="font-label-xs text-label-xs text-on-surface-variant">Showing 1-10 of 42 issue types</span>
+<div class="flex gap-1">
+<button class="p-1 border border-[#27272A] rounded text-on-surface-variant hover:text-on-surface hover:bg-[#18181B] disabled:opacity-50"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
+<button class="px-2 py-1 border border-[#27272A] rounded text-on-surface-variant bg-[#18181B] font-label-xs">1</button>
+<button class="px-2 py-1 border border-transparent rounded text-on-surface-variant hover:bg-[#18181B] font-label-xs">2</button>
+<button class="px-2 py-1 border border-transparent rounded text-on-surface-variant hover:bg-[#18181B] font-label-xs">3</button>
+<button class="p-1 border border-[#27272A] rounded text-on-surface-variant hover:text-on-surface hover:bg-[#18181B]"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Generate Timeline Bars
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartContainer = document.getElementById('timeline-bars');
+            const numBars = 60;
+            
+            for (let i = 0; i < numBars; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                // Simulate a crawl progress curve (ramp up, steady, tail off)
+                let heightPercent;
+                if (i < 10) heightPercent = (i * 8) + Math.random() * 10;
+                else if (i > 50) heightPercent = ((60 - i) * 8) + Math.random() * 10;
+                else heightPercent = 70 + Math.random() * 30;
+                
+                bar.style.height = `${heightPercent}%`;
+                
+                // Add a subtle intensity color shift based on height
+                const opacity = 0.5 + (heightPercent / 200);
+                bar.style.backgroundColor = `rgba(79, 70, 229, ${opacity})`;
+                
+                chartContainer.appendChild(bar);
+            }
+
+            // Generate Table Data
+            const tableBody = document.getElementById('comparison-table-body');
+            const issues = [
+                { type: "404 Not Found", cat: "Indexability", prev: 1240, curr: 850, status: "resolved" },
+                { type: "Missing H1 Tag", cat: "Content", prev: 45, curr: 210, status: "new" },
+                { type: "Slow Page Response (>2s)", cat: "Performance", prev: 3102, curr: 3102, status: "neutral" },
+                { type: "Duplicate Title Tags", cat: "Content", prev: 890, curr: 0, status: "resolved" },
+                { type: "Broken Internal Links", cat: "Links", prev: 156, curr: 189, status: "new" },
+                { type: "Orphan Pages", cat: "Architecture", prev: 42, curr: 38, status: "resolved" },
+                { type: "Missing Meta Description", cat: "Content", prev: 5000, curr: 5020, status: "new" },
+                { type: "Redirect Chain", cat: "Links", prev: 230, curr: 110, status: "resolved" },
+                { type: "Canonical Mismatch", cat: "Indexability", prev: 0, curr: 45, status: "new" },
+                { type: "Images Missing Alt Text", cat: "Content", prev: 12050, curr: 11800, status: "resolved" }
+            ];
+
+            issues.forEach(issue => {
+                const tr = document.createElement('tr');
+                tr.className = 'table-row cursor-pointer transition-colors';
+                
+                let delta = issue.curr - issue.prev;
+                let deltaHtml = '';
+                let statusBadge = '';
+                let iconHtml = '';
+
+                if (delta > 0) {
+                    deltaHtml = `<span class="diff-indicator-down">+${delta}</span>`;
+                    statusBadge = `<span class="status-badge-error">Degraded</span>`;
+                    iconHtml = `<span class="material-symbols-outlined text-[#EF4444] text-[16px]">trending_up</span>`;
+                } else if (delta < 0) {
+                    deltaHtml = `<span class="diff-indicator-up">${delta}</span>`;
+                    statusBadge = `<span class="status-badge-success">Improved</span>`;
+                    iconHtml = `<span class="material-symbols-outlined text-[#10B981] text-[16px]">trending_down</span>`;
+                } else {
+                    deltaHtml = `<span class="text-on-surface-variant font-data-mono">0</span>`;
+                    statusBadge = `<span class="status-badge-info bg-[rgba(145,143,161,0.1)] text-outline">Unchanged</span>`;
+                    iconHtml = `<span class="material-symbols-outlined text-outline text-[16px]">horizontal_rule</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="table-row-cell text-center border-[#27272A]">${iconHtml}</td>
+                    <td class="table-row-cell font-medium">${issue.type}</td>
+                    <td class="table-row-cell text-on-surface-variant">${issue.cat}</td>
+                    <td class="table-row-data-cell text-right">${issue.prev.toLocaleString()}</td>
+                    <td class="table-row-data-cell text-right">${issue.curr.toLocaleString()}</td>
+                    <td class="table-row-data-cell text-right">${deltaHtml}</td>
+                    <td class="table-row-cell text-center">${statusBadge}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        });
+    </script>
+</body></html>

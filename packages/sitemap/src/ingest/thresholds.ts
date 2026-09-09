@@ -59,6 +59,25 @@ export function sampleRateMultiplierFor(
  * Called as counts accumulate, not once at the end — the hard limit only saves
  * anything if it is noticed while there is still work left to skip.
  */
+/**
+ * The conservative default a caller gets when it does not configure its own
+ * thresholds.
+ *
+ * Soft and hard URL limits are left at `Infinity` deliberately: as of Phase
+ * 2A only the file-count hard limit is wired into the pipeline (see
+ * `packages/pipeline/src/stages/ingest.ts`), so a caller that has not been
+ * given real `POPULATION_SOFT_LIMIT_URLS`/`POPULATION_HARD_LIMIT_URLS` values
+ * should not have this module's URL-based branches fire on its behalf. The
+ * file limit mirrors `packages/shared/src/config.ts`'s own
+ * `POPULATION_HARD_LIMIT_FILES` default so the two stay in agreement without
+ * `packages/sitemap` importing from `packages/shared`.
+ */
+export const DEFAULT_OVERSIZE_THRESHOLDS: OversizeThresholds = {
+  softLimitUrls: Number.POSITIVE_INFINITY,
+  hardLimitUrls: Number.POSITIVE_INFINITY,
+  hardLimitFiles: 50_000
+};
+
 export function assessSize(
   observed: { readonly totalUrls: number; readonly totalFiles: number },
   thresholds: OversizeThresholds

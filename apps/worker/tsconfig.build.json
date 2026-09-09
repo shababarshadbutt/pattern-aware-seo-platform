@@ -1,7 +1,16 @@
 {
-  // Typecheck covers tests (tsconfig.json); the build deliberately does not
-  // ship them. One config for correctness, one for output.
+  // Build config: emits src to dist. rootDir/outDir live HERE rather than in
+  // tsconfig.json because that config also covers test/ and vitest.config.ts,
+  // which sit outside src — a rootDir spanning them would emit dist/src/...
+  // and ship the tests. Typecheck covers tests (tsconfig.json); the build
+  // deliberately does not ship them. One config for correctness, one for
+  // output — same split as apps/api.
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false },
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"]
 }

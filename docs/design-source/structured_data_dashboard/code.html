@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Structured Data Dashboard - SEO Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#c3c0ff",
+                        "inverse-primary": "#4d44e3",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#ffd2be",
+                        "on-surface": "#e4e1ee",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "primary-fixed": "#e2dfff",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "surface-container": "#1f1f28",
+                        "on-secondary": "#2a276a",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "secondary-fixed": "#e2dfff",
+                        "tertiary": "#ffb695",
+                        "on-surface-variant": "#c7c4d8",
+                        "on-primary": "#1d00a5",
+                        "on-error": "#690005",
+                        "primary": "#c3c0ff",
+                        "on-background": "#e4e1ee",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-highest": "#35343e",
+                        "on-tertiary": "#571f00",
+                        "outline-variant": "#464555",
+                        "surface-container-low": "#1b1b24",
+                        "surface-container-high": "#2a2933",
+                        "on-primary-fixed": "#0f0069",
+                        "on-primary-container": "#dad7ff",
+                        "background": "#13121b",
+                        "surface-container-lowest": "#0e0d16",
+                        "on-secondary-fixed": "#140f54",
+                        "inverse-on-surface": "#302f39",
+                        "secondary": "#c3c0ff",
+                        "outline": "#918fa1",
+                        "surface-dim": "#13121b",
+                        "surface": "#13121b",
+                        "tertiary-container": "#a44100",
+                        "on-secondary-container": "#b0aef9",
+                        "on-secondary-fixed-variant": "#413f82",
+                        "primary-container": "#4f46e5",
+                        "inverse-surface": "#e4e1ee",
+                        "on-tertiary-fixed": "#351000",
+                        "surface-bright": "#393842",
+                        "surface-variant": "#35343e",
+                        "tertiary-fixed": "#ffdbcc",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#413f82",
+                        "brand-primary": "#4F46E5",
+                        "table-header": "#18181B",
+                        "border-standard": "#27272A",
+                        "input-bg": "#09090B",
+                        "status-green-text": "#10B981",
+                        "status-yellow-text": "#F59E0B",
+                        "status-red-text": "#EF4444"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "component-padding-y": "6px",
+                        "unit": "4px",
+                        "container-margin": "24px",
+                        "gutter": "12px",
+                        "component-padding-x": "12px"
+                    },
+                    "fontFamily": {
+                        "label-xs": ["JetBrains Mono"],
+                        "display-sm": ["Geist"],
+                        "body-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "label-xs": ["11px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "display-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "450" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; background-color: #13121b; color: #e4e1ee; }
+        .data-table-header { background-color: #18181B; }
+        .border-standard { border-color: #27272A; }
+        .input-bg { background-color: #09090B; border: 1px solid #27272A; }
+        .input-bg:focus { border: 1px solid #4F46E5; outline: none; }
+        
+        /* Custom scrollbar for dense tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #13121b; }
+        ::-webkit-scrollbar-thumb { background: #35343e; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #464555; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- JSON Generated Sidebar Placeholder: Requires actual JSON execution in production -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline-variant flex flex-col py-container-margin z-50">
+<div class="px-4 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface">SEO Engine</h1>
+<p class="text-xs text-on-surface-variant font-data-mono">Technical SEO v2.4</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">dashboard</span>
+<span class="font-body-sm text-body-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+<span class="font-body-sm text-body-sm">Projects</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">cloud_download</span>
+<span class="font-body-sm text-body-sm">Crawls</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">error_outline</span>
+<span class="font-body-sm text-body-sm">Issues</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-primary dark:text-primary font-bold border-l-2 border-primary pl-4 bg-surface-container-low hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">build</span>
+<span class="font-body-sm text-body-sm">Tools</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">analytics</span>
+<span class="font-body-sm text-body-sm">Analytics</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-primary-container text-on-primary-container py-2 rounded text-sm font-medium hover:bg-opacity-90 transition-colors">Upgrade Plan</button>
+<div class="mt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[16px]">description</span>
+<span class="font-body-sm text-body-sm">Documentation</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] flex-1 flex flex-col h-screen overflow-hidden">
+<!-- JSON Generated TopNavBar Placeholder -->
+<header class="h-[48px] border-b border-outline-variant bg-surface flex justify-between items-center px-container-margin w-full z-40 shrink-0">
+<div class="flex items-center gap-4">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">example.com</span>
+<nav class="flex gap-4 ml-4 h-full items-center">
+<a class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-surface transition-all duration-150 h-full flex items-center" href="#">Projects</a>
+<a class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-surface transition-all duration-150 h-full flex items-center" href="#">Date Range</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">search</span></button>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">notifications</span></button>
+<button class="font-label-xs text-label-xs text-primary border border-primary px-3 py-1 rounded">Profile Settings</button>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-container-margin space-y-6">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface">Structured Data &amp; Schema</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Validation and coverage across <span class="font-data-mono">14,205</span> crawled URLs</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-high border border-outline-variant px-3 py-1.5 flex items-center gap-2 hover:bg-surface-variant text-sm">
+<span class="material-symbols-outlined text-[16px]">download</span> Export
+                    </button>
+<button class="bg-brand-primary text-white px-3 py-1.5 flex items-center gap-2 hover:bg-opacity-90 text-sm rounded-sm">
+<span class="material-symbols-outlined text-[16px]">refresh</span> Re-Validate
+                    </button>
+</div>
+</div>
+<!-- Top Section: KPIs & Radial Chart -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Health Chart -->
+<div class="col-span-12 md:col-span-4 bg-surface-container border border-outline-variant p-4 flex flex-col">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider mb-4">Schema Health</h3>
+<div class="flex-1 flex items-center justify-center relative min-h-[160px]">
+<!-- SVG Radial Placeholder -->
+<svg class="w-32 h-32 transform -rotate-90" viewbox="0 0 36 36">
+<!-- Background Circle -->
+<path class="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="100, 100" stroke-width="3"></path>
+<!-- Valid (88%) -->
+<path class="text-status-green-text" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="88, 100" stroke-width="3"></path>
+<!-- Warnings (10%) -->
+<path class="text-status-yellow-text" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="10, 100" stroke-dashoffset="-88" stroke-width="3"></path>
+<!-- Errors (2%) -->
+<path class="text-status-red-text" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="2, 100" stroke-dashoffset="-98" stroke-width="3"></path>
+</svg>
+<div class="absolute flex flex-col items-center justify-center">
+<span class="font-data-mono text-xl font-bold text-on-surface">88%</span>
+<span class="text-[10px] text-on-surface-variant uppercase">Valid</span>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-xs font-data-mono border-t border-outline-variant pt-2">
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-status-green-text rounded-full"></span> 88%</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-status-yellow-text rounded-full"></span> 10%</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-status-red-text rounded-full"></span> 2%</span>
+</div>
+</div>
+<!-- KPI Cards -->
+<div class="col-span-12 md:col-span-8 grid grid-cols-3 gap-gutter">
+<div class="bg-surface-container border border-outline-variant p-4 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Total Objects</h3>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">data_object</span>
+</div>
+<div>
+<p class="font-data-mono text-2xl mt-4">24,592</p>
+<p class="text-[10px] text-status-green-text flex items-center mt-1"><span class="material-symbols-outlined text-[12px]">arrow_upward</span> 12% vs last crawl</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Unique Types</h3>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">category</span>
+</div>
+<div>
+<p class="font-data-mono text-2xl mt-4">14</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Across entire domain</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Affected URLs</h3>
+<span class="material-symbols-outlined text-[18px] text-status-red-text">warning</span>
+</div>
+<div>
+<p class="font-data-mono text-2xl mt-4 text-status-red-text">1,420</p>
+<p class="text-[10px] text-status-red-text flex items-center mt-1"><span class="material-symbols-outlined text-[12px]">arrow_upward</span> 3% error rate</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Middle Section: Distribution -->
+<div class="bg-surface-container border border-outline-variant p-4">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider mb-4 border-b border-outline-variant pb-2">Schema Type Distribution</h3>
+<div class="space-y-3">
+<!-- Row 1 -->
+<div class="flex items-center gap-4">
+<div class="w-32 font-data-mono text-xs truncate">Product</div>
+<div class="flex-1 bg-surface-container-highest h-2 relative">
+<div class="absolute left-0 top-0 h-full bg-status-green-text" style="width: 80%"></div>
+<div class="absolute left-[80%] top-0 h-full bg-status-yellow-text" style="width: 15%"></div>
+<div class="absolute left-[95%] top-0 h-full bg-status-red-text" style="width: 5%"></div>
+</div>
+<div class="w-16 text-right font-data-mono text-xs">8,402</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center gap-4">
+<div class="w-32 font-data-mono text-xs truncate">BreadcrumbList</div>
+<div class="flex-1 bg-surface-container-highest h-2 relative">
+<div class="absolute left-0 top-0 h-full bg-status-green-text" style="width: 95%"></div>
+<div class="absolute left-[95%] top-0 h-full bg-status-red-text" style="width: 5%"></div>
+</div>
+<div class="w-16 text-right font-data-mono text-xs">5,120</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center gap-4">
+<div class="w-32 font-data-mono text-xs truncate">Article</div>
+<div class="flex-1 bg-surface-container-highest h-2 relative">
+<div class="absolute left-0 top-0 h-full bg-status-green-text" style="width: 70%"></div>
+<div class="absolute left-[70%] top-0 h-full bg-status-yellow-text" style="width: 30%"></div>
+</div>
+<div class="w-16 text-right font-data-mono text-xs">3,450</div>
+</div>
+<!-- Row 4 -->
+<div class="flex items-center gap-4">
+<div class="w-32 font-data-mono text-xs truncate">FAQPage</div>
+<div class="flex-1 bg-surface-container-highest h-2 relative">
+<div class="absolute left-0 top-0 h-full bg-status-green-text" style="width: 60%"></div>
+<div class="absolute left-[60%] top-0 h-full bg-status-yellow-text" style="width: 20%"></div>
+<div class="absolute left-[80%] top-0 h-full bg-status-red-text" style="width: 20%"></div>
+</div>
+<div class="w-16 text-right font-data-mono text-xs">1,200</div>
+</div>
+</div>
+</div>
+<!-- Lower Section: Data Table -->
+<div class="bg-surface-container border border-outline-variant flex flex-col">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Validation Issues</h3>
+<div class="flex gap-2">
+<input class="input-bg px-2 py-1 text-xs font-data-mono w-48 h-8" placeholder="Filter schema..." type="text"/>
+<select class="input-bg px-2 py-1 text-xs font-data-mono h-8 appearance-none pr-6">
+<option>All Severities</option>
+<option>Errors</option>
+<option>Warnings</option>
+</select>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="data-table-header border-b border-outline-variant font-label-xs text-label-xs text-on-surface-variant uppercase">
+<tr>
+<th class="py-2 px-4 font-normal">Schema Type</th>
+<th class="py-2 px-4 font-normal">Issue Description</th>
+<th class="py-2 px-4 font-normal">Severity</th>
+<th class="py-2 px-4 font-normal">URLs</th>
+<th class="py-2 px-4 font-normal text-right">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="py-2 px-4 font-data-mono text-xs">Product</td>
+<td class="py-2 px-4 font-data-mono text-xs truncate max-w-[300px]">Missing field "offers" or "review" or "aggregateRating"</td>
+<td class="py-2 px-4">
+<span class="inline-block px-2 py-0.5 bg-[#EF4444]/10 text-status-red-text border border-[#EF4444]/20 rounded-sm text-[10px] uppercase tracking-wider">Error</span>
+</td>
+<td class="py-2 px-4 font-data-mono text-xs">420</td>
+<td class="py-2 px-4 text-right">
+<button class="text-brand-primary font-data-mono text-xs hover:underline">Inspect</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="py-2 px-4 font-data-mono text-xs">FAQPage</td>
+<td class="py-2 px-4 font-data-mono text-xs truncate max-w-[300px]">Invalid object type for field "mainEntity"</td>
+<td class="py-2 px-4">
+<span class="inline-block px-2 py-0.5 bg-[#EF4444]/10 text-status-red-text border border-[#EF4444]/20 rounded-sm text-[10px] uppercase tracking-wider">Error</span>
+</td>
+<td class="py-2 px-4 font-data-mono text-xs">240</td>
+<td class="py-2 px-4 text-right">
+<button class="text-brand-primary font-data-mono text-xs hover:underline">Inspect</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="py-2 px-4 font-data-mono text-xs">Article</td>
+<td class="py-2 px-4 font-data-mono text-xs truncate max-w-[300px]">Missing recommended field "image"</td>
+<td class="py-2 px-4">
+<span class="inline-block px-2 py-0.5 bg-[#F59E0B]/10 text-status-yellow-text border border-[#F59E0B]/20 rounded-sm text-[10px] uppercase tracking-wider">Warning</span>
+</td>
+<td class="py-2 px-4 font-data-mono text-xs">1,035</td>
+<td class="py-2 px-4 text-right">
+<button class="text-brand-primary font-data-mono text-xs hover:underline">Inspect</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="py-2 px-4 font-data-mono text-xs">BreadcrumbList</td>
+<td class="py-2 px-4 font-data-mono text-xs truncate max-w-[300px]">Value in "item.id" must be a valid URL</td>
+<td class="py-2 px-4">
+<span class="inline-block px-2 py-0.5 bg-[#EF4444]/10 text-status-red-text border border-[#EF4444]/20 rounded-sm text-[10px] uppercase tracking-wider">Error</span>
+</td>
+<td class="py-2 px-4 font-data-mono text-xs">256</td>
+<td class="py-2 px-4 text-right">
+<button class="text-brand-primary font-data-mono text-xs hover:underline">Inspect</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="py-2 px-4 font-data-mono text-xs">Organization</td>
+<td class="py-2 px-4 font-data-mono text-xs truncate max-w-[300px]">Missing recommended field "logo"</td>
+<td class="py-2 px-4">
+<span class="inline-block px-2 py-0.5 bg-[#F59E0B]/10 text-status-yellow-text border border-[#F59E0B]/20 rounded-sm text-[10px] uppercase tracking-wider">Warning</span>
+</td>
+<td class="py-2 px-4 font-data-mono text-xs">14</td>
+<td class="py-2 px-4 text-right">
+<button class="text-brand-primary font-data-mono text-xs hover:underline">Inspect</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-2 border-t border-outline-variant bg-surface-container-highest flex justify-between items-center text-xs font-data-mono text-on-surface-variant">
+<span>Showing 1-5 of 24 issues</span>
+<div class="flex gap-2">
+<button class="px-2 py-1 hover:text-on-surface disabled:opacity-50" disabled="">&lt; Prev</button>
+<button class="px-2 py-1 hover:text-on-surface">Next &gt;</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

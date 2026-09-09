@@ -22,6 +22,7 @@
     "@pattern-aware/sampling": "workspace:^"
   },
   "devDependencies": {
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.11"
   }
 }

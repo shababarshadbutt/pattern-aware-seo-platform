@@ -1116,3 +1116,2017 @@ Left open, and to remove when auth lands: CORS is `origin: true` and must narrow
 to a configured list; `DEFAULT_ORGANIZATION_SLUG` defaults to the demo
 organization, so a production boot resolves to demo data rather than failing —
 acceptable while nothing is deployed, wrong the moment something is.
+
+---
+
+## ADR-0027 — The Google Stitch design supersedes the instrument-panel spec
+
+**Date:** 2026-09-04
+**Status:** Accepted; its RAIL-LABEL clause superseded by ADR-0039
+(2026-09-07), which renames "Crawls" to "Analyses" at the owner's direction
+after an external review reached the same objection independently. Everything
+else here — the palette, the type, the namespace reset, dark-only, and the four
+things a redesign did not get to change — stands. The unreachability note in the
+Consequences below is also now moot: the design is vendored at
+`docs/design-source/` (ADR-0038).
+
+### Context
+
+`docs/DESIGN.md` described a "glass cockpit instrument panel" identity: amber
+accent, hairline borders, no card chrome, Switzer as the UI face, and an
+explicit ban list (§9) naming purple/indigo accents, KPI card rows, capsule
+badges and drop shadows.
+
+Two things were true about it. It was coherent and structurally enforced —
+`apps/web/app/globals.css` resets Tailwind's colour, radius, font and font-size
+namespaces to nothing, so an off-spec utility does not compile. And it was not
+what shipped: Switzer is not on Google Fonts, its files were never vendored, so
+`--font-switzer` stayed unset and every screen fell back to system sans. The
+largest visual gap between the app and its own spec was a font that was never
+there.
+
+The project owner designed a replacement in Google Stitch (project
+`12137181229897682385`, 13 desktop screens) and decided it supersedes
+`docs/DESIGN.md` rather than being reconciled with it.
+
+### Decision
+
+The Stitch design is the product's visual identity. `docs/DESIGN.md` is
+rewritten to describe it, including a §9 that bans what the new identity
+rejects rather than what the old one did.
+
+Values are transcribed from the `tailwind.config` in Stitch's own generated
+HTML, not sampled from a screenshot. Palette is Material 3 dark; accent is
+indigo, in two strictly separate roles — `--accent` `#4f46e5` is a fill (never
+text, at 4.0:1 against the page) and `--accent-text` `#c3c0ff` is the tint for
+accented text. Radius becomes 2/4/8/12. Type is Geist + JetBrains Mono, both
+served self-hosted by `next/font/google`, which is what finally makes the UI
+face real.
+
+Three decisions inside this one, each made deliberately:
+
+- **Dark only.** Every Stitch screen is `html class="dark"` and its config
+  carries no light ramp, so the previous spec's fully-designed light palette
+  and the `data-theme` switch are retired rather than half-kept. A future light
+  mode is a palette to design, not a switch someone forgot to wire.
+- **The namespace reset survives the values it protected.** The technique is
+  independent of which design it enforces, and it is the reason a spec stays
+  true: drift becomes a build error rather than something a reviewer must
+  notice. Only the surviving token set changed.
+- **The rail mirrors Stitch's navigation exactly** — Overview, Projects,
+  Crawls, Issues, Tools, Analytics — at the owner's explicit direction, after
+  the conflict was raised and reaffirmed. Recorded plainly because it is a real
+  tension: "Crawls" is a crawler product's language, and this platform's whole
+  differentiator is that it samples patterns instead of crawling every URL
+  (CLAUDE.md, non-negotiable rules). The label is presentational. A screen
+  built under that item must still not acquire crawl-everything behaviour, and
+  `components/app-shell.tsx` carries that warning next to the list. Only
+  Overview has a screen; the rest render disabled rather than link to a 404.
+
+### What is explicitly NOT superseded
+
+A visual redesign is the most natural way for a correctness fix to be undone
+quietly, so these carry forward unchanged, and each has a test that fails if it
+does not:
+
+- **ADR-0008's rendering contract.** Every sampled figure renders through
+  `<Estimate>` with its `~` and interval. `lib/adr-0008-guard.test.ts` hardcodes
+  `components/estimate.tsx` as the sole permitted adapter — that file must not
+  be renamed or moved, or the guard passes while checking a convention nothing
+  follows.
+- **The tone mapping in `lib/status.ts` is product logic, not decoration.**
+  Only the colours the four tones resolve to changed. `patternStatusTone`
+  still maps `blocked` to `unknown`, not `critical`: a host refusing us is not
+  a site defect.
+- **The confidence band is said, not only coloured** — the band word renders
+  beside the interval, so it survives a screenshot, a print, and a reader who
+  cannot separate the hues.
+- **Tabular numerals in every data column**, applied at the element level via
+  `[data-numeric]` rather than left to each cell.
+
+### Consequences
+
+Warning is no longer the accent colour. Under the amber accent the two were
+deliberately the same token; with an indigo accent they are independent, and
+`--status-warning` carries its own amber.
+
+The previous spec's §7 rejected the "row of 4 KPI cards" layout by name. The
+Stitch design uses it, so `StatCards` replaces the hairline `StatStrip`.
+
+The design covers 13 screens for a broader, more conventional SEO product —
+redirect analysis, Core Web Vitals, internal links, structured data — of which
+three have a counterpart today (overview → sites list, sitemap analyzer → site
+detail, issue detail → pattern evidence). The other ten are reference for
+future work, not a commitment to build them.
+
+Stitch's own MCP server is registered at local scope, but Node cannot reach
+`stitch.googleapis.com` from this machine: TLS inspection presents a certificate
+Windows trusts and Node does not, so `curl` succeeds where the MCP client fails.
+The design was pulled over `curl` against the same JSON-RPC endpoint. Anyone
+re-pulling it needs either that workaround or the inspecting proxy's root CA in
+`NODE_EXTRA_CA_CERTS`.
+
+---
+
+## ADR-0028 — Fleet reads are organization-scoped, and get their ids from the scope
+
+**Date:** 2026-09-04
+**Status:** Accepted; its PROJECTS verdict superseded by
+ADR-0037 (2026-09-07), which built the fleet portfolio once the owner supplied
+the screen — it is not the sites list this ADR took it for. The cross-site query
+design recorded here stands and ADR-0037 extends it with two more queries.
+
+### Context
+
+The navigation rail adopted with the Stitch design (ADR-0027) has six items, of
+which one had a screen. The other five were rendered disabled, which was the
+recorded decision — but on the running app five items that did nothing on click
+were indistinguishable from five broken links, and were reported as a bug.
+
+Looking at what sat behind each one, they were not equivalent. `Issues` and
+`Crawls` had working, tested queries that had simply never been exposed:
+`listSnapshotsByImpact`, `listRuns`, `listSamplingHealth`,
+`countPatternsByStatus`. `Tools`, `Analytics` and the design's remaining screens
+— Core Web Vitals, internal links, structured data, redirect analysis, content
+audit — have no schema, no pipeline stage and no data, so a screen for them
+would have to invent numbers. `Projects` is the design's name for the sites
+list, which `Overview` already is.
+
+Every existing query takes a `SiteScope`. A rail item has no site selected, so
+these screens are inherently organization-level: "which of my sites is worst".
+
+### Decision
+
+Build `/issues` and `/runs` on real data. Leave `Projects`, `Tools` and
+`Analytics` disabled, now with a visible `SOON` marker so the absence reads as
+a stated fact rather than a failed click.
+
+Two new queries — `listOrganizationSnapshotsByImpact` and
+`listOrganizationRuns` — are the only ones in `packages/database` that
+deliberately span more than one site.
+
+**They resolve their site ids from the `OrganizationScope`, via a
+package-internal `organizationSiteIds`, rather than filtering by joining
+`site.organization_id`.** Two reasons, and the performance one is not the
+important one:
+
+- **Pruning.** `audit_snapshot` and `sitemap_run` are partitioned by `site_id`,
+  and their indexes are site-leading: `idx_audit_snapshot_site_impact` on
+  `(site_id, impact_score DESC NULLS LAST)`, `idx_sitemap_run_site_started` on
+  `(site_id, started_at DESC NULLS LAST)`. An organization filter reached
+  through a join prunes no partitions. An explicit id list prunes — `EXPLAIN`
+  confirms only the named sites' partitions are touched.
+- **The tenant boundary becomes structural.** The only site ids a caller can
+  obtain come from its own scope, so the query cannot reach another tenant's
+  rows even if its predicate were wrong. Contrast the pattern routes, where a
+  caller supplies `siteId` and `assertSiteInOrg` is therefore load-bearing —
+  the defect M7 found was exactly that check being absent.
+
+### This is cross-SITE, not cross-ORGANIZATION
+
+The distinction is the whole point, and it must not erode. These reads span
+every site *within one organization*. The fleet-wide auto-attach question the
+action plan leaves open is a cross-**organization** read, and nothing here
+moves toward it: no function accepts an organization id from a caller, and
+neither route takes one.
+
+### Consequences
+
+`GET /issues` and `GET /runs` are the first routes whose result set is not
+bounded by something in the URL — a site's patterns are bounded by the site, a
+pattern's findings by the pattern, but "every site's worst findings" grows with
+the fleet. So `limit` is validated and capped at 200 at the edge rather than
+left to a repository default.
+
+Findings on `/issues` carry impact's interval, like every other surface: impact
+is `point_estimate × severity_weight` and ADR-0008 does not exempt it.
+`withImpactBounds` moved out of `routes/patterns.ts` into `findings.ts` so both
+routes share one derivation — `schemas.ts` had been documenting it as living
+there while no such file existed.
+
+The demo seed now creates two sites. With one, both fleet screens render a
+one-row table that is indistinguishable from a broken cross-site query; the
+second site is what makes the difference observable, the same reason the
+cross-tenant tests use real rows rather than empty ones. Both new isolation
+tests were confirmed load-bearing by removing the tenant filter and watching
+them fail.
+
+Ranking stays on `impact_score`, never on an interval bound. Ranking on an
+upper bound floats the least-understood patterns to the top, because a wide
+interval means thin evidence rather than a big problem.
+
+### Correction: the ordering is NOT index-satisfied across sites
+
+The first draft of this ADR claimed the id list also let Postgres merge the
+per-partition indexes into globally sorted output. **`EXPLAIN` disproves that**,
+and it is recorded here rather than quietly edited out, because the wrong
+version is the plausible-sounding one.
+
+What was measured, on the seeded database:
+
+- `site_id = <one constant>` with `ORDER BY impact_score DESC NULLS LAST` → a
+  plain `Index Scan` the `LIMIT` stops early. No sort. This is the good plan.
+- `site_id = ANY(<array>)` → **`Bitmap Index Scan`** per partition plus a
+  `Sort`, even with `enable_seqscan = off`. A bitmap scan never preserves index
+  order, so no merge is possible. Pruning still works; the ordering does not.
+
+So the fleet query prunes correctly and then sorts what it matched. That is
+correct at any scale and cheap at this one. The fix when a fleet makes it
+matter is **top-k per site** — one index-ordered `LIMIT n` query per partition,
+merged in application code — which is a different query shape rather than a
+tweak, and is not worth its round trips for the handful of sites that exist
+today. The limitation is commented at the query.
+
+Chasing this down found a real pre-existing defect. `ORDER BY x DESC` means
+`DESC NULLS FIRST`, while both indexes are `DESC NULLS LAST` — a mismatch that
+stops the index satisfying the ordering at all. `listRuns` already got this
+right for `started_at`; `listSnapshotsByImpact` did not, so **even its
+single-site query was sorting every matching row instead of walking the index**.
+`impact_score` is `NOT NULL`, so spelling out `NULLS LAST` cannot change a
+result — it only lets the index be used. Both queries now do.
+
+The rail item that opens `/runs` still says **Crawls** — the Stitch label, kept
+at the owner's direction (ADR-0027) — while the route and page say "Runs",
+because `sitemap_run` is the entity and a run samples rather than crawls. The
+label/title mismatch is deliberate: the alternative is teaching the reader a
+crawl-everything model of the product on the screen that shows its URL counts.
+
+## ADR-0029 — Screens for the data that already existed: run detail, per-site findings, per-pattern file distribution
+
+**Date:** 2026-09-04
+**Status:** Accepted
+**Context:** D3a, prompted by a coverage audit of the Stitch design against what is built.
+
+### What the audit found
+
+Three of the eight navigation-rail items lead anywhere. Two of the five that do
+not — Tools and Analytics — have no schema, no pipeline stage and no data, so a
+screen for them would have to invent numbers; that stays true and they stay
+disabled. But the audit's real finding was not about the rail. It was that the
+database already held, and the pipeline already wrote, a substantial amount of
+measured data that **no HTTP route and therefore no screen could reach**:
+
+- **`sitemap_file`: the entire table.** Every column — ordinal, filename, parse
+  status, URL count, byte size, digest, `parse_error` — written by the ingest
+  stage and readable by nothing. `listSitemapFiles` existed and was called only
+  inside `packages/pipeline`.
+- **`pattern_population`: the entire table.** `listPatternFiles` and
+  `sumPatternPopulation` had no caller outside a test.
+- **`sampling_health`: seven of its nine figures.** The API had always sent
+  them and the web client had always typed them; the site overview rendered
+  exactly two.
+- **`listSnapshotsByImpact`** — a site's own findings, worst first — reachable
+  only from the finalize stage, so the only route into a finding was the
+  fleet-wide `/issues` list.
+- **`countPatternsByStatus`** and **`countObservations`**: the same shape.
+
+None of this needed a schema change or a new pipeline stage. It needed routes
+and screens, which is what this ADR records.
+
+### Decision 1 — A run is addressed by its id alone, scoped through the organization
+
+`GET /runs/:runId` carries no `siteId`, because the fleet list it is reached
+from carries none either and the rail's Crawls item should stay current when the
+reader drills in. That removes the `findSiteById` membership check every other
+id-bearing route makes, so the boundary moves into a new
+`findOrganizationRunById`, which resolves the run against the site ids
+`organizationSiteIds` returns for the caller's own scope — the same technique,
+and for the same two reasons, as ADR-0028's fleet queries. A lookup on `id`
+alone would have been wrong twice over: `sitemap_run` is partitioned by
+`site_id`, so an unqualified id scans every partition, and it would return
+another tenant's run.
+
+This is also what makes the route's `siteScopeWithin(orgScope, run.siteId)`
+safe, and the distinction is worth stating because getting it wrong is the M7
+defect: building a `SiteScope` from a **caller-supplied** id skips a check
+nobody performs. Here the id was never supplied — it came back from a query that
+can only see this organization's runs. The check happened; it happened in the
+lookup.
+
+The isolation test was confirmed load-bearing by deleting the
+`inArray(siteId, ...)` predicate: exactly one test fails, and it fails by
+returning the rival tenant's run.
+
+### Decision 2 — Two read queries gained a join, so their rows are legible
+
+`listSnapshotsByImpact` and `listPatternFiles` each returned rows identified
+only by a UUID — a finding whose pattern is `b2f5e6cb-...` is not actionable, and
+a population row naming `sitemap_file_id` tells a reader nothing. Both now join
+the row they reference, on **both** key columns (`site_id` paired with `id`),
+which is what keeps the join inside one partition under ADR-0010's composite
+primary keys and is the pairing the post-M3 hardening pass added FKs for. The
+fleet query already did exactly this; these two now match it rather than
+inventing a second approach.
+
+`listSnapshotsByImpact`'s new return type is `SiteSnapshotRow` — the site name
+deliberately does **not** travel, unlike the fleet shape, because the screen is
+the site.
+
+### Decision 3 — A capped list must disclose its cap
+
+`listIssues(limit?)` and `listRuns(limit?)` had accepted a limit that no caller
+ever passed, so both fleet screens silently truncated at the API's default of 50
+while their KPI cards counted `rows.length` and labelled it as the fleet. A card
+reading "50 findings" that means "at least 50" is the manufactured-precision
+failure DESIGN.md section 9 bans, arrived at by a different route than the one
+that ban was written for. Until there is real pagination (D3), the screens pass
+the maximum the API allows, prefix every derived figure with a greater-or-equal
+sign when the page is full, label the count "(page)", and say so in a line under
+the cards.
+
+The same rule produced `fileCount` on the run detail. `listSitemapFiles` gained
+an **optional** limit — unset by default, because the pipeline's own callers
+need the whole list and `finalize` would otherwise judge a run on its first page
+— and the route pairs its 200-file page with a real `countSitemapFiles`. Not
+with `sitemap_run.total_files`, which is a progress counter a stage writes: the
+two disagreeing is a fact worth surfacing, and the screen says so when they do.
+
+### Decision 4 — A parsed file with zero URLs is not a success
+
+Found by screenshotting the new run detail against seeded data, not by a test.
+`legacy-sitemap.xml` had `parse_status = 'parsed'` and `url_count = 0`, and the
+screen rendered it green with a healthy row accent, identical to a file holding
+5,700 URLs. That is precisely the indistinguishability the non-negotiable rules
+and standards section 1.5 forbid — an HTML error page parses as perfectly valid,
+URL-less XML, which is how M2 found this the first time — and exposing the table
+for the first time reintroduced it visually.
+
+`parse_status` cannot express it, because the parse genuinely succeeded. So
+`sitemapFileTone(status, urlCount)` decides the tone from both, and the row
+carries a `NO URLS` marker beside the status. `fileParseStatusTone` is kept
+separate and still maps `failed` to critical and `skipped` to warning — a file
+we could not read leaves the run's populations **short**, so its counts are
+wrong rather than merely partial, while a skipped file undercounts by somebody's
+choice. Tests cover all three, including that a zero count does not soften a
+real failure.
+
+### Decision 5 — Projects stays disabled; the rail's dead route match is gone
+
+ADR-0028 already ruled Projects a duplicate of Overview, and that stands. But
+Overview's `match` array listed `/sites`, and there is no `/sites` page — a
+dormant 404 waiting for the first person to trim a URL by hand. It is now
+`/sites/`, the drill-down's real prefix, which cannot be reached without a site
+id. The same class of latent lie the `SOON` marker exists to fix.
+
+### What this deliberately does not do
+
+The API remains **read-only** — seven GET routes, now nine, and no mutation
+anywhere. Nothing in the UI can start a run, onboard a site or dismiss a
+finding, and that is unchanged rather than overlooked: a write path needs auth
+to scope it, and auth is still deferred (ADR-0026). Tools, Analytics, Settings
+and the design's other screens stay disabled for the reason ADR-0028 gave. The
+D3 interaction debt — slide-over, Cmd+K, j/k navigation, density toggle,
+sparklines — is untouched, and real pagination belongs with it.
+
+Two documentation findings from the audit, recorded because they will otherwise
+be rediscovered. `docs/DESIGN.md` asserts the Stitch design has 13 desktop
+screens but never enumerates them — only eight are recoverable by name from this
+log and the action plan, and five are unrecorded anywhere. And the six deferred
+interaction features are **not in the current DESIGN.md at all**: they belonged
+to the superseded instrument-panel spec and survive only as a debt list, which
+is why "the three Magic UI motion moments" now contradicts DESIGN.md section 8,
+where decorative animation is banned.
+
+## ADR-0030 — The Settings screen reports which limits are actually enforced
+
+> **Superseded in part by ADR-0031 (2026-09-05).** The screen composition this ADR describes was invented rather than transcribed, and the real Stitch design is a per-project form. The config mask, the enforcement manifest and its bidirectional guard — the substance below — all stand.
+
+**Date:** 2026-09-05
+**Status:** Accepted
+**Context:** D3b, prompted by "check if the Settings screen is completed".
+
+### What checking it found
+
+Settings was a disabled footer rail item with a `SOON` badge, no route and no
+stub — and no document has ever described what the screen should contain.
+`docs/DESIGN.md` mentioned Settings once, only to say it appears in the rail. So
+its scope was a decision to make rather than a spec to recover.
+
+Making that decision turned up the reason it was worth doing now. **Twelve of
+the platform's twenty-three configured operational limits are applied by
+nothing.** Validated at startup, held in one auditable schema whose own docblock
+says every number in it "bounds something that costs real money or points real
+traffic at somebody else's production web server" — and then consumed by no
+code:
+
+- The five HTTP budgets (`HTTP_PLATFORM_DAILY_REQUEST_CAP`,
+  `HTTP_PER_SITE_DAILY_REQUEST_CAP`, `HTTP_BUDGET_WARN_FRACTION`,
+  `HTTP_BUDGET_HALT_FRACTION`, `HTTP_MAX_GET_ESCALATION_FRACTION`). There is no
+  per-site or platform request counter anywhere — no table, no Redis key — so
+  nothing can charge a daily cap against anything, and the warn/halt fractions
+  are fractions of an uncounted cap. The escalation fraction loses to the
+  hardcoded `DEFAULT_ESCALATION_BUDGET` because `stages/verify.ts` never passes
+  a budget through.
+- The three `POPULATION_*` thresholds.
+- **The four `CONFIDENCE_*` band widths** — found by the guard below rather than
+  by reading, and the most consequential of the twelve.
+  `CONFIDENCE_LOW_BAND_WIDTH`'s own comment says it is shared deliberately
+  between the adaptive expansion trigger and the UI's LOW band, "and the two
+  disagreeing would mean the interface flags a pattern the engine considers
+  settled". Setting it today changes neither: `classifyConfidenceBand` and
+  `planExpansion` default to `DEFAULT_CONFIDENCE_THRESHOLDS` and nothing threads
+  the configured values in.
+- Plus the two site columns `daily_request_cap` and `min_request_interval_ms`,
+  stored, served by `GET /sites` since M7, and applied by nothing:
+  `RateLimiterOptions` accepts only `requestsPerSecond` and `concurrency`, and
+  `#intervalMs` is derived once, globally.
+
+A Settings screen that printed "daily request cap: 250,000" as though it
+governed anything would assert a guarantee the code does not make — section
+1.9's shape, which this codebase has already found twice. On a platform whose
+differentiator is auditing a 90M-URL site WITHOUT hammering the origin, that is
+a worse defect than a missing screen.
+
+### Decision — surface the gap rather than hide it or fix it
+
+Build the read-only screen now, and have it state per value whether that value
+is **in force** or **not enforced**. The gap is not fixed here; it is made
+visible, and the guard below is what forces the screen to stop claiming it once
+somebody does fix it. Scope stays read-only: no mutation route, no auth, both
+still deferred (ADR-0026).
+
+### Decision — the policy config is a `.pick()`, not a second schema
+
+`packages/shared/src/config.ts` holds operational limits and secrets in one
+object. The API needs the numbers without the credentials beside them, so
+`policyConfigSchema` masks that one schema via `configSchema.pick(...)`.
+
+Three properties follow, and the third is the reason for a mask rather than a
+hand-written parallel schema:
+
+1. **Secrets are excluded by construction.** `.pick()` can only narrow, so
+   `DATABASE_URL`, `AUTH_SECRET` and the AWS keys are not absent because
+   something removed them — they were never reachable. A redaction list is a
+   thing to forget to update when a variable is added, and forgetting it
+   publishes a credential.
+2. `PolicyConfig` is a structural subset of `Config`, so `apps/api/src/index.ts`
+   keeps passing the real validated config unchanged.
+3. **One definition of every default and bound.** A parallel schema would
+   restate them and drift — the section 1.13 shape exactly.
+
+`ApiConfig` is left narrow on purpose; only `buildApp` widens, to
+`SettingsConfig = ApiConfig & PolicyConfig`. Every policy key is defaulted, so
+`loadPolicyConfig({})` parses an empty environment and the API test suite still
+holds no database URL — the invariant `api-config.ts`'s docblock records
+survived rather than being quietly undone.
+
+### Decision — enforcement is structural, not a label
+
+A hardcoded `enforced: false` in a page rots on the commit that wires a limit
+up. Three layers instead:
+
+1. **`POLICY_LIMITS` is a mapped type over `keyof PolicyConfig`**, so adding a
+   key to the mask without recording its enforcement is a compile error, and
+   describing a key that is not config is one too. `enforcedAt: string | null` —
+   the path that consumes the value, or null — is a single field, so no flag can
+   disagree with its own explanatory note.
+2. **`policy-enforcement-guard.test.ts` checks both directions** against the
+   source tree: a limit marked enforced must be referenced in the file it names,
+   and a limit marked unenforced must be referenced nowhere outside the two
+   presentation roots. The second direction is the one that earns the file — it
+   fails on the commit that adds the enforcement, naming the remedy.
+3. The two site columns are scanned separately, since `packages/database` owns
+   them and the API and web legitimately render them; only a reference from the
+   worker or the request-issuing packages means one has become real.
+
+The presentation carve-out is `apps/api` and `apps/web` only, and it is a
+carve-out rather than an allowlist of "places enforcement may live" — everything
+else stays in scope, so the guard still fails on an enforcement added anywhere
+it could actually happen. It exists because `apps/web/lib/settings.ts` reads
+`HTTP_PER_SITE_DAILY_REQUEST_CAP` to resolve what a site with no cap of its own
+inherits: a browser rendering a number cannot enforce a server-side budget, and
+counting that as enforcement made the guard flag the very screen built to report
+the gap.
+
+### What the guard caught while being written
+
+Worth recording, because all three are failure modes this kind of test is
+supposed to have and usually does not:
+
+- **A broken matcher that made every "unenforced" assertion pass vacuously.**
+  `\b` inside a template literal is a BACKSPACE character, not a word boundary.
+  The files-scanned floor did not notice — the files were there and the regex
+  was the thing that was wrong. The **enforced** direction is what failed, which
+  is the whole argument for bidirectionality. There is now a positive control on
+  the matcher itself, not only on the walk.
+- **A docblock counted as an enforcement.** `schema/tenancy.ts` documents the
+  column as "a per-site override of `HTTP_PER_SITE_DAILY_REQUEST_CAP`" — prose,
+  not code. This is the M7 finding repeating verbatim: the first version of the
+  database import guard flagged a comment that merely described the rule it was
+  policing. Comments are stripped before matching.
+- **Four wrong claims in the manifest's first draft.** The `CONFIDENCE_*` keys
+  were recorded as enforced at the worker, on the reasonable assumption that
+  config reaching the worker is config being used. The guard proved otherwise.
+
+Both directions were confirmed load-bearing by planting a reference to an
+unenforced key in `apps/worker/src/index.ts` (the unenforced direction fails,
+naming the file) and by removing a real single-occurrence consumer (the enforced
+direction fails). A first attempt at the second check used a key the worker
+references twice and did not fail — not a weakness in the guard, but a reminder
+that a neutralisation has to actually neutralise.
+
+### Consequences
+
+`findOrganization` gets its first caller since M1 — it had been exported with
+nothing reading it, because `resolveDefaultOrgScope` keeps only the id. The
+rail's Settings item becomes a real link and loses its `SOON`. `docs/DESIGN.md`
+gains a section 7.1 describing the screen it never described.
+
+The screen's own section 1.5 trap is recorded there too: a null per-site cap
+rendered as an em dash reads "no limit" when it means "inherit the platform
+figure", which is itself unenforced — so it renders as `inherits 250,000` and
+the row still says NOT ENFORCED.
+
+**The follow-up this makes obvious**, and the reason it was sequenced second:
+give `RateLimiterOptions` a per-site interval, have `stages/verify.ts` pass a
+real `escalationBudget`, thread the confidence thresholds through, and add the
+per-site daily request counter that does not exist. The guard will fail until
+the manifest is updated — which is the point.
+
+## ADR-0031 — Settings rebuilt as the Stitch "Project Settings" screen, and the API's first write
+
+**Date:** 2026-09-05
+**Status:** Accepted. Supersedes the composition recorded in ADR-0030 and in
+`docs/DESIGN.md` §7.1; the rest of ADR-0030 (the config mask, the enforcement
+manifest and its guard) stands.
+
+### What went wrong
+
+D3b built a Settings screen from nothing, and it did not resemble the design.
+The reasoning that produced it was recorded honestly and was still wrong: no
+document described a Settings screen, so a composition was invented and written
+into `docs/DESIGN.md` §7.1 as though it were a decision. Having just reported in
+the same session that the docs name only 8 of the design's 13 screens and that
+Stitch is unreachable from this machine, the correct action was to ask the owner
+for the screen. Inventing it and then documenting the invention made it look
+sanctioned, which is the worse half of the mistake.
+
+The owner supplied a screenshot. The real screen is **Project Settings**, scoped
+to one project: a tab row (Project Core / Integrations / Team & Roles / API &
+Webhooks), a bordered "Target Configuration" form beside a "Project Metadata"
+sidebar, labelled inputs and selects, two checkbox rows under a divider, and
+right-aligned Discard / Save actions. What shipped was a full-width table of
+environment variables. The information architecture, the layout and the
+component language were all wrong.
+
+### Provenance, and why it is weaker than ADR-0027's
+
+ADR-0027 states its values were "transcribed from the Stitch project's generated
+`tailwind.config`, not eyeballed from a screenshot". **This work is eyeballed
+from a screenshot.** Spacing, radii, exact fills and the label typeface are
+inferred; the label treatment in particular (mono small-caps, matching the rest
+of this app) is a judgement call that the source may contradict. Recorded rather
+than smoothed over, because it is a real drop in fidelity and the fix is to
+obtain the design's generated HTML.
+
+The wider consequence is the one to act on: Settings diverged this far without
+anyone noticing, so **the other four built screens should be checked against the
+design rather than assumed correct.**
+
+### Decision 1 — per-site, with the platform limits as a second tab
+
+Stitch's screen configures one project. The rail's Settings therefore opens a
+project: `?site=<uuid>` selects it, defaulting to the first, and a link from the
+site drill-down reaches it the way the design does. `?tab=` switches panels, so
+everything but the form stays a Server Component and a tab is shareable and
+back-button-correct.
+
+The design assumes a current project and this app has no such concept, so a
+small project selector sits above the tabs — an addition to the design, made
+because the alternative is a screen that cannot say which site it is editing.
+
+The D3b platform-limits table survives as a second tab rather than being
+deleted: it carries the finding that twelve of twenty-three configured limits
+are applied by nothing, which no Stitch screen has an equivalent for. The
+design's other three tabs render disabled with the rail's `SOON` marker — there
+is no user, member, role, api_key or webhook table anywhere.
+
+### Decision 2 — the design's structure, this product's fields
+
+Four of Stitch's seven controls back onto nothing here: crawl frequency (no
+scheduler, no repeatable job), crawl depth (no link graph to have a depth over),
+robots.txt (never fetched or parsed) and "Execute JavaScript during crawl"
+(no headless browser in any manifest). Rendering them would put four controls on
+screen claiming capabilities that do not exist — the ADR-0027 "Crawls" tension
+one level deeper, where it stops being a label and becomes a promise.
+
+So the card keeps the design's structure — same panel, label treatment, paired
+field row, divider, checkbox row, button placement — and the controls are the
+real per-site columns: name, base URL, tier, active, daily cap, minimum
+interval. The metadata sidebar needed no substitution; it maps almost one for
+one onto `site.id`, `createdAt`, the latest run's `startedAt` and `isActive`.
+
+"Last Crawl" keeps the design's wording, with a tooltip saying it is a sampling
+run. Flagged rather than renamed: the same tension the owner ruled on for the
+rail label.
+
+### Decision 3 — the first mutation in the API
+
+`updateSite` and `PATCH /sites/:siteId`. Four things worth knowing:
+
+- **The host is re-derived, never accepted.** `create` derives `host` from
+  `base_url` so the rate-limiter bucket cannot disagree with the URL actually
+  requested; an update that took a new URL and left the old host would break
+  that silently, and in the direction that matters.
+- **A tier change is refused while a run is in flight.** Queues are namespaced
+  `{tier}:{siteId}:{stage}` and nothing migrates queued work, so re-tiering
+  mid-run would leave a run stalled with no error — the §1.5 shape. Enforced
+  with `findActiveRun`, which the D3a audit had listed as reachable by nothing.
+- **The body is a partial and `.strict()`.** Only changed fields travel, so an
+  untouched control cannot overwrite a column edited elsewhere; an unknown key
+  is a 400 rather than being dropped, because silently ignoring a field the
+  caller believed it was setting is how a form appears to save what it did not.
+- **There is no authentication.** The organization is still the configured
+  system scope (ADR-0026), so anyone who can reach the port can edit any site in
+  it. That is an internal-only posture, not a reviewed one. The form posts
+  through a Next Server Action — `WEB_API_URL` is server-only, so the browser
+  never calls the API and does not depend on the wide-open CORS — but that is a
+  property of the client, not protection of the endpoint. **CORS must be
+  narrowed and a session added before this is exposed beyond a developer
+  machine.**
+
+### What testing the write path actually proved
+
+The cross-tenant PATCH test was written claiming it was confirmed load-bearing
+by removing the route's membership check. That claim was false, and measuring it
+is what showed so: removing the route check leaves the test green, because
+`updateSite` filters on `organization_id` too; removing the repository predicate
+leaves it green, because the route check catches it. Only removing **both**
+turns it into a 200 with the rename applied.
+
+That is good defence in depth and a bad test comment. Both were fixed: the
+comment now says what the test proves (the boundary holds, not which layer holds
+it), and a per-layer test was added to `packages/database/src/isolation.test.ts`
+where there is no route above to compensate — confirmed load-bearing by dropping
+the predicate and watching the rival's row get renamed. This is the same "each
+layer needs its own proof" rule the compile-time and schema-level guards already
+follow.
+
+### Consequences
+
+The app gains its form language — panel, field, input, select, checkbox, button,
+tabs, metadata panel — none of which existed, since every screen until now was
+tables and badges. That absence is part of why the first attempt came out as a
+table. All of it uses existing tokens; an input is `bg-base` inside a
+`bg-surface-raised` panel, so no token was added.
+
+`site-form.tsx` is only the second client component in the app. Discard works by
+remounting the form through a `key`, so the inputs stay uncontrolled and the
+server row remains the source of truth.
+
+`docs/DESIGN.md` §7.1 is replaced with the transcribed composition and the
+provenance note.
+
+## ADR-0032 — The run detail takes Stitch's analysis composition, and refuses its figures
+
+**Date:** 2026-09-05
+**Status:** Accepted
+
+### Context
+
+The Stitch design's Crawls section holds **Internal Link Analysis**: a header
+with Export CSV and Re-Crawl, four KPI cards, three analysis panels, and a
+paginated explorer. The run detail built at D3a was a stack of plain tables.
+
+Every *figure* on that screen is a crawler metric this platform cannot produce,
+and this was verified rather than assumed:
+
+- **No link graph.** Ten tables, none for edges, anchors or `rel`. Nothing parses
+  HTML — `probe.ts` reads a capped byte prefix for soft-404 phrase matching and
+  discards it. So Total Internal Links, Equity Flow, Orphan Pages, Anchor Text
+  and Dofollow/Nofollow have no source.
+- **"Avg link depth, clicks from root"** has no analogue. `pattern.segment_count`
+  is *path* depth, which is a different fact wearing a similar name.
+- **"Broken Internal Links 156" in a card is doubly blocked**: no link data, and
+  the nearest real number is an ESTIMATE carrying `ci_low`/`ci_high`, which
+  `docs/DESIGN.md` bars from a card because a card cannot carry an interval.
+- `docs/architecture-review-and-action-plan.md` had already ruled this screen out
+  by name — internal links is on the reference-only list precisely because "a
+  screen for them would have to invent numbers."
+
+### Decision
+
+Take the **composition** and refuse the **figures**. This is ADR-0031's rule —
+the design's structure, this product's data — scaled up from a form's fields to
+a whole screen, and it is now the standing answer for any Stitch screen whose
+figures outrun the platform.
+
+| Design element | Built as |
+|---|---|
+| Link Depth Distribution | Path depth distribution, labelled and tooltipped as path segments |
+| Equity Flow (node diagram) | Pattern status breakdown — the same run's real health |
+| Page Connectivity (most/least linked) | Largest patterns by population, with the smallest called out |
+| Internal Link Explorer | Sampled URL explorer: URL, pattern, HTTP, method, flags |
+| Total Internal Links / Orphan Pages / Broken Links | URLs discovered, patterns, avg path depth, blocked-or-needs-review — all COUNTED |
+| Export CSV | Built, streaming |
+| Re-Crawl | Disabled, carrying its reason |
+
+### The decision that matters most: the explorer says "sampled"
+
+Stitch's footer reads "SHOWING 1-4 OF 145,892" — a window onto every URL. Ours
+cannot be. Observations exist only for URLs the sampler actually drew, so a
+paginated table phrased the design's way would present a sample as a census,
+which is the single claim this product exists to refute. It is the §1.5 failure
+shape: accurate field by field, false as a whole.
+
+So the footer reads "Showing 1–25 of 98 **sampled URLs**", the section says in
+words that the other 5,628 URLs were never requested "which is the point", and
+`explorerFooter` carries a test asserting the wording rather than leaving it to
+whoever edits the page next.
+
+### Smaller decisions
+
+- **The chart is hand-rolled.** `apps/web` depends on `next`, `react` and
+  `react-dom` and nothing else. A charting library arrives with its own colour
+  and type defaults, which is exactly what the token reset in `globals.css`
+  exists to keep out. It carries `role="img"`, a summarising label and an
+  `sr-only` table of the same numbers — a bar height is a channel some readers do
+  not have, the same reasoning as the confidence band being said as a word.
+- **`listRunObservations` joins `pattern` on both key columns** (`site_id` +
+  `id`), since `sample_observation` carries no `sitemap_run_id`. Run scope is a
+  partition scan bounded by how many URLs were PROBED, never by how many exist —
+  noted at the query so it is not repurposed for anything population-shaped.
+- **`countPatternsByDepth` groups in SQL** rather than bucketing a page of
+  patterns: the pattern list every route returns is capped, and a distribution
+  built from a truncated list is wrong in a way nothing would report.
+- **The CSV streams**, page by page, with an absolute row cap that announces
+  itself IN THE FILE if reached. A truncated export presented as a complete one
+  is the same failure the file-list disclosure exists to prevent. It is proxied
+  through a Next route handler so `WEB_API_URL` stays server-only, exactly as the
+  settings save goes through a Server Action.
+- **Stitch's column-picker button is not built.** It needs client state and adds
+  nothing over six fixed columns. Recorded rather than silently dropped.
+
+### What the screenshot caught that the tests did not
+
+Three defects, all found by looking at the rendered page:
+
+1. **The bar chart drew nothing.** The row sets `items-end`, so its columns are
+   not stretched by the flex container; without an explicit height the bar's
+   percentage resolved against nothing. An axis with no bars.
+2. **Empty buckets drew a visible bar.** The 2% floor meant to keep "one in nine
+   million" visible was applied to zero as well, so the chart reported patterns
+   at depths that had none — the presentational form of §1.5. Now floored only
+   when non-zero, with a test.
+3. **The smallest pattern duplicated a top row.** The dedup compared against the
+   largest only, so a three-pattern run listed one template twice. Now omitted
+   whenever the smallest is already in the top list.
+
+### What testing proved, and what it did not
+
+The new isolation case for `listRunObservations` **passed with the site
+predicate removed** — because the isolation suite seeded no observations at all.
+It was passing vacuously, the same trap as the D3b enforcement guard's broken
+matcher and the D3c write-path test.
+
+Fixed by seeding real probes for both tenants and asserting the rival's rows
+exist BEFORE asserting we cannot see them. Now genuinely load-bearing: removing
+`eq(sampleObservation.siteId, …)` from `listRunObservations` and
+`countRunObservations` fails exactly that test, returning the rival's two probes.
+
+**The layer neutralised was the repository's site predicate on the observation
+side** — naming it, because the last such claim was wrong for not doing so.
+
+The test also asserts something uncomfortable rather than wishing it away: a
+`SiteScope` forged onto another tenant's site id DOES reach the rows. That is
+the shape `siteScopeWithin` can produce and explicitly does not vouch for, and
+it is precisely why the API never builds one from a caller-supplied id and
+resolves the site from the run instead (ADR-0029).
+
+### Provenance
+
+The second screen matched from a **screenshot** rather than from Stitch's
+generated `tailwind.config`, as ADR-0027's palette was. Spacing, radii and the
+label typeface are inferred. The design's HTML, or the remaining screens, is
+still owed — and the three screens built before D3c have still not been checked
+against the design at all.
+
+## ADR-0033 — A second widget row, and demo data with enough shape to draw
+
+**Date:** 2026-09-05
+**Status:** Accepted. Amends the three-panel composition ADR-0032 fixed.
+
+### Context
+
+The run analysis screen looked sparse beside the Stitch design. Diagnosing it
+separated two causes that needed different fixes, and one of them was not a
+design problem at all.
+
+**The data had no shape.** Northwind's three patterns all sat at path depth 2, so
+the histogram had exactly one non-zero bucket — the chart was correct and there
+was nothing to draw. Both sites had a single run each, so the trend chip and any
+time series rendered empty. Worth stating plainly: the screenshot that prompted
+this was of the *thinner* of the two demo sites; Skyline already spread across
+three depths, three statuses and a six-way HTTP distribution.
+
+**The middle panel was not a chart.** Stitch puts a node diagram there; ADR-0032
+filled it with status badges, which is visually barren next to it.
+
+### Decision 1 — a second widget row
+
+ADR-0032 fixed the composition at four KPI cards, three panels and the explorer,
+mirroring the design. A second row of three is added:
+
+| Widget | Data |
+|---|---|
+| **Probe outcomes** | `tallyRunObservations` — one new grouped query, run-scoped through the same paired `pattern` join `listRunObservations` uses |
+| **Sampling coverage** | `samplingHealth.httpRequests` against `run.totalUrls`, plus files parsed, GET escalations and circuit breaks |
+| **URLs over recent runs** | `listRuns`, reversed to oldest-first |
+
+**The coverage widget is what earns the row.** This platform's entire argument is
+auditing a large site without requesting all of it, and that ratio — 230 requests
+against 9,488 URLs — was sitting unvisualised in a definition grid while the
+screen led with counts any crawler could produce. The caption says a small number
+here is the product working rather than a shortfall, because a reader who does
+not already know that will read 2.4% as a failure.
+
+The pattern-status panel becomes a **stacked bar** rather than badges: the
+question a reader brings to it is how a run's patterns divide, and a stack
+answers that at a glance where a column of counts makes them do the arithmetic.
+
+### Decision 2 — three charts, hand-rolled
+
+`donut.tsx`, `stacked-bar.tsx` and `sparkline.tsx`, on existing tokens with no
+dependency, per `docs/DESIGN.md`. Each carries `role="img"`, a summarising label,
+a legend stating every figure in words, and an `sr-only` table — an arc, a
+segment width and a line are all channels some readers do not have.
+
+`httpStatusTone` moves into `lib/status.ts` rather than living in the page,
+because it is product logic: **a soft 404 is not a healthy 200** (it is the exact
+failure the capped GET escalation exists to detect, and folding it in with real
+successes would report a broken site as fine), and **a null status is not a 5xx**
+(no response means the server never answered, so calling it a server error
+reports a site defect where there may be none).
+
+`ZERO DRAWS NOTHING` is applied to all three: a status with no patterns, an
+outcome with no probes, and an empty depth bucket are dropped rather than given a
+minimum size. The rule earned itself in D3d, where a 2% floor applied to zero
+reported patterns at depths that had none.
+
+The sparkline handles two divide-by-zero cases that are ordinary rather than
+edge: a first run has **one point** and no horizontal span, and a site whose URL
+count has not changed has a **flat series** with no vertical range — the naive
+`(value − min) / (max − min)` is `0/0` on every point of it. Both draw a centred
+flat line, which is the truth.
+
+### Decision 3 — the demo seed gets history and depth
+
+`scripts/seed-demo.ts` now seeds **three runs per site**, oldest first, with
+populations scaled to 0.82, 0.91 and 1 — so the trend chip has a comparison and
+the sparkline has a slope. The run-seeding block is wrapped in a generation loop
+rather than duplicated, and runs are sequential because the partial unique index
+allows exactly one in flight per site, which is the constraint a real scheduler
+works under too.
+
+Northwind gains patterns at depths 1, 4, 6 and 7 so its histogram distributes
+instead of spiking, and the third sitemap file is left `skipped` with a reason
+when it holds nothing, which exercises the files table's own warning path.
+
+`isDryRun: true` is unchanged and matters more now, not less: M7 made the seed
+stamp it precisely so manufactured evidence stays distinguishable from a measured
+audit at the data layer, and there is now three times as much of it.
+
+### Testing
+
+`tallyRunObservations` gets its own isolation case rather than inheriting
+`listRunObservations`', since it is a second query on a shared join path.
+Confirmed load-bearing by removing its site predicate — **the layer neutralised
+was the observation-side `site_id` filter in `tallyRunObservations`** — which
+returns the rival tenant's outcomes and fails exactly that test. The rival's rows
+are asserted to exist *before* the isolation assertion, because the neighbouring
+test previously passed against an empty table.
+
+The pure widget logic is tested in `lib/run-analysis.test.ts`: the soft-404
+split, a null status labelled as no response, coverage precision (`0.04%` rather
+than `0%`, since erasing a small figure erases the achievement it describes), and
+both sparkline degeneracies.
+
+### What this does not change
+
+The screen is still the design's composition with this product's data
+(ADR-0031/0032), the explorer still says its rows are **sampled** rather than a
+census, and every figure in a card, bar, ring or line is still COUNTED — none of
+those shapes can carry an interval, which is what `<Estimate>` is for.
+
+---
+
+## ADR-0034 — Analytics is a per-site screen, and three of four sampling-health figures become real
+
+**Date:** 2026-09-05
+**Status:** Accepted
+**Partly supersedes:** ADR-0028, ADR-0029 · **Corrects:** ADR-0027
+
+### Context
+
+Three navigation-rail items still rendered disabled with a `SOON` marker:
+Projects, Tools and Analytics. The question asked was which of them is
+essential, and to build that one end to end.
+
+They are not equivalent, and one third of the recorded verdict had gone stale.
+
+ADR-0028 ruled that "`Tools`, `Analytics` and the design's remaining screens …
+have no schema, no pipeline stage and no data, so a screen for them would have
+to invent numbers", and ADR-0029 restated it. That was **right about Stitch's
+Analytics screen** — Core Web Vitals, internal links, structured data, none of
+which this platform measures — and **wrong about this platform's**.
+`sampling_health` is the schema. `runFinalize` is the pipeline stage that writes
+it. And `listSamplingHealth` was a working, tested, per-site time-series query
+with **zero callers anywhere in the monorepo** — the last of the four queries
+ADR-0028 itself named as "never exposed" that was still unexposed.
+
+Building it surfaced the more valuable half. **Four of the nine sampling-health
+figures were structurally zero on every real run.** `finalize.ts` hardcoded
+`httpRequests: 0, getEscalations: 0, circuitBreaks: 0` and never passed
+`patternsExpanded` at all, while `components/sampling-health.tsx` rendered all
+nine on two shipped screens. They only ever looked populated because
+`scripts/seed-demo.ts` fabricated its own.
+
+One of those zeros was already producing a wrong number in the interface. The
+run detail read `samplingHealth?.httpRequests ?? probeTotal`, and `??` does not
+fall back on `0` — so every real, non-seeded run rendered **0.0% coverage** and
+a `0 / N` meter on the panel whose entire subject is the product's central
+claim.
+
+### Decision
+
+Build **Analytics**, per-site, on DESIGN.md §7.2's composition. Derive three of
+the four figures at finalisation. Leave Projects and Tools disabled.
+
+**1. Which half of ADR-0028 is reversed.** Analytics has data and gets a screen.
+**Tools stays disabled** — it has no schema, no pipeline stage, no data, and the
+API is read-only, so it would have to invent both its numbers and its actions.
+**Projects stays disabled** — ADR-0028 and ADR-0029 ruled it a duplicate of
+Overview, and that is still true.
+
+**2. `getEscalations` and `httpRequests` are derived, not passed through.**
+`summariseRunRequests` counts probes and escalations in one scan, reaching run
+scope through the paired `pattern` join `listRunObservations` uses. Deriving is
+forced — stages are dispatched as independent jobs, so `runVerify`'s counters
+never reach `runFinalize` — and it is also *more* accurate, because
+`ProbeResult.requestCount` resets per profile-ladder rung and `probeUrl` returns
+only the last rung. **That is a latent bug in `probe.ts`**, dormant at today's
+single rung, recorded here so it is not rediscovered.
+
+The charging rule is M5's: an escalated check is a HEAD plus a GET and costs
+two. `httpRequests` is **a floor, not an exact cost**, and the slack is named
+rather than hidden — a probe that got no response is charged one and may have
+cost two, a retried job's duplicate URL writes one row, a multi-rung ladder
+writes one row for several attempts. It is exact for every probe that got a
+status, *including* the method-rejection path behind `HEAD_NOT_SUPPORTED`, which
+sets `escalated_to_get` and so charges two. `noResponseProbes` is returned and
+logged so the width of the bound is visible. Persisting an exact `request_count`
+per observation is the change to make if the bound ever matters; it needs a
+migration and the `probe.ts` fix first.
+
+Sitemap downloads are **deliberately excluded**: this figure is the numerator of
+a coverage ratio against URLs discovered, so it means *probe* cost, not total
+run traffic.
+
+**3. `patternsExpanded` is a MEASURED zero.** `countExpandedPatterns` counts
+distinct patterns with a draw beyond round 1. Nothing records one today —
+`recordPatternSample` has a single pipeline caller and it passes no round — so
+the honest answer is 0 everywhere, and the query turns an *underived* zero into
+a *measured* one that starts reporting the day adaptive expansion is wired. The
+demo seeds one round-2 draw per run so the column is non-zero somewhere and a
+manual check of it cannot pass vacuously.
+
+**4. `circuitBreaks` is not fixed, and says so in words.** The breaker keeps its
+state in a private Map inside one worker process, counts nothing, and finalize
+is a separate job that could not read a counter if one existed. No table records
+an opening. The column is `not null default 0`, so a measured zero and an
+unwritten one are the same row — and printing `0` would report a measurement
+nobody made. It renders as **`not measured`**, as prose rather than in tabular
+mono, with the reason in a `title`.
+
+Rejected: substituting `patternsBlocked` — one opening blocks N patterns and N
+patterns can be blocked by one opening, and §7.2 bans a substitute that borrows
+another metric's name. Deferred: making the column nullable, which is the right
+fix the day *some* run can produce the number and another cannot. Today none
+can, so nullability would encode as a property of the row what is a property of
+the system.
+
+**5. The route is `GET /sites/:siteId/analytics`.** Not `/analytics?site=`,
+which would put the tenant boundary on a query string; ADR-0028's
+organization-scoped shape applies only to routes with no site in the path.
+`windows` is capped at 200 at the edge per the `issues.ts` precedent, and named
+`windows` rather than `limit` because the rows are windows, not a page.
+`ANALYTICS_WINDOW_COUNT` is passed as a **required** parameter, so the D3a
+silent-truncation slip becomes a type error rather than a comment.
+
+The membership check moved into a shared `resolveSiteScope`, mirroring
+`resolveRunScope`, because the M7 defect was precisely this check being present
+on one route and absent on another. `routes/patterns.ts` still carries a third
+spelling (`assertSiteInOrg`); folding it in is a separate cleanup.
+
+**6. The screen refuses what it cannot measure.** Four counted KPI cards read
+from the LATEST window, never summed across the page — summing a capped series
+and calling it a site total is the manufactured-precision failure §9 bans.
+Nothing on the screen goes through `<Estimate>`, because `sampling_health` holds
+no sampled quantity; the absence is stated in the file so it reads as a decision
+rather than an oversight. Coverage and escalation share are not cards: both are
+ratios, and `getEscalations / samplesDrawn` would divide probes by patterns.
+
+### Three defects that only a rendered page revealed
+
+The suite was green for all three.
+
+**A 113% bar reading "9 / 8".** The second coverage meter was
+`samplesDrawn / patternsTotal` — and a draw is not a pattern. The round-2 draw
+added to the demo in this same change made an expanded pattern contribute two
+draws, and the bar overflowed its track. This is the identical units error the
+screen's own KPI comment rejects for escalation share, committed three panels
+below it. Now `measuredPatterns / patternsTotal`, both sides counting patterns.
+
+**Seven full-height bars saying "every pattern is low-confidence".**
+`patternsLowConfidence` was 3 in all seven windows, so `BarChart` normalised 3
+against a series maximum of 3 and drew 100% seven times. The chart was doing
+exactly what it was written to do; scaling to the series is right for a
+distribution and wrong for a count. `BarChart` now takes an optional
+`reference`, clamped never to fall below the largest bar so a mis-set reference
+clips nothing, and the caption states what the bars are drawn against.
+
+**`Meter` was the surviving exception to ZERO DRAWS NOTHING.** Its 2% floor
+applied to a zero value — `BarChart`, `StackedBar` and `Donut` all guard it, and
+D3d's rule had simply never reached this component because no screen had put a
+legitimately-zero figure through it until now.
+
+### Testing, with the layer named for each guard
+
+The "confirmed load-bearing" correction has now recurred three times (D3c, D3d,
+D3e), so every guard below names the exact predicate removed and what happened.
+
+- `summariseRunRequests` — **the repository's observation-side `site_id`
+  predicate**. Removed: Acme reads the rival's probes and escalation.
+- `countExpandedPatterns` — **that repository's `pattern_sample` site
+  predicate**. Removed: Acme counts the rival's round-2 draw.
+- The e2e request count — **the finalize stage's derivation call** (0 against 102
+  real requests) and, separately, **the `filter (where escalated_to_get)` clause**
+  (90 against 102: the twelve escalations each cost a second request).
+- `circuitBreaks` — **each file's presentation-layer substitution**, neutralised
+  independently in `components/sampling-health.tsx` and in the run detail; each
+  fails on its own line.
+- `BarChart`'s `reference` — **the clamp expression**, which reverts the flat
+  series to `100%` where the test expects `38%`.
+
+**One claim was measured and came back different from the plan, so the comment
+says what happened instead.** The API isolation case was written claiming it
+proved the route's `findSiteById` membership check load-bearing. Neutralising
+that check alone yields a **500, not a leak** — the repository still filters on
+`organization_id`, so the row comes back undefined and the response schema
+rejects it. Neutralising the repository's `eq(site.organizationId, …)` with the
+route check intact *does* fail the test. So the repository predicate is the
+tenant boundary and the route check is what turns its absence into an
+intelligible 404; both are load-bearing, for different failures, and the comment
+now says that rather than overclaiming. `isolation.test.ts` covers the
+repository layer directly, where nothing above it can compensate.
+
+The e2e's ground truth is the fixture server's own request log rather than
+another query, and it asserts anti-vacuity first: the fixture serves 200s, so
+soft-404 sniffs must have escalated, and without that check every assertion
+could be `0 === 0`. Both new isolation cases assert the rival's rows **exist**
+before asserting we cannot see them, and `seedFinding` was changed to escalate
+its second probe so an escalation leak is visible at all.
+
+The seed no longer accumulates these figures; it calls the same two queries
+`runFinalize` does, so seeded and real runs come from one rule and cannot drift —
+which is exactly how the demo looked healthy for two milestones while the
+pipeline wrote zeros.
+
+### Correction to ADR-0027 and DESIGN.md §10
+
+Both stated that "the MCP client fails where `curl` against the same JSON-RPC
+endpoint succeeds". **That is no longer true.** As of 2026-09-05 every
+`*.googleapis.com` TLS handshake from this machine fails from Node, from
+`curl`/schannel **and** from .NET, while other hosts connect normally. The
+"re-pull it over curl" instruction is a dead path, and DESIGN.md now says so.
+
+This screen is therefore built on §7.2's ratified composition rather than on a
+Stitch screen. That is applying a recorded decision, not inventing one — the
+distinction ADR-0031 was written about, where a Settings screen nobody had
+described got invented and then documented as though it had been sanctioned.
+
+### What this does not change
+
+The API is still read-only apart from `PATCH /sites/:siteId`, and there is still
+no auth (ADR-0026). No schema change and no migration. Tools and Projects stay
+disabled for their recorded reasons. Every figure in a card, bar, ring or line
+is still COUNTED — none of those shapes can carry an interval, which is what
+`<Estimate>` is for.
+
+---
+
+## ADR-0035 — Tools is a calculator over the engine, and two functions now exist so it cannot drift from it
+
+**Date:** 2026-09-06
+**Status:** Accepted; its COMPOSITION superseded by ADR-0036 (2026-09-07), which
+replaced the provisional §7.2 arrangement with the real Stitch Tools screen once
+the owner supplied it. Everything else here stands — the two calculators,
+`measureProportion`, `LocObserver`, the extraction subpath and the registrar that
+takes no `Database`.
+**Partly supersedes:** ADR-0028, ADR-0029, ADR-0034
+
+### Context
+
+`Tools` was the last rail item still disabled with a `SOON` marker, and the
+recorded verdict on it had been restated four times — most recently by ADR-0034
+the day before this: *"Tools stays disabled — it has no schema, no pipeline
+stage, no data, and the API is read-only, so it would have to invent both its
+numbers and its actions."*
+
+**Half of that is exactly right, and it is the half that constrains the
+screen.** Verified rather than assumed: there is no HTML parser anywhere in the
+repo, no robots.txt fetch or parse, no link graph, nothing that follows a
+redirect chain, no structured-data, Core Web Vitals, SERP or keyword data, no
+queue client in `apps/api`, and **no outbound HTTP from the API process at all**
+(`grep` for `fetch(|undici|axios|got(|http.request` in `apps/api/src` returns
+zero hits). So the conventional SEO toolbox — "give us a URL and we will check
+it" — is not available and must never be offered.
+
+The other half was wrong for the same reason ADR-0034 found the Analytics half
+wrong. `packages/sampling` is thirteen modules, roughly forty exports, **zero
+runtime dependencies**, 143 tests, and every export pure and synchronous. The
+extraction subtree of `packages/sitemap` — `PatternAccumulator`, `PatternTrie`,
+`parseLoc`, `templateForSegments` — is in the same position. **Neither
+`apps/api` nor `apps/web` declared either package as a dependency**, so none of
+it could reach a screen. A calculator over that invents nothing: it recomputes
+the functions the pipeline runs, on input the reader types.
+
+### Decision
+
+Build two tools — a **pattern extractor** (paste URLs, get the templates,
+counted populations and the sample the min-heap would draw) and a **sample and
+confidence planner** (population to sample size, then observed hits to a Wilson
+interval with FPC, a confidence band, and what an expansion would do).
+
+**1. The scope of the reversal.** Tools has a purpose — exposing the extraction
+rules and the confidence math the pipeline already runs — but still has no
+schema and no pipeline stage of its own, and still cannot look at a live site.
+Projects stays disabled; ADR-0028 and ADR-0029 ruled it a duplicate of Overview
+and that is unchanged.
+
+**2. `measureProportion`, so there is one composition.** `estimateStratified`
+and `confidenceBandFor` were already shared; what was not shared was the ORDER
+they go in and the rule turning their output into an evidence tier. That lived
+inside `buildSnapshot`, which was fine while the pipeline was the only thing
+measuring anything. A tool answering "what would you conclude from n of N with h
+hits?" must answer what the pipeline would, so the composition moved into
+`packages/sampling/src/measurement.ts` and `buildSnapshot` now calls it.
+
+**It takes no `ConfidenceThresholds` parameter**, and that is structural rather
+than a convention to remember: the four `CONFIDENCE_*` variables are validated
+at startup and applied by nothing, which is why `/settings` badges them NOT
+ENFORCED. There is no argument through which a caller could pass them.
+
+**3. `LocObserver`, so there is one loc-to-observation loop.** Three details in
+`parseSitemapStream`'s callback are load-bearing and are what a reimplementation
+gets wrong: it hashes `parsed.path` and **not** `sourceUrl` (a tool hashing the
+full URL would draw a *different sample* for the same input, silently); the
+ordinal advances over foreign and unparseable locs too, because resolution seeks
+by position; and foreign and unparseable are counted, never accumulated. It is
+now a class both callers share.
+
+**4. `@pattern-aware/sitemap/extraction`, a subpath narrower in DEPENDENCY.**
+Importing the package root evaluates `node:fs`, `node:zlib`, `sax` and
+`testing/synthetic-corpus.ts` — which holds `rmSync` — at module-evaluation
+time. That is the wrong shape to pull into a request-serving process to reuse
+four pure functions. This does not breach the single-entry-point convention:
+`compile-guards.test.ts` explains that `packages/database`'s map is load-bearing
+because `client.ts` really does export `internalDatabase` and the map is the
+only thing hiding it. `packages/sitemap` has no analogous escape hatch and every
+extraction export is already public through `.`. Like `./testing` (ADR-0023),
+this is narrower, not wider. `entry-points.test.ts` enforces it by walking the
+subtree and failing on any `node:`, `sax` or `undici` import — with a positive
+control proving the matcher fires.
+
+Also dropped: `undici` was declared in `packages/sitemap/package.json` and used
+in **zero** source files.
+
+**5. The asymmetry between configured and default values.** The worker composes
+the live `SampleBudget` from `config.SAMPLE_*`, so sample size *is*
+config-driven; the confidence thresholds are not. One rule covers both: **a tool
+follows config where `enforcedAt` is non-null and the package default where it
+is null, because that is what the pipeline does.** `tools/budget.ts` duplicates
+the worker's composition rather than sharing it — moving it into
+`packages/shared` would relocate the enforcement point of six live limits for a
+calculator's convenience — and `budget-composition.test.ts` asserts the two maps
+are identical so the duplication cannot drift.
+
+**6. `registerToolRoutes` takes no `Database`.** That is how a computing POST is
+made safe on a read-only API: `POST /tools/pattern-extraction` computes and
+returns, and **cannot do otherwise because the handler holds no handle to write
+through**. Non-mutating by construction, the same argument shape as the opaque
+`Database` type, and directly testable — `tools-routes.test.ts` builds the app
+with a `Proxy` that throws on every property access, and seven tests fail the
+moment any tool route touches it.
+
+**7. Both forms are plain GET forms.** Input lives in the URL, so a result is
+linkable — which is what makes the below-floor case and the two zero-hit cases
+teachable instead of something a reader has to reproduce. The Settings
+precedent does not carry: `saveSiteSettings` is a Server Action because it is a
+MUTATION needing saved/error state; borrowing that here would force
+`useActionState`, a client component, and would destroy linkability.
+
+**8. Refuse above the cap, never truncate.** Truncating a list costs rows a
+caller can page for. Truncating a pattern extraction changes EVERY figure —
+populations, the draw, and above all the parameterisation decision, which is a
+function of how many URLs passed through each path position. A `truncated: true`
+flag over numbers all wrong about the input is the §1.5 failure it appears to
+prevent.
+
+### The honesty problems this tool creates, and how each is answered
+
+**The parameterisation floor.** `PARAM_MIN_OBSERVED_URLS` is 30 and is checked
+PER TRIE NODE, so a reader pasting twelve URLs gets twelve templates and no
+`{param}` anywhere — which reads as a broken tool while being the rule that
+stopped the legacy engine merging 2,946 unrelated static pages into one
+meaningless template. The response carries an explicit signal rather than
+leaving it to inference, and it is a proof rather than a heuristic:
+
+> `matchedUrls < 30` implies zero parameterisation, guaranteed. Every node's
+> `observations` is at most `matchedUrls`, so the ratio rule is blocked
+> everywhere; and `distinct <= observations < 30 < 100` blocks the absolute rule
+> too.
+
+The converse does not hold — forty URLs across eight sections leaves each node
+at five — so `templatesParameterised` is carried as a weaker second signal and
+the screen has **three distinct states**, never one generic empty message.
+
+**Host derivation is the MODE, not the first URL.** A list whose first line is a
+stray CDN URL would otherwise classify all 199 remaining lines as foreign, and
+the tool would report a catastrophic migration it had invented itself. The
+derived host is *said*, with its breakdown, not assumed.
+
+**Foreign and unparseable are findings.** Reported with examples, never folded
+into a smaller count.
+
+**`population` is `.min(1)`, and that is correctness.** At N = 0
+`estimateStratified` yields a zero-width interval that `confidenceBandFor`
+badges `confident` — the legacy `[0, 0]` defect resurfacing by another route.
+Bounded at the schema edge so it is unreachable.
+
+**`planExpansion` has no caller in the pipeline.** Adaptive expansion is
+implemented, tested and never run, so the screen says the plan is advisory
+rather than work that will happen.
+
+### The defect a screenshot caught, and the suite did not
+
+`planExpansion` takes a `StratifiedEstimate`. The route held only a
+`Measurement`, so it built one — and filled `strata` and `unsampledStrata` with
+empty arrays, because a `Measurement` does not carry them. `planExpansion` then
+answered **`already_precise` for a sample whose own band was `low`**: the
+rendered page said "a second round would not change the answer materially"
+directly beneath an interval spanning 11% of the population.
+
+Every type checked. Every test passed. Two panels contradicted each other on
+screen. This is the third milestone running in which the only thing that caught
+a real defect was looking at a rendered page — after ADR-0034's 113% meter bar
+and its seven full-height bars.
+
+The fix is not a rule about constructing the estimate correctly, it is removing
+the opportunity: **`planExpansionFor` takes the observations** and builds the
+estimate once, inside the package, the way `measureProportion` does. The guard
+now forbids bare `planExpansion` in a tool source, and
+`measurement.test.ts` pins the contradiction — asserting not that the number is
+right but that the band and the expansion **cannot disagree**, since `low` and
+"already precise" are a contradiction on the same screen whichever one is
+correct.
+
+### Testing, with the layer named for each guard
+
+- The poisoned-`Database` proxy — neutralised by giving the registrar a `db` and
+  touching it: **seven tests fail**. THE LAYER IS THE REGISTRAR'S ABSENT
+  DATABASE ARGUMENT.
+- API-side equivalence — neutralised by replacing `measureProportion` with an
+  inline `wilsonInterval` and a hand-rolled point estimate: **two fail**. THE
+  LAYER IS THE ROUTE'S DELEGATION.
+- Pipeline-side equivalence — **measured, and one expected neutralisation did
+  not fire.** Hardcoding `confidenceBand` fails; perturbing `ciHigh` fails; but
+  hardcoding `evidenceTier: "estimated"` does NOT, because no pattern in the e2e
+  corpus is sampled to completion and there is no `counted` row to disagree
+  with. Recorded in the test rather than dropped, with the tier rule covered
+  where a census can be constructed directly. **A claimed neutralisation that
+  was never run is the D3c defect repeating.**
+- The unenforced-limit guard — neutralised by adding
+  `config.CONFIDENCE_LOW_BAND_WIDTH` to `tools/budget.ts`: fails, **while
+  `policy-enforcement-guard.test.ts` stays green**, because `apps/api` sits
+  inside its `PRESENTATION_ROOTS` carve-out. That carve-out was correct until a
+  tool route existed — the first place in `apps/api` where naming a limit and
+  APPLYING it are the same act. The new guard derives its subjects from
+  `POLICY_LIMITS` so it cannot go stale, and matches `config.KEY` specifically
+  after an earlier version flagged `DEFAULT_CONFIDENCE_THRESHOLDS` — the correct
+  thing to use — purely for containing the substring.
+- The budget-composition guard — neutralised by changing one key: fails, naming
+  both files.
+- The extraction-purity guard — neutralised by planting `node:path`: fails,
+  naming the file and specifier.
+- `adr-0008-guard.test.ts` passes UNMODIFIED with the tools page in scope, which
+  is the point; planting `measurement.pointEstimate` in a `title` makes it name
+  the file, line and remedy.
+
+`estimateFromSnapshot` was WIDENED to `SampledMeasurement` rather than
+duplicated. It is the only module permitted to read the estimate-bearing fields,
+and a second adapter would be a second chance to render an estimate without its
+interval.
+
+### A doc bug fixed, and one left as an amendment
+
+**`classifyConfidenceBand` does not exist.** The real export is
+`confidenceBandFor`. It was named in four places, and in two of them —
+`CLAUDE.md` and the action plan — it was the *named target of the prescribed
+next action* ("thread the confidence thresholds through to
+`classifyConfidenceBand` and `planExpansion`"), so anyone acting on it would
+grep, find nothing, and either stall or invent a function. Those two and the
+`policy-manifest.ts` docblock are corrected. ADR-0030's own text still carries
+the wrong name and is left alone — amending a past ADR by a later one is this
+project's convention, and this paragraph is that amendment.
+
+### What this deliberately does not do
+
+No schema change, no migration, no auth (ADR-0026). The API remains read-only
+apart from `PATCH /sites/:siteId`; the new POST computes and returns and cannot
+write. No tool contacts a website, and none may — there is no HTML parser, no
+robots.txt and no outbound HTTP to build one on.
+
+Three findings are flagged rather than fixed, because each deserves its own
+work:
+
+- **The manifest over-claims for three keys.** `SAMPLE_MAX_EXPANDED`,
+  `SAMPLE_MAX_EXPANSION_FACTOR` and `SAMPLE_MAX_POPULATION_FRACTION` are badged
+  IN FORCE because the worker composes them into a `SampleBudget` — but the only
+  budget fields the pipeline reads are `minSample` and `maxFirstRound`, via
+  `firstRoundSampleSize`. The three expansion ceilings are composed, passed, and
+  consumed by nothing. The guard checks *references*, not *reachability*.
+- **`apps/web/lib/**` is outside the ADR-0008 guard's scan** — `tsxFilesUnder`
+  is called only with `"app"` and `"components"`, so a helper in `lib/` could
+  format a sampled figure unseen.
+- **`packages/sitemap` publishes its `rmSync`-holding fixture generator from the
+  production barrel.** The `./extraction` subpath routes around it rather than
+  fixing it.
+
+### The composition is provisional
+
+`docs/DESIGN.md` names Tools exactly once, in the rail's item list, and
+describes no screen. It is not among the eight Stitch screens recoverable by
+name, and Stitch is unreachable from this machine (ADR-0034). The owner has said
+they will supply the design; until then the arrangement follows §7.2's ratified
+analysis composition — applying a recorded decision rather than inventing one —
+and `app/tools/page.tsx` says so in its header. ADR-0031 is why this is marked
+as a placeholder instead of documented as though it were sanctioned.
+
+---
+
+## ADR-0036 — The Tools screen is rebuilt on the real Stitch design, and the seven tools this platform cannot offer are cards rather than omissions
+
+**Date:** 2026-09-07
+**Status:** Accepted
+**Supersedes in part:** ADR-0035 (its composition only — the two calculators, `measureProportion`, `LocObserver` and the no-`Database` registrar all stand)
+
+### Context
+
+ADR-0035 built Tools one day earlier and said plainly that its arrangement was a
+placeholder: *"`docs/DESIGN.md` names Tools once, as a rail label, describes no
+screen, and Stitch is unreachable, so §7.2 is borrowed as a placeholder pending
+the owner's design (ADR-0031's rule)."*
+
+The owner has now supplied the screen. It is not §7.2's analysis composition and
+does not resemble it: a meta strip, a title with header actions, a search-and-
+category filter bar, a **featured hero panel** for a single tool, then three
+category sections of three utility cards each, then a status strip.
+
+**This is the good case of ADR-0031's rule.** That ADR was written after a
+Settings screen was INVENTED because no document described one, and then written
+into `DESIGN.md` as though the invention were a decision. The rule it set —
+*when a binding design cannot be read, ask for it; do not fill the gap and
+document the filling* — was followed here: ADR-0035 marked its arrangement
+provisional in the ADR, in `DESIGN.md` §7.2 and in the page's own docblock, so
+when the design arrived there was nothing to unpick and no false sanction to
+retract.
+
+### The design problem
+
+**The design ships nine utilities. This platform has two.** Seven of the nine
+need capabilities that were verified absent rather than assumed so, re-confirming
+ADR-0035's audit: no HTML parser anywhere in the repo, no headless browser, no
+link graph, no robots.txt fetch or rule parser, nothing that follows a redirect,
+and **no outbound HTTP from `apps/api` at all**.
+
+The design leads with an **"Instant Single URL Live Inspector"** — paste a URL,
+get its status, canonical and index directives. That is the single thing this
+screen must never offer, and not only for want of a fetch client: verification
+runs in the worker behind a rate limiter and a circuit breaker against a sample
+the pipeline planned, and an on-demand fetch triggered by a web request would
+bypass both, which is the behaviour those two exist to prevent.
+
+### Decision
+
+**Take the composition; refuse the figures** — ADR-0031's rule for a form's
+fields, and ADR-0032's for a whole screen, applied to a catalogue.
+
+**1. The seven impossible tools are rendered as cards, not omitted.** A nine-card
+grid cut to two says nothing about why. Each unavailable card names the missing
+capability in the card body, and the section holding the three live-inspection
+tools carries `NOT AVAILABLE — NO OUTBOUND HTTP` as its own label. A reader
+learns what this platform does not do, which is worth more than a tidy grid —
+and the design's own hero tool sits first in that section, so the product's
+central refusal is stated where the design puts its loudest promise.
+
+**2. The catalogue is data, and a test enforces the honesty in both directions.**
+`lib/tools-catalog.ts` holds the nine entries; `tools-catalog.test.ts` fails if
+an unavailable tool carries no `unavailableReason` (or one under 40 characters),
+and if a launchable tool points anywhere but a route this app serves. **Confirmed
+load-bearing by deleting `unavailableReason` from the live URL inspector** — the
+layer neutralised is the catalogue entry itself, and two tests fail and name it,
+while the card still renders and still says "Unavailable" and simply stops saying
+why. Nothing else in the suite notices.
+
+**3. The header's count says what a reader can run.** `countLaunchable()` returns
+4, not 9, and the section chips read "1 of 3 available" rather than the design's
+"3 Tools". A count of the grid is §1.9's shape: a label asserting a guarantee the
+code does not make.
+
+**4. `toolAvailabilityTone` joins `lib/status.ts`, and unavailable is `unknown`.**
+Not `critical`: a capability deliberately never built is not a defect, and seven
+red cards report a broken product to anyone who reads the grid before the text —
+the same inversion `patternStatusTone` already carries a warning about, where a
+host refusing us was being called critical. `advisory` is a warning, for the
+expansion planner: real, tested, and run by no pipeline stage.
+
+**5. The hero holds the loaded tool, and its tiles appear only after a
+computation.** The design's four tiles are an inspection's results. Rendering
+them as dashes or zeros before the reader has submitted anything borrows the
+"it ran" state for a screen where nothing has — zero draws nothing (DESIGN.md
+§9). Tiles carry counted figures and the confidence BAND NAME; the estimate and
+its interval stay in `<Estimate>`, which ADR-0008's guard makes the only adapter.
+
+**6. Functionality added is deliberately minimal.** The catalogue search and
+category pills are plain GET links and a GET form over static data — no new
+endpoint, no new query, no schema change, no mutation. The one genuinely new
+affordance is the `#api-endpoints` panel, which documents the two routes that
+already exist. `Batch execution` is drawn from the design and rendered inert
+with its reason, per §7.2's header-action rule.
+
+### Consequences
+
+Ten GET routes and one PATCH, unchanged. No migration, no schema change, no new
+dependency. `DESIGN.md` gains §7.3 and §7.2 stops describing Tools as
+provisional.
+
+**A defect a screenshot caught and no test did, the fourth milestone running** —
+though a smaller one than its predecessors: `--text-2xs` is 11px on a **12px**
+line-height, correct for a badge and cramped for a wrapping paragraph, and the
+planner's hint additionally mixed a mono span into an 11px sans line, where the
+two faces at one size do not read as one size. Both fixed, and the token note is
+recorded in §7.3 because `components/form.tsx`'s `Field` hint had the same
+latent problem on the Settings screen.
+
+**Still owed, unchanged from ADR-0035:** the twelve configured-but-unenforced
+operational limits (ADR-0030) remain unenforced and remain reported; `Projects`
+stays disabled as ADR-0028 and ADR-0029 ruled; there is still no auth
+(ADR-0026); and the three screens built before ADR-0031 have still never been
+checked against the design. Newly owed: the design's Tools screen shows a rail
+with a plan/quota meter and a `Documentation` item, and a top bar with a global
+search, a bell and an avatar — none of which have anything behind them, and none
+of which were built for that reason.
+
+---
+
+## ADR-0037 — Projects is a fleet portfolio, not a second sites list; and the health score is refused rather than invented
+
+**Date:** 2026-09-07
+**Status:** Accepted
+**Supersedes in part:** ADR-0028 (its Projects verdict only — the cross-site query design it records stands and is extended here)
+
+### Context
+
+`Projects` was the last rail item still disabled on a recorded verdict rather
+than for want of data, and that verdict had been restated three times. ADR-0028
+put it plainly: *"Projects is the design's name for the sites list, which
+Overview already is."* ADR-0029 and ADR-0035 both re-affirmed it while ruling on
+their own screens.
+
+**That was right on the evidence available and wrong once the evidence
+changed.** The owner supplied the Stitch "Projects Portfolio" screen, and it is
+not a sites list. It is a fleet view with four KPI cards over the whole account,
+three filters, a paginated table pairing each domain with its latest run and its
+findings, per-row quick actions, a CSV export and the app's onboarding action.
+Overview's table is five columns of `site` and nothing else.
+
+And underneath it, the same gap ADR-0034 found for Analytics: **the data existed
+and no route could reach it.** `createSite` had exactly one caller in the repo —
+the seed script. The fleet needed one query per site to answer "what is each
+site's latest run", which is the shape that works at eighteen sites and stops
+working with nobody noticing.
+
+### Decision
+
+Build the portfolio end to end: two new organization-scoped aggregates, a read
+model route, a CSV export, the API's first CREATE, and the screen.
+
+**1. The health score is refused, and the refusal is on the screen.** Stitch
+shows `94/100` per project and `Avg. Technical Health 88.4/100` in a card. This
+platform computes no such number anywhere — not in `packages/sampling`, not in
+the estimate stage, not in any column. A composite invented in a serializer
+would be the most confident-looking figure on the page and the only one with no
+definition, no test, and no way for a reader to check it; worse, any honest
+version would be derived from ESTIMATES, and DESIGN.md forbids a card carrying a
+sampled figure because a card cannot carry an interval.
+
+So the column carries **counted findings** — a severity bar plus "35 critical of
+42" — and the intro paragraph says the score is absent rather than leaving a
+reader to guess which card absorbed it. Two more figures are renamed for the
+same reason: `Total Crawled Pages` becomes **urls discovered** (this platform
+samples a population, it does not request all of it) and its "99.4% indexable"
+is dropped outright (there is no indexability signal anywhere). The CSV column is
+`urls_discovered` too, because a spreadsheet outlives the screen that made it.
+
+**2. `latestRunPerSite` and `countOrganizationSnapshotsBySeverity`**, both
+`DISTINCT ON`/`GROUP BY` in one pass, both resolving their site ids through
+`organizationSiteIds` exactly as ADR-0028's two fleet lists do. They **resolve
+the ids themselves rather than accepting the page's**, which is the more
+expensive call and the only one that keeps the tenant boundary structural: a
+function that reads whatever site ids it is handed is a function whose safety
+depends on its caller.
+
+Each got its own isolation case rather than inheriting the neighbour's — the D3e
+rule, since a second query on a shared boundary is a second place to get it
+wrong — and each asserts the rival tenant's rows EXIST before asserting they
+cannot be seen, per the D3d finding that an isolation test seeding nothing
+passes against an empty table. **Both confirmed load-bearing by removing the
+`inArray` predicate in the query itself**: `latestRunPerSite`'s failure returns
+the rival's site as an extra map entry, and the severity count's returns the
+rival's rows in ours. Named, per the D3c correction.
+
+**3. `POST /sites` — the API's first CREATE.** `GET /projects` is the read model
+and `POST /sites` is where you create one, because "Projects" is the design's
+label and `site` is the entity: the same split `Crawls` → `/runs` already makes.
+Onboarding creates the row and its table partitions in one transaction
+(ADR-0003), and `host` is derived from `base_url` rather than accepted, so the
+bucket the outbound rate limiter throttles on cannot disagree with the URL
+actually requested — both properties of `createSite`, which is why the body has
+no `host` field.
+
+**A REAL DEFECT THIS EXPOSED, found by the new route's own test.** `createSite`
+never mapped `uq_site_organization_host`: with one caller that guards against
+re-seeding, a duplicate host had never been reached, so the violation propagated
+raw. Onboarding a domain that is already monitored is the single most ordinary
+mistake this endpoint will see, and it was answering **500**. `updateSite`
+already mapped the same constraint; the create path simply never had. Confirmed
+by removing the mapping — the test reports 500 instead of 409.
+
+**4. Fleet totals are computed over the fleet, never the page**, and sent as a
+separate `totals` object so the screen cannot accidentally sum its rows. This is
+the D3a defect asserted so it cannot return: both fleet screens once counted a
+page of 50 and labelled it the total. A filter reaches the totals as well as the
+rows, or the cards describe a different set from the table beneath them. The CSV
+export likewise ignores `limit`/`offset` while honouring the filters — a file
+named "portfolio" containing one page is a truncated export presented as
+complete.
+
+**5. Four run states, not two**, in `lib/projects.ts` with `projectRunTone` in
+`lib/status.ts`. `never_run`, `in_flight`, `no_urls`, `measured`. A project
+onboarded ten minutes ago and a project whose run found nothing both render as
+zeros unless something says otherwise; `never run` and `not measured` are said
+in words, and a completed run that discovered zero URLs takes a `no urls` badge,
+because an HTML error page parses as valid URL-less XML and `status` cannot
+express it. `never_run` is `unknown`, not a warning — no measurement yet is not
+trouble. **Run health and measurement stay separate**: a `failed` run that
+discovered 12 URLs is still `measured`, because the status badge already carries
+the failure and reporting it twice would hide the counts the row does hold.
+
+### Consequences
+
+Twelve GET routes and two mutations. No migration, no schema change, no new
+dependency. `DESIGN.md` gains §7.4; ADR-0028's Projects verdict is superseded
+and its cross-site query design is extended by two more queries.
+
+**Verified against the running app, including the state that had never
+rendered**: a project was created through the real endpoint, the row came back
+grey-accented with `not measured`, `—`, `—` and `never run` while the fleet's
+`urls discovered` correctly did not move, and the site was then soft-deleted.
+Filters, the empty-filtered state and the CSV export were each driven end to end
+through the Next proxy.
+
+**Two screenshot findings, neither caught by a test.** The severity breakdown
+printed in full wrapped to three lines and made every row tall, so the visible
+text is now the two figures a reader scanning a fleet compares, with the full
+breakdown in the hover and an `sr-only` line — the "never the only channel" rule
+kept without the row height. And the column headers wrapped, which is cosmetic
+but pushed the header to double height; `whitespace-nowrap` fixes it safely
+because the table already scrolls inside its own container.
+
+**Owed, and recorded rather than decided in passing: Overview's table is now a
+strict subset of this screen.** ADR-0028 called Projects the duplicate; the
+relationship is now the other way round. Folding it in, or re-scoping Overview
+to a fleet dashboard, is a decision about what the landing screen is for — the
+page carries a link and a comment saying so. Also unchanged: no auth
+(ADR-0026), so anyone who can reach the port can now CREATE a site and its
+partitions, which needs CORS narrowed and a session before it leaves a
+developer machine; the twelve configured-but-unenforced limits (ADR-0030) are
+still unenforced; and there is still no scheduler, which is why the cadence
+filter and the per-row run-now action are drawn inert with their reasons.
+
+---
+
+## ADR-0038 — Pattern Intelligence: the run's patterns ranked for triage, and why the rollup is not `scorePatternImpact`
+
+**Date:** 2026-09-07
+**Status:** Accepted
+
+### Context
+
+An external reviewer assessed the Stitch design and produced a 25-point verdict.
+Checked against the built app rather than the mockups, most of it was already
+answered: "Total Crawled Pages" is already `urls discovered` with a
+not-requested tooltip (ADR-0037), the internal-link figures were refused
+(ADR-0032), the explorer footer already says "sampled URLs" and a test asserts
+it, and seven of the nine Tools cards already name the capability they lack
+(ADR-0036). Several more of its recommendations — Content Analysis, TF-IDF
+clusters, a redirect analyzer, Core Web Vitals, GSC Intelligence, structured
+data, and a live single-URL Page Audit — need capabilities verified absent here:
+no HTML parser, no headless browser, no link graph, no `googleapis`/CrUX client,
+and **no outbound HTTP from `apps/api` at all**.
+
+One finding survived and was the strongest in the review: **there is no pattern
+explorer.** The data existed and nothing could reach it. `scorePatternImpact`
+and `compareByImpact` in `packages/sampling` had zero callers; the route
+`GET /sites/:siteId/patterns` existed and no screen consumed it; and the site
+detail's pattern table showed population and status but no evidence at all —
+the estimated affected count, the sample behind it and the worst finding were
+reachable only by opening one pattern at a time. This is the ADR-0034 gap
+again: written, tested, and reachable by nothing.
+
+### Decision
+
+A per-site, per-run ranked pattern explorer at
+`/sites/[siteId]/patterns` — a list page that never existed — over a widened
+`GET /sites/:siteId/patterns`.
+
+**Composition from the Stitch "Sitemap Analyzer" screen**
+(`docs/design-source/sitemap_analyzer/`). All 18 vendored screens were checked
+and none is pattern-shaped; `url_explorer_detail` is page-level audit (title
+tags, H1, inbound links, HTTP headers — every one a blocked capability). Rather
+than invent a composition, which is the D3c failure ADR-0031 records, this takes
+the design's population screen and refuses its figures. Recorded as DESIGN.md
+§7.5, including the three refusals: no "Indexability 94%" (nothing measures
+index state), one `urls discovered` card rather than the Search Console
+submitted/discovered pair, and `parsed at` rather than "Last Modified", because
+`sitemap_file.parsed_at` is when WE parsed it.
+
+**Ranked and paged in SQL.** `listPatternsRanked` groups `audit_snapshot` by
+pattern and orders on the summed `impact_score`, LEFT JOINed so a pattern with
+no published finding still appears — the load-bearing choice, since `blocked`,
+`needs_review` and `unsampled` patterns have no snapshot row at all and an inner
+join would silently drop exactly the patterns a triage screen exists to surface.
+Summing in the route instead would rank whatever page happened to be fetched,
+which is the defect `countPatternsByDepth` already avoids. Ties break on `id` so
+the order is total and rows cannot swap between loads.
+
+**The rollup is NOT `scorePatternImpact`, and this is the decision worth
+carrying.** That function computes exactly this shape and was the obvious reuse.
+It takes a probe outcome plus a fresh `StratifiedEstimate` and derives the
+weight from the severity table **in force now**. A stored `audit_snapshot`
+carries the weight that was in force **when it was published**, deliberately,
+because weights are business decisions that get revised and a historical claim
+has to stay reconstructible against the ones that produced it (ADR-0014).
+Re-scoring at read time would silently restate old findings under new weights.
+Reaching that function at all would also mean rebuilding a `StratifiedEstimate`
+these rows do not carry — no per-stratum breakdown, no `isSoft404` — which is
+the invent-the-missing-part defect ADR-0035 records, where the invented part
+decides the answer.
+
+So `rollUpPatternImpact` lives in `apps/api/src/findings.ts` beside
+`withImpactBounds`, repeats the arithmetic, and shares the CLASSIFICATION:
+`isAbsenceOfEvidence` is a pure function of the severity class with nothing to
+invent. A test asserts the two agree wherever the stored weights match the
+current table, so the duplication cannot drift into a second, quieter answer.
+`compareByImpact` gets its first caller as the assertion that the SQL ordering
+and the package's documented total order are one rule, not two.
+
+**The rollup is SHAPED as a measurement.** Its fields are exactly
+`auditSnapshotSummary`'s — `impactScore`, `impactLow`, `impactHigh`,
+`evidenceTier`, `confidenceBand`, `sampleSize`, `populationCount` — so the web's
+existing `impactFromSnapshot` renders it with no second adapter, and
+`lib/adr-0008-guard.test.ts` already polices those names. A rollup with its own
+field names would have been a sampled figure the guard could not see.
+`impactFromSnapshot` was widened to the seven fields it actually reads rather
+than duplicated, the same move `estimateFromSnapshot` documents.
+
+### Consequences
+
+Three states are kept apart, in the API and on the screen: **nothing published**
+(no snapshot row — the `impact` field is absent), **every finding an absence of
+evidence** (`evidenceTier: "blocked"`), and **measured at zero** (a real zero).
+All three render as "0" unless something says otherwise, and collapsing the
+middle into the last reports a host refusing us as a clean bill of health.
+
+`rankScore` — the bare summed impact the SQL orders by — never leaves the API.
+It is a point value with no bounds. `adr-0008-guard.test.ts` gained a second,
+STRICTER rule for it: a name no module may read, **the adapter included**, since
+an adapter that learned to format it would satisfy every other check in that
+file while rendering an interval-less estimate.
+
+There is no run-wide "estimated affected URLs" figure. Summing intervals across
+patterns is a statistical choice this screen does not make, and summing the
+visible page would be D3a's defect with a new label.
+
+No rail item: this is a per-site drill-down reached from the site overview and
+the breadcrumb trail, and Overview's `match` already owns the `/sites/` prefix.
+
+Both new queries got their own isolation case (the D3e rule — a second query on
+a shared join path does not inherit its neighbour's), each asserting the rival
+tenant's rows EXIST before asserting we cannot see them (the D3d rule), and each
+confirmed load-bearing by removing **that specific query's site predicate** (the
+D3c rule: name the layer). `listPatternsRanked` returns the rival's pattern
+without `eq(pattern.siteId, ...)`; `listSnapshotsByPatterns` returns the rival's
+claims without `eq(auditSnapshot.siteId, ...)`. Separately, removing the route's
+`assertSiteInOrg` makes the API answer 200 with the rival's template in the body
+— **the layer neutralised there is the route's membership check**, and it is
+load-bearing for a different failure than the repository predicates are.
+
+One fixture finding worth keeping: the first draft seeded a `blocked` claim with
+`observed_count: 30`, and the database refused it —
+`ck_audit_snapshot_evidence_tier_matches_coverage` requires a blocked claim to
+carry `observed_count = 0` and `point_estimate = 0`. A refusal means the host
+would not let us look, so there is nothing observed to report. The schema
+caught a fixture that would have tested a claim the platform cannot make.
+
+Unchanged: no auth (ADR-0026), no migration, no schema change, and the API is
+still eleven GETs plus the two writes ADR-0037 added.
+
+---
+
+## ADR-0039 — The rail says "Analyses", not the design's "Crawls"
+
+**Date:** 2026-09-07
+**Status:** Accepted. Supersedes ADR-0027's rail-label clause; the rest of
+ADR-0027 stands.
+
+### Context
+
+ADR-0027 fixed the navigation rail to the Stitch design's item list exactly —
+Overview, Projects, Crawls, Issues, Tools, Analytics — at the project owner's
+explicit direction, **after the conflict was raised and reaffirmed**. It
+recorded the tension plainly rather than smoothing it over: "Crawls" is a
+crawler product's language, and this platform's whole differentiator is that it
+collapses a sitemap into patterns and probes a statistical sample of each. The
+label was held as presentational, with a warning comment beside the item list
+and a compensating tooltip on Settings' "Last Crawl" row.
+
+An external design review reached the same conclusion independently, listing
+ten terminology changes of which this was the first. That is two separate
+readers arriving at the same objection, which is different evidence from the
+implementer raising it once.
+
+The audit that followed found the visible surface was already almost clean:
+exactly **two** user-visible strings used the word as product language — the
+rail item and Settings' "Last Crawl" — while every page heading behind it
+already said "Runs" or "Sampling Analysis", and one string was a deliberate
+negation ("sampled, never fully crawled"). The remaining hits were third-party
+terminology (robots.txt `Crawl-delay`), an unbuilt tool's description, and an
+icon identifier.
+
+### Decision
+
+The rail item becomes **"Analyses"** and Settings' metadata row becomes **"Last
+Analysis"**, at the owner's direction. The item order still follows the design;
+one label deliberately does not.
+
+`components/nav-rail.test.tsx` asserts it, because a comment is not enforcement:
+the rail is the most-read text in the app and the easiest place for crawler
+language to drift back during an unrelated restyle. The guard checks the label
+by name, scans every rail label for crawler words with the remedy in the failure
+message, and asserts that no item points at a route that does not exist — the
+dormant-404 class the `SOON` marker and the `/sites/` prefix fix already exist
+for. Confirmed load-bearing by reverting the label: three tests fail.
+
+### Consequences
+
+**"Analyses" now sits directly above "Analytics" in the same rail**, and they
+are different screens — a run's sampling passes, and per-site estimator health.
+This was raised before the change was made and the owner chose "Analyses" over
+"Runs", which was the alternative offered and which matches both the page's own
+`<h1>` and the `sitemap_run` entity. A test asserts the two items stay separate
+and correctly pointed, so if they are ever confused the fix is a better name for
+one of them rather than a quiet return to crawler language. If the pairing reads
+badly in use, "Runs" remains the fallback.
+
+The `CrawlIcon` export keeps its name. It is an internal identifier for a
+cloud-download glyph, never rendered as text, and renaming it would be churn
+across five call sites with no reader-visible effect.
+
+Three references to "Crawls" survive in comments, all of them deliberately
+naming the DESIGN's label in order to explain why the app does not use it.
+
+## ADR-0040 — The pipeline is made self-driving through BullMQ, and the queue namespace's separator turns out to have never worked
+
+**Date:** 2026-09-08
+**Status:** Accepted.
+
+### Context
+
+An architecture audit found that, despite `packages/pipeline`'s five stages and
+`apps/worker`'s per-site `SitePipeline` being well-built and individually
+tested, nothing had ever driven a run through them end to end in production.
+Two hand-offs were missing outright — `discover` never enqueued `ingest`, and
+nothing enqueued `finalize` after the last pattern's `estimate` completed — and
+`attachSite()` had no caller anywhere, so a worker process started and idled
+forever. The only thing that could run all five stages was `scripts/live-run.ts`,
+a manual script that deliberately bypasses Redis and BullMQ and says so in its
+own header comment. Separately, `verify` and `estimate` had no guard against
+BullMQ's at-least-once redelivery (only `ingest` did), and the schema's
+`heartbeat_at`/`idx_sitemap_run_heartbeat` stale-run recovery path had never been
+implemented — `heartbeatRun()` existed, exported, and uncalled.
+
+Closing these gaps required building the first real integration test of
+`SitePipeline` against an actual Redis — a test that had never existed. It
+failed immediately, on `Queue` construction, for a reason unrelated to anything
+this session set out to fix: **BullMQ throws `"Queue name cannot contain :"`,
+because `:` is the delimiter BullMQ's own Redis keys use internally**
+(`bull:{queueName}:wait`, etc.). This project's queue namespace has been
+documented as `{tier}:{siteId}:{stage}` since M5, praised repeatedly in the
+milestone log as real and well-tested, and asserted by pure-string unit tests
+in `queue-names.test.ts` — none of which could have caught this, because none
+of them ever constructed a real BullMQ `Queue`. `packages/pipeline`'s own e2e
+suite is deliberately Redis-free by design. As far as this audit could
+determine, no `SitePipeline` had ever been attached to a real Redis before this
+session's test did it, and the entire namespacing scheme would have failed on
+the very first site any real deployment ever tried to attach.
+
+### Decision
+
+**The queue-name separator changes from `:` to `.`.** `queueName()` and
+`parseQueueName()` in `packages/pipeline/src/queue-names.ts` now join
+`{tier}.{siteId}.{stage}`; `queue-names.test.ts` gained a regression asserting
+no name this function produces can contain `:`, so this cannot silently
+regress back to the delimiter BullMQ forbids. UUIDs cannot contain `.`, so the
+same collision-freedom argument the original design made for `:` still holds.
+Every prose description of the `:`-separated scheme elsewhere in this codebase
+(`CLAUDE.md`, milestone-log entries, docblocks not touched by this change) is
+left as the historical record it now is rather than rewritten.
+
+**Stage self-chaining is completed using the existing injected-`enqueue`
+pattern, not a new mechanism.** `discover` now calls `deps.enqueue("ingest",
+...)` on success and `finishRun(..., "degraded")` directly when a parsed index
+names no children — moving `scripts/live-run.ts`'s manual decision into the
+stage itself, so the script and the queue-driven path are one code path, not
+two that can drift. The `estimate → finalize` hand-off is a genuine fan-in, not
+a 1:1 hand-off: a new `checkRunCompletion` helper
+(`packages/pipeline/src/stages/finalize-trigger.ts`) compares a live count of
+patterns in a terminal status (`measured`/`blocked`/`needs_review`) against
+`sitemap_run.total_patterns`, and enqueues `finalize` once they match. It is
+called from `estimate`'s own success path (the common case) and from
+`verify`'s fully-unresolvable early return, which is the one way a pattern can
+reach a terminal status without ever enqueuing `estimate`. `ingest` itself
+enqueues `finalize` directly when it draws zero samples at all, since no
+downstream job would otherwise exist to notice completion. The comparison is
+safe without a distributed lock only because `estimate`'s `Worker` runs at
+concurrency 1 per site (`SitePipeline.start()` now throws if that is ever
+raised without a matching change to the completion check) — recorded as a
+load-bearing invariant, not merely a resource limit.
+
+**Idempotency is enforced by making redelivery a safe no-op, following the
+pattern `ingest`'s `IngestAlreadyAggregatedError` guard already established,**
+not by trying to prevent redelivery. `verify` now checks
+`countObservations(patternSampleId)` before probing and skips straight to
+re-enqueuing `estimate` if a prior attempt already wrote observations — the
+real cost redelivery risks here is sending the same HTTP requests at the
+client's origin a second time, not a database inconsistency.
+`audit_snapshot` gained `uq_audit_snapshot_sample_status`, a unique index on
+`(site_id, pattern_sample_id, http_status)` — the natural key `estimate`
+already writes one row per, per its own docblock ("ONE SNAPSHOT ROW PER
+OUTCOME") — and `insertAuditSnapshot` upserts on it with `ON CONFLICT DO
+NOTHING`, reading back the existing row on conflict rather than treating it as
+an error, mirroring `recordPatternSample`'s existing shape.
+
+**A site is attached and a run started through one new queue,
+`ATTACH_REQUESTS_QUEUE`, not through a fleet-wide poll.** `attachSite()`'s own
+docblock had already named the correct shape: "a run is attached explicitly,
+which is what the API will call." Building that required deciding how "the
+API" reaches into a separate worker process, and the answer is a small control
+message — `{organizationId, siteId, tier, sitemapRunId, sitemapUrl, baseUrl,
+expectedHost}` — posted by the new `POST /sites/:siteId/runs` route and
+consumed by a single `Worker` the worker process runs alongside its per-site
+pipelines. Its handler calls `attachSite()` (a no-op if already attached) and
+then `SitePipeline.startRun()`, in that order, which is what guarantees a
+`discover` job is never enqueued before something is listening for it.
+Deliberately NOT a periodic `listSites()` sweep: `CLAUDE.md`'s own
+non-negotiable rules flag fleet-wide auto-attach as needing a cross-organization
+read that has been repeatedly, deliberately left undecided, and every message
+on this queue already names the one site it is about — no enumeration, no new
+scope, nothing for the worker to decide on its own. `startRun` itself still
+runs synchronously in the API request, ahead of the queue message, so
+`uq_sitemap_run_one_active_per_site` arbitrates a race between two requests
+rather than two attach messages both trying to start a run.
+
+**`POST /sites/:siteId/runs`'s dependency on Redis is injected as its own
+parameter, `runTrigger?: RunTrigger`, not folded into `SettingsConfig`.**
+`REDIS_URL` has no default, and `api-config.ts`'s docblock already records
+twice why widening the config every route receives to require it would force
+every existing test building that config to also hold a Redis URL — the same
+§1.13 shape recurring a third time, caught before it landed rather than after.
+`buildApp` gained a fourth, optional parameter instead; omitted, the route
+answers 503 `RUN_TRIGGER_NOT_CONFIGURED` rather than crashing or silently doing
+nothing, and the existing test suite's zero-Redis invariant survives unchanged.
+
+**A stale-run sweeper now exists, and it is deliberately separate from the
+event-driven failure path.** `SitePipeline`'s `worker.on("failed", ...)`
+handler now calls `finishRun(..., "failed")` once a job's BullMQ retries are
+exhausted — an immediate, clean signal — but cannot catch the case where the
+*worker process itself* dies, since nothing survives to fire the event. A new
+`apps/worker/src/stale-run-sweeper.ts` polls on an interval
+(`HEARTBEAT_SWEEP_INTERVAL_MS`) for `running` rows whose heartbeat has gone
+quiet past `HEARTBEAT_STALE_THRESHOLD_MS` and fails them — a fleet-wide read
+with no `SiteScope`, deliberately, matching `organizationSiteIds`' precedent
+for a package-internal exception, and narrow: it returns ids only, never site
+content, and its only write is failing a run by id. `finishRun` itself gained
+a `WHERE status = 'running'` guard so a run that finished by some other path
+between a sweep's read and its write cannot be overwritten back to `failed` —
+harmless for every existing caller, since all of them already only call it
+while a run is running.
+
+### Consequences
+
+`apps/worker` has real test coverage for the first time — `apps/worker/test/`,
+against a real Redis, a real Postgres and a real local HTTP server, not the
+Redis-free stage-level testing `packages/pipeline` deliberately keeps. The
+first version of the self-chaining test caught the `:`-separator defect on its
+first run; a second fixture-sizing mistake (too few URLs per family to clear
+the pattern-trie's collapse threshold) and a missing `baseUrl`/`expectedHost`
+propagation gap through `AttachRequestPayload` → `SitePipeline.startRun` →
+`discover`'s payload were both found the same way, by the test failing for a
+real reason rather than by inspection. `packages/pipeline`'s own e2e suite
+gained matching idempotency regressions for `verify` and `estimate`
+(`pipeline.e2e.test.ts`), a dedicated `gzip-sniff.test.ts`, and a real gzip
+reproduction (`discover-gzip.e2e.test.ts`) for a related, independently-found
+bug — see the gzip fix below.
+
+`scripts/live-run.ts` is unchanged and still works: it drives the same stage
+functions directly, which now happen to also self-chain when given the
+chance (its own `enqueue` stub still just collects rather than executing, so
+this is inert for that script specifically), and it remains the only thing
+that has ever exercised a real run's discover→ingest→verify→estimate→finalize
+sequence against a genuinely large corpus.
+
+Not addressed here, and not silently resolved: the cross-organization
+fleet-wide auto-attach question `CLAUDE.md` and `attachSite()`'s own docblock
+both flag as open. This work makes single-site, explicitly-triggered
+attachment real; scaling to 650 sites' worth of concurrent, unattended
+attachment is a separate decision this ADR deliberately does not make.
+
+## ADR-0041 — A gzip-compressing server can make ingest fail on an already-decompressed file, fixed by sniffing bytes instead of trusting a header
+
+**Date:** 2026-09-08
+**Status:** Accepted.
+
+### Context
+
+A runbook for a new script, `scripts/live-run.ts` (the first thing able to
+drive a real run against a real site — see ADR-0040), surfaced a real,
+reproduced, pre-existing bug: `packages/pipeline/src/stages/discover.ts`'s
+`isGzip()` decided whether a stored sitemap file was gzip-compressed by
+checking `url.endsWith(".gz") || response.headers.get("content-encoding")`.
+Undici's `fetch` transparently decompresses a gzip response body before a
+`SitemapResponse`'s bytes are ever read, but leaves `content-encoding: gzip` on
+the response object regardless — so a server that genuinely, correctly
+compresses its XML on the wire (IIS and nginx both do this by default,
+independent of the URL's extension) left the pipeline believing the STORED
+bytes were still gzip. The next stage's `gunzip` then failed with
+`Z_DATA_ERROR: incorrect header check` on a perfectly good sitemap. Reproduced
+against `https://www.sitemaps.org/sitemap.xml`, which IIS serves this way.
+
+### Decision
+
+Trust the bytes actually on disk, not a header describing a transformation
+undici already reversed. A new helper, `packages/pipeline/src/gzip-sniff.ts`,
+reads the smallest possible prefix of a stream and checks for the gzip magic
+number (`1f 8b`). `discover.ts` sniffs the entry document immediately after
+`deps.store.put` writes it — before ever deciding `is_gzip` for the
+single-`urlset` case, and before re-opening the same bytes to detect the root
+element or list an index's children, both of which used to repeat the same
+`.gz`-suffix-or-nothing guess independently. `ingest.ts`'s `ingestOneFile`
+sniffs a freshly-downloaded child file the same way and corrects
+`sitemap_file.is_gzip` via a new optional field on `markFileDownloaded` — a
+child is only a named URL at discovery time, with no bytes yet to sniff, so
+this is the first point a caller can correct that registration-time guess from
+what was actually written.
+
+The `.gz`-URL-suffix fast path is kept everywhere it already existed; sniffing
+only replaces the `content-encoding` half of the check, which was the only
+half that could be wrong in the direction that matters (marking gzip bytes as
+plain is comparatively harmless — `streamLocs` would simply fail to parse XML
+it received as still-compressed noise — while marking already-plain bytes as
+gzip is what broke a working sitemap).
+
+### Consequences
+
+`packages/pipeline/src/gzip-sniff.test.ts` covers the sniff function directly
+(real gzip bytes, plain XML, an empty stream, and the prefix-only detection
+boundary). `discover-gzip.e2e.test.ts` reproduces the exact bug end to end
+against a real local HTTP server that genuinely gzips a response with an
+accurate header on a non-`.gz` URL, and asserts `discover`+`ingest` succeed
+where the old code threw. Neither test existed before, and neither of the
+existing gzip-adjacent tests in `packages/sitemap` could have caught this: they
+either pass `isGzip: true` by hand (testing the downstream gunzip-when-told-to
+path, not detection) or use `.gz`-suffixed synthetic fixtures — this codebase
+had no test anywhere of the specific header-vs-bytes mismatch a real
+compressing server produces.

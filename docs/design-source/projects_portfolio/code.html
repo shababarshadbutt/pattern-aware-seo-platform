@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;450;500&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"secondary":"#c3c0ff","background":"#13121b","surface-container-low":"#1b1b24","outline":"#918fa1","on-tertiary-fixed-variant":"#7b2f00","error-container":"#93000a","secondary-fixed":"#e2dfff","on-error-container":"#ffdad6","surface-container-highest":"#35343e","on-surface":"#e4e1ee","on-tertiary-container":"#ffd2be","on-primary-fixed-variant":"#3323cc","on-primary-fixed":"#0f0069","inverse-on-surface":"#302f39","tertiary-container":"#a44100","on-secondary-container":"#b0aef9","primary-fixed":"#e2dfff","inverse-primary":"#4d44e3","on-surface-variant":"#c7c4d8","primary":"#c3c0ff","on-primary":"#1d00a5","outline-variant":"#464555","on-error":"#690005","surface-container-lowest":"#0e0d16","tertiary-fixed-dim":"#ffb695","error":"#ffb4ab","primary-fixed-dim":"#c3c0ff","on-primary-container":"#dad7ff","surface-container-high":"#2a2933","on-tertiary-fixed":"#351000","on-background":"#e4e1ee","surface-tint":"#c3c0ff","surface-dim":"#13121b","surface-variant":"#35343e","tertiary":"#ffb695","primary-container":"#4f46e5","secondary-container":"#413f82","surface":"#13121b","on-secondary-fixed":"#140f54","surface-container":"#1f1f28","on-secondary-fixed-variant":"#413f82","secondary-fixed-dim":"#c3c0ff","surface-bright":"#393842","on-tertiary":"#571f00","on-secondary":"#2a276a","tertiary-fixed":"#ffdbcc","inverse-surface":"#e4e1ee"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"component-padding-y":"6px","container-margin":"24px","unit":"4px","component-padding-x":"12px","gutter":"12px"},"fontFamily":{"headline-sm":["Geist"],"body-md":["Geist"],"display-sm":["Geist"],"body-sm":["Geist"],"label-xs":["JetBrains Mono"],"data-mono":["JetBrains Mono"]},"fontSize":{"headline-sm":["18px",{"lineHeight":"24px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-sm":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"label-xs":["11px",{"lineHeight":"12px","fontWeight":"500"}],"data-mono":["13px",{"lineHeight":"16px","fontWeight":"450"}]}}}}</script></head><body class="bg-surface font-body-sm text-body-sm text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-12 px-container-margin flex items-center gap-2 bg-surface-container-lowest"><div class="w-6 h-6 rounded bg-primary-container flex items-center justify-center"><span class="font-label-xs text-label-xs text-on-primary-container font-semibold">SE</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm leading-none text-on-surface">SEO Engine</span><span class="font-label-xs text-label-xs text-outline">Technical SEO v2.4</span></div></div><nav class="flex flex-col gap-1 px-unit py-component-padding-y" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-[16px]">dashboard</span><span class="font-body-sm text-body-sm">Overview</span></a><a aria-current="page" class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg transition-colors bg-primary-container text-on-primary-container font-medium" data-path="projects" href="#"><span class="material-symbols-outlined text-[16px]">folder_open</span><span class="font-body-sm text-body-sm">Projects</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="crawls" href="#"><span class="material-symbols-outlined text-[16px]">radar</span><span class="font-body-sm text-body-sm">Crawls</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="issues" href="#"><span class="material-symbols-outlined text-[16px]">bug_report</span><span class="font-body-sm text-body-sm">Issues</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="tools" href="#"><span class="material-symbols-outlined text-[16px]">build</span><span class="font-body-sm text-body-sm">Tools</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[16px]">monitoring</span><span class="font-body-sm text-body-sm">Analytics</span></a></nav></div><div class="flex flex-col gap-unit p-unit bg-surface-container-lowest"><div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col gap-unit mb-unit"><div class="flex items-center justify-between"><span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Node Cap</span><span class="font-data-mono text-data-mono text-primary">84%</span></div><div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[84%]"></div></div><button class="w-full mt-unit py-component-padding-y px-component-padding-x rounded-lg bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium hover:bg-opacity-90 transition-all">Upgrade Plan</button></div><nav class="flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-medium"><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[16px]">settings</span><span class="font-body-sm text-body-sm">Settings</span></a><a class="flex items-center gap-2 px-component-padding-x py-component-padding-y rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentation" href="#"><span class="material-symbols-outlined text-[16px]">menu_book</span><span class="font-body-sm text-body-sm">Documentation</span></a></nav></div></aside><div class="pl-[240px]"><header class="fixed top-0 left-[240px] right-0 h-12 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-container-margin"><div class="flex items-center gap-gutter flex-1 max-w-xl"><div class="flex items-center gap-unit text-outline font-label-xs text-label-xs select-none"><span class="hover:text-on-surface transition-colors cursor-pointer">ENGINE</span><span class="material-symbols-outlined text-[12px]">chevron_right</span><span class="text-on-surface">PRODUCTION</span></div><div class="relative flex items-center flex-1 max-w-md"><span class="material-symbols-outlined absolute left-component-padding-x text-[16px] text-outline pointer-events-none">search</span><input class="w-full h-8 pl-8 pr-component-padding-x bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container-low transition-colors" placeholder="Search projects, URLs or metrics..." type="text"/></div></div><div class="flex items-center gap-gutter"><button class="h-8 px-component-padding-x rounded bg-primary-container text-on-primary-container font-body-sm text-body-sm font-medium flex items-center gap-unit hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-[16px]">play_arrow</span><span>Run Test Crawl</span></button><button class="h-8 w-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-12 bg-surface px-container-margin pb-container-margin"><div class="flex flex-col w-full gap-gutter">
+<!-- Portfolio Header Area -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-component-padding-x pt-unit">
+<div class="flex flex-col gap-unit">
+<div class="flex items-center gap-2">
+<h1 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Projects Portfolio</h1>
+<span class="font-label-xs text-label-xs px-2 py-0.5 rounded bg-surface-container-high text-secondary">FLEET v2.4</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-2xl">
+        Manage monitored domains, scheduled crawl cadences, and cross-site technical health benchmarks across your organization.
+      </p>
+</div>
+<div class="flex items-center gap-2 self-start lg:self-center">
+<button class="h-8 px-component-padding-x rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm flex items-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-outline">file_download</span>
+<span>Export Portfolio CSV</span>
+</button>
+<button class="h-8 px-component-padding-x rounded bg-primary-container hover:bg-primary-container/90 text-on-primary font-body-sm text-body-sm font-medium flex items-center gap-1.5 transition-opacity shadow-sm">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Add New Project</span>
+</button>
+</div>
+</div>
+<!-- KPI Metric Overview Cards (4 Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-gutter">
+<!-- Metric 1 -->
+<div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-center justify-between text-outline">
+<span class="font-label-xs text-label-xs uppercase tracking-wider">Active Monitored Domains</span>
+<span class="material-symbols-outlined text-[18px] text-secondary">language</span>
+</div>
+<div class="flex items-baseline justify-between mt-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">18</span>
+<span class="font-label-xs text-label-xs text-outline">Domains</span>
+</div>
+<span class="font-label-xs text-label-xs text-primary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>+2 this month
+        </span>
+</div>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden mt-3">
+<div class="h-full bg-secondary w-3/4"></div>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-center justify-between text-outline">
+<span class="font-label-xs text-label-xs uppercase tracking-wider">Total Crawled Pages</span>
+<span class="material-symbols-outlined text-[18px] text-primary">layers</span>
+</div>
+<div class="flex items-baseline justify-between mt-2">
+<div class="flex items-baseline gap-2">
+<span class="font-data-mono text-headline-sm text-on-surface font-semibold tracking-tight">2,418,920</span>
+<span class="font-label-xs text-label-xs text-outline">URLs</span>
+</div>
+<span class="font-label-xs text-label-xs text-secondary flex items-center">
+          99.4% indexable
+        </span>
+</div>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden mt-3">
+<div class="h-full bg-primary-container w-[99%]"></div>
+</div>
+</div>
+<!-- Metric 3 -->
+<div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-center justify-between text-outline">
+<span class="font-label-xs text-label-xs uppercase tracking-wider">Avg. Technical Health</span>
+<span class="material-symbols-outlined text-[18px] text-tertiary">speed</span>
+</div>
+<div class="flex items-baseline justify-between mt-2">
+<div class="flex items-baseline gap-2">
+<span class="font-data-mono text-headline-sm text-on-surface font-semibold">88.4<span class="text-outline text-body-sm font-normal">/100</span></span>
+</div>
+<span class="font-label-xs text-label-xs text-secondary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">arrow_upward</span>+3.2% vs last crawl
+        </span>
+</div>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden mt-3">
+<div class="h-full bg-secondary-container w-[88%]"></div>
+</div>
+</div>
+<!-- Metric 4 -->
+<div class="p-component-padding-x py-component-padding-y rounded-lg bg-surface-container-low flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-center justify-between text-outline">
+<span class="font-label-xs text-label-xs uppercase tracking-wider">Critical Issues Fleet</span>
+<span class="material-symbols-outlined text-[18px] text-error">warning</span>
+</div>
+<div class="flex items-baseline justify-between mt-2">
+<div class="flex items-baseline gap-2">
+<span class="font-data-mono text-headline-sm text-error font-semibold">24</span>
+<span class="font-label-xs text-label-xs text-outline">Issues</span>
+</div>
+<span class="font-label-xs text-label-xs text-error flex items-center gap-0.5">
+          Requires triage
+        </span>
+</div>
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden mt-3">
+<div class="h-full bg-error w-[42%]"></div>
+</div>
+</div>
+</div>
+<!-- Search and Quick Filter Toolbar -->
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-component-padding-x p-unit bg-surface-container-low rounded-lg shadow-sm">
+<div class="flex items-center gap-2 flex-1 max-w-xl">
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-2.5 text-[16px] text-outline pointer-events-none">search</span>
+<input class="w-full h-8 pl-8 pr-component-padding-x bg-surface-container-lowest rounded text-on-surface font-body-sm text-body-sm placeholder:text-outline focus:outline-none focus:bg-surface-container transition-colors" id="projectFilterInput" placeholder="Filter projects by domain, tag, or owner..." type="text"/>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<!-- Environment Dropdown -->
+<div class="relative">
+<select class="h-8 pl-2 pr-6 appearance-none bg-surface-container-lowest rounded text-on-surface font-label-xs text-label-xs focus:outline-none focus:bg-surface-container cursor-pointer">
+<option value="all">Environment: All</option>
+<option value="prod">Environment: Production</option>
+<option value="staging">Environment: Staging</option>
+</select>
+<span class="material-symbols-outlined absolute right-1.5 top-2 text-[14px] text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- Health Status Filter -->
+<div class="relative">
+<select class="h-8 pl-2 pr-6 appearance-none bg-surface-container-lowest rounded text-on-surface font-label-xs text-label-xs focus:outline-none focus:bg-surface-container cursor-pointer">
+<option value="all">Health: All</option>
+<option value="healthy">Healthy &gt;90%</option>
+<option value="warning">Warning 70-89%</option>
+<option value="critical">Critical &lt;70%</option>
+</select>
+<span class="material-symbols-outlined absolute right-1.5 top-2 text-[14px] text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- Crawl Frequency -->
+<div class="relative">
+<select class="h-8 pl-2 pr-6 appearance-none bg-surface-container-lowest rounded text-on-surface font-label-xs text-label-xs focus:outline-none focus:bg-surface-container cursor-pointer">
+<option value="all">Cadence: All</option>
+<option value="weekly">Weekly</option>
+<option value="daily">Daily</option>
+<option value="custom">Custom</option>
+</select>
+<span class="material-symbols-outlined absolute right-1.5 top-2 text-[14px] text-outline pointer-events-none">expand_more</span>
+</div>
+<!-- View Switcher -->
+<div class="flex items-center p-0.5 bg-surface-container-lowest rounded">
+<button class="h-7 w-7 flex items-center justify-center rounded bg-primary-container text-on-primary transition-colors" title="Table View">
+<span class="material-symbols-outlined text-[16px]">view_list</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded text-outline hover:text-on-surface hover:bg-surface-container transition-colors" title="Grid View">
+<span class="material-symbols-outlined text-[16px]">grid_view</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main High-Density Projects Data Table -->
+<div class="w-full bg-surface-container-lowest rounded-lg shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse select-text">
+<thead>
+<tr class="bg-surface-container-low text-outline font-label-xs text-label-xs uppercase tracking-wider select-none">
+<th class="py-component-padding-y px-container-margin font-medium">Domain / Project</th>
+<th class="py-component-padding-y px-component-padding-x font-medium">Health Score</th>
+<th class="py-component-padding-y px-component-padding-x font-medium">Total Crawled</th>
+<th class="py-component-padding-y px-component-padding-x font-medium text-center">Critical Issues</th>
+<th class="py-component-padding-y px-component-padding-x font-medium">Cadence &amp; Last Run</th>
+<th class="py-component-padding-y px-container-margin font-medium text-right">Quick Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface font-body-sm text-body-sm">
+<!-- Row 1: Acme Corp -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-component-padding-y px-container-margin">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-secondary font-label-xs font-semibold">
+                  AC
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface truncate">acme-corp.com</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-label-xs text-[10px] uppercase font-medium">PROD</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">prj_09a471ec</span>
+</div>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex items-center gap-2">
+<div class="w-14 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[94%]"></div>
+</div>
+<span class="font-data-mono text-data-mono font-medium text-secondary">94<span class="text-outline text-label-xs font-normal">/100</span></span>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x font-data-mono text-data-mono text-on-surface">
+              145,892
+            </td>
+<td class="py-component-padding-y px-component-padding-x text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-data-mono text-label-xs bg-surface-container-high text-outline">
+                0
+              </span>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-on-surface font-body-sm">Weekly (Sun 00:00 UTC)</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline pl-3">2 hours ago</span>
+</div>
+</td>
+<td class="py-component-padding-y px-container-margin text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Run Audit Crawl">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="Project Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: store.globalbrand.io -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-component-padding-y px-container-margin">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-primary font-label-xs font-semibold">
+                  GB
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface truncate">store.globalbrand.io</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-label-xs text-[10px] uppercase font-medium">PROD</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">prj_77bc129d</span>
+</div>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex items-center gap-2">
+<div class="w-14 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-tertiary h-full rounded-full w-[78%]"></div>
+</div>
+<span class="font-data-mono text-data-mono font-medium text-tertiary">78<span class="text-outline text-label-xs font-normal">/100</span></span>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x font-data-mono text-data-mono text-on-surface">
+              820,400
+            </td>
+<td class="py-component-padding-y px-component-padding-x text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-data-mono text-label-xs bg-error/10 text-error">
+                4
+              </span>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="text-on-surface font-body-sm">Daily (02:00 UTC)</span>
+</div>
+<span class="font-label-xs text-label-xs text-primary pl-3">In progress (84%)</span>
+</div>
+</td>
+<td class="py-component-padding-y px-container-margin text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-primary transition-colors" title="Pause Audit">
+<span class="material-symbols-outlined text-[16px]">pause</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="Project Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: docs.apigateway.net -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-component-padding-y px-container-margin">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-secondary-fixed font-label-xs font-semibold">
+                  AG
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface truncate">docs.apigateway.net</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-high text-outline font-label-xs text-[10px] uppercase font-medium">STAGE</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">prj_11cc842e</span>
+</div>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex items-center gap-2">
+<div class="w-14 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-error h-full rounded-full w-[62%]"></div>
+</div>
+<span class="font-data-mono text-data-mono font-medium text-error">62<span class="text-outline text-label-xs font-normal">/100</span></span>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x font-data-mono text-data-mono text-on-surface">
+              12,450
+            </td>
+<td class="py-component-padding-y px-component-padding-x text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-data-mono text-label-xs bg-error/20 text-error font-medium">
+                12
+              </span>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span class="text-on-surface font-body-sm">Weekly (Mon 04:00 UTC)</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline pl-3">4 days ago</span>
+</div>
+</td>
+<td class="py-component-padding-y px-container-margin text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Run Audit Crawl">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="Project Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: blog.fintechflow.co -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-component-padding-y px-container-margin">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-primary font-label-xs font-semibold">
+                  FF
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface truncate">blog.fintechflow.co</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-label-xs text-[10px] uppercase font-medium">PROD</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">prj_9400ffbb</span>
+</div>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex items-center gap-2">
+<div class="w-14 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[91%]"></div>
+</div>
+<span class="font-data-mono text-data-mono font-medium text-secondary">91<span class="text-outline text-label-xs font-normal">/100</span></span>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x font-data-mono text-data-mono text-on-surface">
+              54,200
+            </td>
+<td class="py-component-padding-y px-component-padding-x text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-data-mono text-label-xs bg-error/10 text-error">
+                1
+              </span>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span class="text-on-surface font-body-sm">Custom (Bi-weekly)</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline pl-3">12 hours ago</span>
+</div>
+</td>
+<td class="py-component-padding-y px-container-margin text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Run Audit Crawl">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="Project Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: cloud.saasmatrix.com -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-component-padding-y px-container-margin">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center text-secondary font-label-xs font-semibold">
+                  SM
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface truncate">cloud.saasmatrix.com</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-label-xs text-[10px] uppercase font-medium">PROD</span>
+</div>
+<span class="font-data-mono text-label-xs text-outline">prj_55aa3921</span>
+</div>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex items-center gap-2">
+<div class="w-14 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[96%]"></div>
+</div>
+<span class="font-data-mono text-data-mono font-medium text-secondary">96<span class="text-outline text-label-xs font-normal">/100</span></span>
+</div>
+</td>
+<td class="py-component-padding-y px-component-padding-x font-data-mono text-data-mono text-on-surface">
+              1,385,978
+            </td>
+<td class="py-component-padding-y px-component-padding-x text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-data-mono text-label-xs bg-surface-container-high text-outline">
+                0
+              </span>
+</td>
+<td class="py-component-padding-y px-component-padding-x">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span class="text-on-surface font-body-sm">Daily (03:30 UTC)</span>
+</div>
+<span class="font-label-xs text-label-xs text-outline pl-3">Yesterday</span>
+</div>
+</td>
+<td class="py-component-padding-y px-container-margin text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Run Audit Crawl">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="Project Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Data Table Pagination & Metadata Footer -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-component-padding-x px-container-margin py-component-padding-y bg-surface-container-low select-none">
+<div class="flex items-center gap-2">
+<span class="font-label-xs text-label-xs text-outline">Showing</span>
+<span class="font-data-mono text-label-xs text-on-surface font-semibold">1-5</span>
+<span class="font-label-xs text-label-xs text-outline">of 18 tracked projects</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="h-7 px-2 flex items-center justify-center rounded bg-surface-container-lowest text-outline hover:text-on-surface transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[14px]">chevron_left</span>
+<span class="font-label-xs text-label-xs ml-0.5">Prev</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center rounded bg-primary-container text-on-primary font-label-xs text-label-xs font-semibold">
+          1
+        </button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant font-label-xs text-label-xs transition-colors">
+          2
+        </button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant font-label-xs text-label-xs transition-colors">
+          3
+        </button>
+<button class="h-7 w-7 flex items-center justify-center rounded hover:bg-surface-container text-on-surface-variant font-label-xs text-label-xs transition-colors">
+          4
+        </button>
+<button class="h-7 px-2 flex items-center justify-center rounded bg-surface-container-lowest text-outline hover:text-on-surface transition-colors">
+<span class="font-label-xs text-label-xs mr-0.5">Next</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Ensure Projects item in navigation is visually highlighted
+  document.addEventListener('DOMContentLoaded', () => {
+    const navLinks = document.querySelectorAll('aside nav a');
+    navLinks.forEach(link => {
+      if (link.getAttribute('data-path') === 'projects') {
+        link.classList.add('bg-primary-container', 'text-on-primary-container', 'font-medium');
+        link.classList.remove('text-on-surface-variant');
+      } else {
+        link.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-medium');
+        link.classList.add('text-on-surface-variant');
+      }
+    });
+
+    // Real-time table filter simulation
+    const searchInput = document.getElementById('projectFilterInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+          const text = row.innerText.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
+  });
+</script></main></div></body></html>

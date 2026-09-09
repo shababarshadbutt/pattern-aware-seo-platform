@@ -28,7 +28,17 @@ const runContext = z.object({
 
 export const discoverPayloadSchema = runContext.extend({
   /** The sitemap or sitemap-index URL to start from. */
-  sitemapUrl: z.string().url()
+  sitemapUrl: z.string().url(),
+  /**
+   * Site base URL and expected host, carried from the very first job so
+   * `discover` can hand them to `ingest` without re-deriving either from the
+   * sitemap URL — which may live on a different host than the site itself
+   * (a CDN-served sitemap next to an apex-domain site, for one). Snapshotted
+   * onto the job at run-start time, same reasoning as `ingest`'s own fields
+   * below: a run stays reproducible if the site's URL is later edited.
+   */
+  baseUrl: z.string().url(),
+  expectedHost: z.string().min(1)
 });
 
 export const ingestPayloadSchema = runContext.extend({
@@ -80,11 +90,31 @@ export const estimatePayloadSchema = runContext.extend({
 
 export const finalizePayloadSchema = runContext;
 
+/**
+ * A request to attach one site's queues and start one run — the message on
+ * {@link ATTACH_REQUESTS_QUEUE}. Carries everything `attachSite` and
+ * `SitePipeline.startRun` need so the worker never has to look either up
+ * itself: the caller (the API, resolving a specific site's row) already knows
+ * all of it, and handing it over is what lets the worker attach without ever
+ * enumerating sites on its own.
+ */
+export const attachRequestPayloadSchema = z.object({
+  organizationId: uuid,
+  siteId: uuid,
+  tier: z.enum(["standard", "priority", "bulk"]),
+  sitemapRunId: uuid,
+  sitemapUrl: z.string().url(),
+  /** Forwarded all the way to `discover`'s own payload. See its schema. */
+  baseUrl: z.string().url(),
+  expectedHost: z.string().min(1)
+});
+
 export type DiscoverPayload = z.infer<typeof discoverPayloadSchema>;
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type VerifyPayload = z.infer<typeof verifyPayloadSchema>;
 export type EstimatePayload = z.infer<typeof estimatePayloadSchema>;
 export type FinalizePayload = z.infer<typeof finalizePayloadSchema>;
+export type AttachRequestPayload = z.infer<typeof attachRequestPayloadSchema>;
 
 /** Thrown when a job's payload is not the shape its handler requires. */
 export class InvalidJobPayloadError extends Error {
