@@ -8,13 +8,23 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@fastify/cors": "^10.1.0",
+    "@pattern-aware/database": "workspace:*",
+    "@pattern-aware/pipeline": "workspace:*",
+    "@pattern-aware/sampling": "workspace:*",
     "@pattern-aware/shared": "workspace:*",
-    "fastify": "^5.1.0"
+    "@pattern-aware/sitemap": "workspace:*",
+    "bullmq": "^5.28.0",
+    "fastify": "^5.1.0",
+    "fastify-type-provider-zod": "^7.0.0",
+    "ioredis": "^5.4.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.11"
   }
 }

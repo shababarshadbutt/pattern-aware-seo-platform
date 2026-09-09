@@ -27,6 +27,58 @@ services:
   # No local S3 emulation here on purpose — use a real low-traffic S3
   # dev bucket for S3/SFTP testing so behavior matches production.
 
+  # --- Full-stack testing profile ---------------------------------------
+  # Not started by a plain `docker compose up -d` (LIVE_RUN_GUIDE.md and
+  # local dev both depend on that staying postgres+redis only). Bring these
+  # up explicitly with `docker compose --profile full up -d --build` to test
+  # the containerized app end to end before deploying it anywhere.
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      DATABASE_URL: postgresql://seo_platform:password@postgres:5432/seo_platform
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+
+  worker:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgresql://seo_platform:password@postgres:5432/seo_platform
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      WEB_API_URL: http://api:3001
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+
 volumes:
   postgres_data:
   redis_data:

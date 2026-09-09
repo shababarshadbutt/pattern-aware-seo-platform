@@ -41,6 +41,12 @@ const configSchema = z.object({
     .default("info"),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   WEB_PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  // Only the internal team logs in today (see schema/tenancy.ts), so the API
+  // has no session to derive an OrganizationScope from yet. This stands in
+  // until real auth exists in M7 and row-level security attaches to
+  // organization_id — every route that touches this must say so in a comment,
+  // not bury the placeholder silently.
+  DEFAULT_ORGANIZATION_SLUG: z.string().min(1).default("asapsemi-demo"),
 
   // --- Infrastructure ---
   DATABASE_URL: urlString,
@@ -54,9 +60,51 @@ const configSchema = z.object({
 
   // --- Auth ---
   AUTH_SECRET: z.string().min(1).optional(),
+  // A deployment stopgap, not the real auth M7/ADR-0026 deferred: HTTP Basic
+  // Auth in front of both the API and the web app so a deployment reachable
+  // from the public internet isn't a bare, unauthenticated `POST /sites`.
+  // Optional so local dev is unaffected; `apps/api` refuses to start if only
+  // one of the pair is set, since a half-configured credential is worse than
+  // none (it looks protected and isn't).
+  BASIC_AUTH_USER: z.string().min(1).optional(),
+  BASIC_AUTH_PASSWORD: z.string().min(1).optional(),
 
   // --- ML service (Phase 4; unused until ml-service/ is active) ---
   ML_SERVICE_URL: urlString.optional(),
+
+  // --- Worker resource budgets ---
+  // The worker's own Postgres pool, budgeted apart from the API's. An ingest
+  // pass streaming a large site must not be able to exhaust the connections
+  // the API needs to answer a dashboard request — the "population scan starves
+  // the API" failure the architecture plan names explicitly.
+  WORKER_DB_POOL_SIZE: z.coerce.number().int().min(1).max(64).default(8),
+  // Where downloaded sitemap files live between pipeline stages. Local disk in
+  // development; an S3-backed store replaces it in M8 without the stages
+  // changing, since they take the store as an interface.
+  SITEMAP_STORE_ROOT: z.string().min(1).default(".sitemaps"),
+
+  // --- Stale-run recovery ---
+  // The heartbeat sweeper's backstop for a worker PROCESS dying mid-run, where
+  // no BullMQ "failed" event ever fires because nothing is left running to
+  // fire it. Generous by design: the sweeper cannot distinguish "the worker
+  // died" from "a job is legitimately still working" any other way, so this
+  // has to comfortably exceed the slowest single stage a real run takes.
+  HEARTBEAT_STALE_THRESHOLD_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .default(900_000),
+  // How often the sweep itself runs. Independent of the threshold above: a
+  // short interval checking against a long threshold costs one cheap query
+  // per tick and catches a stale run soon after it actually goes stale.
+  HEARTBEAT_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(10_000)
+    .default(120_000),
+  // How often the worker re-lists attached sites is NOT here — attaching is
+  // per-request (see ATTACH_REQUESTS_QUEUE), not a poll. There is nothing to
+  // configure for a mechanism that does not exist.
 
   // --- Parse budgets: memory and concurrency ---
   // Piscina threads for the streaming SAX pass. Four is the legacy
@@ -196,4 +244,87 @@ export function getConfig(): Config {
 /** Reset the memoised config. Test-only; production code has no reason to call it. */
 export function resetConfigForTesting(): void {
   cached = undefined;
+}
+
+/**
+ * The operational limits, as a mask over {@link configSchema}.
+ *
+ * WHY A `.pick()` AND NOT A SECOND SCHEMA. The API serves these to a Settings
+ * screen, which needs the numbers without the credentials sitting beside them
+ * in the same object. Hand-writing a parallel schema would restate every
+ * `.default()` and every bound above, and the two would drift — the §1.13
+ * shape exactly: two independently-correct definitions of one fact. A mask
+ * cannot drift, because there is still only one definition.
+ *
+ * SECRETS ARE EXCLUDED BY CONSTRUCTION, not by filtering. `.pick()` can only
+ * narrow, so `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET` and the AWS keys are
+ * not absent because something removed them — they were never reachable. That
+ * matters more than a redaction step would: a redaction list is a thing to
+ * forget to update when a variable is added, and forgetting it publishes a
+ * credential.
+ *
+ * Every key here has a `.default()`, which is what lets `loadPolicyConfig({})`
+ * succeed against an empty environment — so a test can construct the policy
+ * half of a config without holding a database URL.
+ */
+const POLICY_KEYS = [
+  "POPULATION_SOFT_LIMIT_URLS",
+  "POPULATION_HARD_LIMIT_URLS",
+  "POPULATION_HARD_LIMIT_FILES",
+  "SAMPLE_MIN_SIZE",
+  "SAMPLE_MAX_FIRST_ROUND",
+  "SAMPLE_MAX_EXPANDED",
+  "SAMPLE_MAX_EXPANSION_FACTOR",
+  "SAMPLE_MAX_POPULATION_FRACTION",
+  "SAMPLE_MIN_PER_STRATUM",
+  "CONFIDENCE_LOW_BAND_WIDTH",
+  "CONFIDENCE_APPROXIMATE_BAND_WIDTH",
+  "CONFIDENCE_ZERO_HIT_LOW_BAND_WIDTH",
+  "CONFIDENCE_ZERO_HIT_APPROXIMATE_BAND_WIDTH",
+  "HTTP_PER_HOST_REQUESTS_PER_SECOND",
+  "HTTP_PER_HOST_CONCURRENCY",
+  "HTTP_PLATFORM_DAILY_REQUEST_CAP",
+  "HTTP_PER_SITE_DAILY_REQUEST_CAP",
+  "HTTP_BUDGET_WARN_FRACTION",
+  "HTTP_BUDGET_HALT_FRACTION",
+  "HTTP_MAX_GET_ESCALATION_FRACTION",
+  "HTTP_CIRCUIT_BREAK_AFTER_429",
+  "HTTP_CIRCUIT_BREAK_AFTER_403",
+  "HTTP_CIRCUIT_COOLDOWN_MS"
+] as const;
+
+export const policyConfigSchema = configSchema.pick(
+  Object.fromEntries(POLICY_KEYS.map((key) => [key, true as const])) as {
+    readonly [K in (typeof POLICY_KEYS)[number]]: true;
+  }
+);
+
+/**
+ * The operational limits alone — a structural subset of {@link Config}.
+ *
+ * Because it is a subset, a caller holding the real validated `Config` already
+ * satisfies it and nothing at the process edge changes.
+ */
+export type PolicyConfig = Readonly<z.infer<typeof policyConfigSchema>>;
+
+/**
+ * Parse an environment into a {@link PolicyConfig}.
+ *
+ * Reports every invalid variable at once, like {@link loadConfig}. Succeeds on
+ * an empty environment, since every key it covers is defaulted.
+ */
+export function loadPolicyConfig(
+  env: NodeJS.ProcessEnv = process.env
+): PolicyConfig {
+  const result = policyConfigSchema.safeParse(env);
+
+  if (!result.success) {
+    const details = result.error.issues
+      .map((issue) => `  ${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("\n");
+
+    throw new ConfigError(`Invalid policy configuration:\n${details}`);
+  }
+
+  return Object.freeze(result.data);
 }

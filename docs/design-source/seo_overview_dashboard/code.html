@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Engine - Overview</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#1f1f28",
+                    "on-error-container": "#ffdad6",
+                    "inverse-surface": "#e4e1ee",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "inverse-primary": "#4d44e3",
+                    "surface-container-highest": "#35343e",
+                    "on-surface": "#e4e1ee",
+                    "surface-variant": "#35343e",
+                    "surface": "#13121b",
+                    "surface-dim": "#13121b",
+                    "error": "#ffb4ab",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "on-background": "#e4e1ee",
+                    "surface-tint": "#c3c0ff",
+                    "secondary-fixed-dim": "#c3c0ff",
+                    "secondary-fixed": "#e2dfff",
+                    "tertiary": "#ffb695",
+                    "surface-container-lowest": "#0e0d16",
+                    "surface-container-low": "#1b1b24",
+                    "on-primary-fixed": "#0f0069",
+                    "on-secondary": "#2a276a",
+                    "on-primary-container": "#dad7ff",
+                    "on-secondary-fixed": "#140f54",
+                    "error-container": "#93000a",
+                    "secondary-container": "#413f82",
+                    "outline": "#918fa1",
+                    "outline-variant": "#464555",
+                    "surface-bright": "#393842",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "on-primary": "#1d00a5",
+                    "background": "#13121b",
+                    "on-tertiary-container": "#ffd2be",
+                    "surface-container-high": "#2a2933",
+                    "secondary": "#c3c0ff",
+                    "on-tertiary-fixed": "#351000",
+                    "primary": "#c3c0ff",
+                    "on-secondary-fixed-variant": "#413f82",
+                    "on-secondary-container": "#b0aef9",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "tertiary-fixed": "#ffdbcc",
+                    "on-surface-variant": "#c7c4d8",
+                    "inverse-on-surface": "#302f39",
+                    "on-error": "#690005",
+                    "primary-fixed": "#e2dfff",
+                    "tertiary-container": "#a44100",
+                    "on-tertiary": "#571f00",
+                    "primary-container": "#4f46e5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "component-padding-y": "6px",
+                    "unit": "4px",
+                    "component-padding-x": "12px",
+                    "gutter": "12px"
+            },
+            "fontFamily": {
+                    "label-xs": ["JetBrains Mono"],
+                    "headline-sm": ["Geist"],
+                    "data-mono": ["JetBrains Mono"],
+                    "body-md": ["Geist"],
+                    "display-sm": ["Geist"],
+                    "body-sm": ["Geist"]
+            },
+            "fontSize": {
+                    "label-xs": ["11px", {"lineHeight": "12px", "fontWeight": "500"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "data-mono": ["13px", {"lineHeight": "16px", "fontWeight": "450"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface h-screen w-full overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-lowest dark:bg-surface-container-lowest text-primary dark:text-primary font-body-md text-body-md fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin z-50">
+<!-- Header -->
+<div class="px-4 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-on-primary-container font-headline-sm text-headline-sm font-bold">
+                SE
+            </div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant">Technical SEO v2.4</p>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex-1 flex flex-col gap-1">
+<!-- Active Tab -->
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-primary dark:text-primary font-bold border-l-2 border-primary pl-4 bg-surface-container-low" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Inactive Tabs -->
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+<span>Projects</span>
+</a>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="prowler">cloud_download</span>
+<span>Crawls</span>
+</a>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="error_outline">error_outline</span>
+<span>Issues</span>
+</a>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="build">build</span>
+<span>Tools</span>
+</a>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="analytics">analytics</span>
+<span>Analytics</span>
+</a>
+</div>
+<!-- Footer Actions -->
+<div class="mt-auto flex flex-col gap-1">
+<button class="mx-4 mb-4 py-2 bg-primary-container text-white rounded font-body-sm text-body-sm hover:bg-primary transition-colors">
+                Upgrade Plan
+            </button>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 py-2 cursor-pointer active:scale-95 text-on-surface-variant dark:text-on-surface-variant pl-4 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="description">description</span>
+<span>Documentation</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary font-label-xs text-label-xs fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40 transition-all duration-150">
+<div class="flex items-center gap-6">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">SEO Engine</span>
+<div class="flex gap-4">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface uppercase tracking-wider" href="#">Projects</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface uppercase tracking-wider" href="#">Date Range</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="search">search</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="notifications">notifications</span>
+</button>
+<div class="flex items-center gap-2 cursor-pointer border-l border-outline-variant pl-4 ml-2">
+<span class="uppercase tracking-wider">Profile Settings</span>
+<div class="w-6 h-6 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">person</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mt-[48px] w-full h-[calc(100vh-48px)] overflow-y-auto bg-surface p-container-margin">
+<!-- Dashboard Context Header -->
+<div class="mb-6 pb-4 border-b border-outline-variant flex justify-between items-end">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-2">Project: Enterprise Commerce</h2>
+<div class="flex items-center gap-4 font-data-mono text-data-mono text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">link</span> https://example.com</span>
+<span class="text-outline-variant">|</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">history</span> Last Crawl: 2 hours ago</span>
+</div>
+</div>
+<div class="px-2 py-1 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 rounded font-label-xs text-label-xs uppercase tracking-wider">
+                Status: Success
+            </div>
+</div>
+<!-- Fluid Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Overall Health Section (Span 8) -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded p-6 flex flex-col gap-6">
+<div class="flex justify-between items-center">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Overall Health Score</h3>
+<span class="font-data-mono text-data-mono text-[#10B981] flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +4.2%
+                    </span>
+</div>
+<div class="flex items-center gap-10">
+<!-- Radial Chart -->
+<div class="relative w-32 h-32 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-container-highest" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="2"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="87, 100" stroke-width="2"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-sm text-display-sm text-on-surface leading-none">87</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase mt-1">/100</span>
+</div>
+</div>
+<!-- Breakdown Metrics -->
+<div class="flex-1 grid grid-cols-2 gap-x-8 gap-y-4">
+<div class="flex flex-col gap-1 border-b border-outline-variant pb-2">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Indexability</span>
+<div class="flex items-center justify-between">
+<span class="font-data-mono text-data-mono text-on-surface">92%</span>
+<div class="w-16 h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[92%]"></div></div>
+</div>
+</div>
+<div class="flex flex-col gap-1 border-b border-outline-variant pb-2">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Performance</span>
+<div class="flex items-center justify-between">
+<span class="font-data-mono text-data-mono text-on-surface">78%</span>
+<div class="w-16 h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-[#F59E0B] w-[78%]"></div></div>
+</div>
+</div>
+<div class="flex flex-col gap-1 border-b border-outline-variant pb-2">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Content</span>
+<div class="flex items-center justify-between">
+<span class="font-data-mono text-data-mono text-on-surface">85%</span>
+<div class="w-16 h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[85%]"></div></div>
+</div>
+</div>
+<div class="flex flex-col gap-1 border-b border-outline-variant pb-2">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Technical</span>
+<div class="flex items-center justify-between">
+<span class="font-data-mono text-data-mono text-on-surface">88%</span>
+<div class="w-16 h-1 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary w-[88%]"></div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Priority Issues Area (Span 4) -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded flex flex-col">
+<div class="p-4 border-b border-outline-variant bg-[#18181B]">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Priority Issues</h3>
+</div>
+<div class="flex flex-col p-2">
+<!-- Issue Item: Critical -->
+<div class="flex items-start justify-between p-2 hover:bg-surface-container-low transition-colors border-b border-outline-variant last:border-0 group cursor-pointer">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-error mt-0.5">cancel</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Canonical Conflict</span>
+<span class="font-label-xs text-label-xs text-error uppercase">Critical</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">2,341</span>
+</div>
+<!-- Issue Item: Error -->
+<div class="flex items-start justify-between p-2 hover:bg-surface-container-low transition-colors border-b border-outline-variant last:border-0 group cursor-pointer">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#F43F5E] mt-0.5">warning</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Broken Internal Links</span>
+<span class="font-label-xs text-label-xs text-[#F43F5E] uppercase">Error</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">1,284</span>
+</div>
+<!-- Issue Item: Warning -->
+<div class="flex items-start justify-between p-2 hover:bg-surface-container-low transition-colors border-b border-outline-variant last:border-0 group cursor-pointer">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#F59E0B] mt-0.5">info</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Missing Meta Descriptions</span>
+<span class="font-label-xs text-label-xs text-[#F59E0B] uppercase">Warning</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">8,932</span>
+</div>
+</div>
+<div class="mt-auto p-4 border-t border-outline-variant">
+<button class="w-full text-center font-label-xs text-label-xs text-primary uppercase tracking-wider hover:text-white transition-colors">View All Issues →</button>
+</div>
+</div>
+<!-- Crawl Analytics (Span 12) -->
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- URLs Crawled -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-4 flex flex-col justify-between h-[120px]">
+<div class="flex justify-between items-start">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">URLs Crawled</h3>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">download_for_offline</span>
+</div>
+<div class="flex items-end justify-between">
+<span class="font-display-sm text-display-sm text-on-surface">450k</span>
+<!-- Simple SVG Sparkline placeholder -->
+<div class="w-24 h-8">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0,25 Q10,20 20,25 T40,15 T60,20 T80,5 T100,10" fill="none" stroke="#4F46E5" stroke-width="2"></path>
+<path d="M0,25 Q10,20 20,25 T40,15 T60,20 T80,5 T100,10 L100,30 L0,30 Z" fill="url(#grad1)" opacity="0.2"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#4F46E5;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+</div>
+<!-- Response Time -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-4 flex flex-col justify-between h-[120px]">
+<div class="flex justify-between items-start">
+<h3 class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Avg Response Time</h3>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">timer</span>
+</div>
+<div class="flex items-end justify-between">
+<div class="flex items-baseline gap-1">
+<span class="font-display-sm text-display-sm text-on-surface">240</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">ms</span>
+</div>
+<!-- Simple SVG Sparkline placeholder -->
+<div class="w-24 h-8">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0,15 Q10,18 20,12 T40,16 T60,10 T80,22 T100,18" fill="none" stroke="#10B981" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

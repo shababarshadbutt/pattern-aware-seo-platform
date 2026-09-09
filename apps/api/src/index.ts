@@ -1,6 +1,8 @@
+import { createDatabase } from "@pattern-aware/database";
 import { createLogger, getConfig } from "@pattern-aware/shared";
 
 import { buildApp } from "./app.js";
+import { createRunTrigger } from "./run-trigger.js";
 
 // Fail fast and loudly on bad configuration, before anything binds a port.
 const config = getConfig();
@@ -10,17 +12,31 @@ const logger = createLogger({
   pretty: config.NODE_ENV === "development"
 });
 
-const app = buildApp(config, logger);
+const { db, close: closeDatabase } = createDatabase({
+  connectionString: config.DATABASE_URL
+});
+
+/**
+ * Constructed here, at the process edge, from the full `Config` — the one
+ * place in this process allowed to need `REDIS_URL`. See `run-trigger.ts`
+ * for why `buildApp` itself never requires it.
+ */
+const runTrigger = createRunTrigger(config.REDIS_URL);
+
+const app = buildApp(config, logger, db, runTrigger);
 
 // Drain in-flight requests before exiting so a deploy does not sever a response
 // mid-write. Registered before listen so a signal during startup is still
-// handled.
+// handled. The pool closes after the app so an in-flight request's last query
+// still has a live connection to finish on.
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.on(signal, () => {
     logger.info({ signal }, "shutdown signal received, closing api");
 
     app
       .close()
+      .then(async () => runTrigger.close())
+      .then(() => closeDatabase())
       .then(() => process.exit(0))
       .catch((error: unknown) => {
         logger.error({ err: error }, "api failed to close cleanly");

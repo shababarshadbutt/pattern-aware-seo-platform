@@ -17,17 +17,28 @@
     "lint:promises": "eslint .",
     "format": "biome format --write .",
     "prepare": "husky",
-    "gen:sitemaps": "tsx scripts/generate-synthetic-sitemaps.ts"
+    "gen:sitemaps": "tsx --env-file-if-exists=.env scripts/generate-synthetic-sitemaps.ts",
+    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
+    "live:run": "turbo run build --filter=./packages/* && tsx --env-file-if-exists=.env scripts/live-run.ts",
+    "benchmark:scale": "turbo run build --filter=./packages/* && tsx --env-file-if-exists=.env scripts/benchmark-scale.ts"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,json,jsonc,css}": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
+    "@pattern-aware/database": "workspace:*",
+    "@pattern-aware/pipeline": "workspace:*",
+    "@pattern-aware/sampling": "workspace:*",
+    "@pattern-aware/shared": "workspace:*",
+    "@pattern-aware/sitemap": "workspace:*",
+    "@pattern-aware/verification": "workspace:*",
     "@types/node": "^22.9.0",
+    "@types/pg": "^8.23.1",
     "eslint": "^10.9.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
+    "pg": "^8.23.0",
     "tsx": "^4.19.0",
     "turbo": "^2.10.12",
     "typescript": "^5.6.0",

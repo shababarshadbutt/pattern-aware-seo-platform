@@ -144,17 +144,46 @@ describe("verifyPattern", () => {
       expect(result.requestCount).toBe(36);
     });
 
-    it("flags the pattern for review rather than failing it", async () => {
+    /**
+     * CHANGED, and the reason is worth keeping.
+     *
+     * A spent allowance used to make the verdict `needs_review`. That inverted
+     * the signal: a healthy 200 wants a sniff, so an entirely healthy pattern
+     * always spends its allowance and got flagged, while an entirely dead
+     * pattern (410, nothing to sniff) never escalated and came back clean. The
+     * end-to-end run made it obvious — every healthy pattern flagged, the one
+     * broken pattern measured.
+     *
+     * The pattern is measured, because it is: every URL has a real status from
+     * its HEAD. What the cap reduced is soft-404 coverage, now reported as a
+     * count.
+     */
+    it("still reports the pattern as measured, with the coverage it achieved", async () => {
       const { fetch } = constantFetch(200);
       const result = await verifyPattern(
         { urls: urls(30), plannedSampleSize: 30 },
         { fetch }
       );
 
-      expect(result.verdict).toEqual({
-        kind: "needs_review",
-        reason: "GET_ESCALATION_CAP"
-      });
+      expect(result.verdict).toEqual({ kind: "measured" });
+      expect(result.soft404Sniffed).toBe(6);
+      expect(result.soft404Suppressed).toBe(24);
+      // Coverage accounts for every 2xx: sniffed plus suppressed is the lot.
+      expect(result.soft404Sniffed + result.soft404Suppressed).toBe(30);
+    });
+
+    it("does not count a 410 as a suppressed sniff", async () => {
+      // The sniff only ever applies to a 2xx, so a pattern that is entirely
+      // gone has nothing suppressed and full coverage of what was sniffable.
+      const { fetch } = constantFetch(410);
+      const result = await verifyPattern(
+        { urls: urls(30), plannedSampleSize: 30 },
+        { fetch }
+      );
+
+      expect(result.verdict).toEqual({ kind: "measured" });
+      expect(result.soft404Sniffed).toBe(0);
+      expect(result.soft404Suppressed).toBe(0);
     });
 
     /**
@@ -430,7 +459,7 @@ describe("holes the manual review pass found", () => {
    * SILENT SUCCESS ON BAD INPUT.
    *
    * `decideEscalation` answers `nothing_to_probe` for a zero-size plan, which
-   * is not `flag_for_review` — so a caller passing 0 alongside thirty real URLs
+   * is not `suppress_escalation` — so a caller passing 0 alongside thirty real URLs
    * disabled the cap completely and the run returned "measured" with sixty
    * requests sent and no signal at all.
    */

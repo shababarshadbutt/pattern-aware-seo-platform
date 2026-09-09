@@ -3,6 +3,9 @@ export {
   ConfigError,
   getConfig,
   loadConfig,
+  loadPolicyConfig,
+  type PolicyConfig,
+  policyConfigSchema,
   resetConfigForTesting
 } from "./config.js";
 export {

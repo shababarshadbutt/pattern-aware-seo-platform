@@ -1,0 +1,774 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import {
+  countObservations,
+  countPatternsByStatus,
+  createOrganization,
+  createSite,
+  findRunSamplingHealth,
+  listPatternsByPopulation,
+  listSitemapFiles,
+  listSnapshotsByImpact,
+  type SiteScope,
+  setFileParseStatus,
+  startRun,
+  sumPatternPopulation
+} from "@pattern-aware/database";
+import {
+  createTestDatabase,
+  type TestDatabase
+} from "@pattern-aware/database/testing";
+import { measureProportion } from "@pattern-aware/sampling";
+import { createLogger } from "@pattern-aware/shared";
+import { LocalDiskFileStore } from "@pattern-aware/sitemap";
+import {
+  HostCircuitBreaker,
+  HostRateLimiter
+} from "@pattern-aware/verification";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { PipelineDeps, PipelineStage } from "./index.js";
+import { runDiscover } from "./stages/discover.js";
+import { runEstimate } from "./stages/estimate.js";
+import { runFinalize } from "./stages/finalize.js";
+import { IngestAlreadyAggregatedError, runIngest } from "./stages/ingest.js";
+import { runVerify } from "./stages/verify.js";
+
+/**
+ * The whole pipeline, end to end, against a real Postgres and a real HTTP
+ * server on localhost.
+ *
+ * DELIBERATELY NOT MOCKED AT THE HTTP BOUNDARY. The probe's whole job is
+ * HEAD-first-then-GET over a real socket, and a stubbed fetch would exercise
+ * the parts of it that were never in doubt while skipping the parts that were:
+ * that a HEAD is actually sent, that a 405 actually triggers the GET, that a
+ * soft 404 body actually arrives truncated. The server here is a fixture, so
+ * the run is still deterministic and still safe in CI — no outbound traffic and
+ * no other origin involved.
+ *
+ * The planted defects are the point. A flat sample over this site would average
+ * the small broken family away, which is exactly what stratification and
+ * per-pattern estimation exist to prevent.
+ */
+
+interface Fixture {
+  readonly baseUrl: string;
+  readonly requests: string[];
+  readonly methods: Map<string, string[]>;
+}
+
+/** A body long enough to clear the soft-404 short-body floor. */
+const SOFT_404_BODY = `<!doctype html><html><head><title>Page not found</title></head><body><h1>Sorry, this page could not be found</h1><p>${"padding ".repeat(
+  200
+)}</p></body></html>`;
+
+const GOOD_BODY = `<!doctype html><html><head><title>A real product</title></head><body><h1>Product</h1><p>${"content ".repeat(
+  200
+)}</p></body></html>`;
+
+let harness: TestDatabase;
+let server: Server;
+let fixture: Fixture;
+let storeRoot = "";
+let scope: SiteScope;
+let runId: string;
+let deps: PipelineDeps;
+let enqueued: { stage: PipelineStage; payload: Record<string, unknown> }[];
+
+/**
+ * The site the fixture serves.
+ *
+ * Two healthy patterns and one small broken one. `/legacy/{id}` is 40 URLs
+ * against 240 total, and every one of them is gone — the case a site-wide
+ * average reports as "98% healthy" and a per-pattern estimate reports as "this
+ * whole family is dead".
+ */
+const PRODUCTS = 120;
+const ARTICLES = 80;
+const LEGACY = 40;
+
+function pathsFor(): string[] {
+  const paths: string[] = [];
+
+  for (let index = 1; index <= PRODUCTS; index += 1) {
+    paths.push(`/product/${index}`);
+  }
+
+  for (let index = 1; index <= ARTICLES; index += 1) {
+    paths.push(`/article/${index}`);
+  }
+
+  for (let index = 1; index <= LEGACY; index += 1) {
+    paths.push(`/legacy/${index}`);
+  }
+
+  return paths;
+}
+
+/** How the fixture answers one page URL. */
+function statusFor(path: string): number {
+  if (path.startsWith("/legacy/")) {
+    // The planted broken family: every one is gone.
+    return 410;
+  }
+
+  // Articles and products both answer 200. Every tenth article is a SOFT 404,
+  // which by definition is a 200 whose body says the page is missing — the
+  // status alone cannot express it, which is why the sniff exists.
+  return 200;
+}
+
+function isSoft404Path(path: string): boolean {
+  if (!path.startsWith("/article/")) {
+    return false;
+  }
+
+  return Number(path.slice("/article/".length)) % 10 === 0;
+}
+
+beforeAll(async () => {
+  harness = await createTestDatabase();
+  storeRoot = await mkdtemp(join(tmpdir(), "pipeline-e2e-"));
+
+  const requests: string[] = [];
+  const methods = new Map<string, string[]>();
+  const all = pathsFor();
+
+  server = createServer((request, response) => {
+    const path = request.url ?? "/";
+    const method = request.method ?? "GET";
+
+    requests.push(`${method} ${path}`);
+    methods.set(path, [...(methods.get(path) ?? []), method]);
+
+    if (path === "/sitemap.xml") {
+      const children = [1, 2]
+        .map(
+          (n) =>
+            `<sitemap><loc>${fixture.baseUrl}/sitemap-${n}.xml</loc></sitemap>`
+        )
+        .join("");
+
+      response.writeHead(200, { "content-type": "application/xml" });
+      response.end(
+        `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${children}</sitemapindex>`
+      );
+
+      return;
+    }
+
+    const childMatch = /^\/sitemap-(\d)\.xml$/u.exec(path);
+
+    if (childMatch !== null) {
+      const half = Math.ceil(all.length / 2);
+      const slice =
+        childMatch[1] === "1" ? all.slice(0, half) : all.slice(half);
+      const entries = slice
+        .map((p) => `<url><loc>${fixture.baseUrl}${p}</loc></url>`)
+        .join("");
+
+      response.writeHead(200, { "content-type": "application/xml" });
+      response.end(
+        `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</urlset>`
+      );
+
+      return;
+    }
+
+    const status = statusFor(path);
+
+    if (method === "HEAD") {
+      response.writeHead(status, { "content-type": "text/html" });
+      response.end();
+
+      return;
+    }
+
+    response.writeHead(status, { "content-type": "text/html" });
+    response.end(isSoft404Path(path) ? SOFT_404_BODY : GOOD_BODY);
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address() as AddressInfo;
+
+  fixture = {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    requests,
+    methods
+  };
+
+  const org = await createOrganization(harness.db, {
+    name: "Pipeline E2E",
+    slug: `e2e-${Date.now()}`
+  });
+
+  const site = await createSite(harness.db, org.scope, {
+    name: "Fixture Shop",
+    baseUrl: fixture.baseUrl
+  });
+
+  scope = site.scope;
+  runId = (await startRun(harness.db, scope, { workerId: "e2e" })).id;
+
+  enqueued = [];
+
+  deps = {
+    db: harness.db,
+    store: new LocalDiskFileStore(storeRoot),
+    logger: createLogger({ service: "e2e", level: "silent", pretty: false }),
+    fetchSitemap: async (url: string) => {
+      const response = await fetch(url);
+
+      return {
+        status: response.status,
+        headers: new Map(
+          response.headers as unknown as Iterable<[string, string]>
+        ),
+        body: streamOf(response.body)
+      };
+    },
+    enqueue: async (stage, payload) => {
+      // Collected rather than executed, so the test drives the stages in order
+      // and can assert what each one handed on.
+      enqueued.push({ stage, payload });
+    },
+    rateLimiter: new HostRateLimiter({
+      requestsPerSecond: 200,
+      concurrency: 8
+    }),
+    circuitBreaker: new HostCircuitBreaker({})
+  };
+}, 120_000);
+
+afterAll(async () => {
+  await new Promise<void>((resolve) => {
+    server.close(() => {
+      resolve();
+    });
+  });
+
+  await harness.destroy();
+  await rm(storeRoot, { recursive: true, force: true });
+});
+
+async function* streamOf(
+  body: ReadableStream<Uint8Array> | null
+): AsyncIterable<Uint8Array> {
+  if (body === null) {
+    return;
+  }
+
+  const reader = body.getReader();
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      return;
+    }
+
+    if (value !== undefined) {
+      yield value;
+    }
+  }
+}
+
+describe("the pipeline end to end", () => {
+  it("discovers the index's children", async () => {
+    const result = await runDiscover(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: runId,
+      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
+    });
+
+    expect(result.rootElement).toBe("sitemapindex");
+    expect(result.fileCount).toBe(2);
+    expect(result.suspiciouslyEmpty).toBe(false);
+
+    const files = await listSitemapFiles(deps.db, scope, runId);
+
+    // Ordinal 0 is reserved for the index itself, so children start at 1.
+    expect(files.map((file) => file.fileOrdinal)).toEqual([1, 2]);
+
+    /**
+     * THE `discover → ingest` HAND-OFF, self-chained rather than left for a
+     * caller to notice — the gap the Phase 1 orchestration work closed.
+     * `deps.enqueue` here just collects rather than running the job (the
+     * test drives `ingest` explicitly below with its own payload), but the
+     * enqueue call itself is the thing under test.
+     */
+    expect(enqueued.filter((job) => job.stage === "ingest")).toHaveLength(1);
+  });
+
+  it("ingests every file in one pass and draws a sample per pattern", async () => {
+    const result = await runIngest(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: runId,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
+    });
+
+    expect(result.filesParsed).toBe(2);
+    expect(result.filesFailed).toBe(0);
+    expect(result.allFilesFailed).toBe(false);
+    expect(result.totalUrls).toBe(PRODUCTS + ARTICLES + LEGACY);
+
+    // Three families in, three patterns out — the whole premise.
+    expect(result.patternCount).toBe(3);
+    expect(result.samplesDrawn).toBe(3);
+
+    const patterns = await listPatternsByPopulation(deps.db, scope, runId, 10);
+
+    expect(patterns.map((p) => p.template).sort()).toEqual([
+      "/article/{param}",
+      "/legacy/{param}",
+      "/product/{param}"
+    ]);
+
+    // Populations are COUNTED, not estimated, and they must be exact.
+    const byTemplate = new Map(patterns.map((p) => [p.template, p]));
+
+    expect(byTemplate.get("/product/{param}")?.populationCount).toBe(PRODUCTS);
+    expect(byTemplate.get("/article/{param}")?.populationCount).toBe(ARTICLES);
+    expect(byTemplate.get("/legacy/{param}")?.populationCount).toBe(LEGACY);
+
+    // The per-file index the legacy engine lacked: each pattern spans both
+    // files, and its per-file counts sum back to its population.
+    for (const pattern of patterns) {
+      const summed = await sumPatternPopulation(deps.db, scope, pattern.id);
+
+      expect(summed).toBe(pattern.populationCount);
+    }
+
+    expect(enqueued.filter((job) => job.stage === "verify")).toHaveLength(3);
+  }, 120_000);
+
+  it("verifies each pattern over real HTTP, HEAD first", async () => {
+    const verifyJobs = enqueued.filter((job) => job.stage === "verify");
+
+    for (const job of verifyJobs) {
+      const result = await runVerify(deps, scope, job.payload);
+
+      expect(result.observationsWritten).toBeGreaterThan(0);
+      expect(result.probed).toBeGreaterThan(0);
+    }
+
+    // Every probed URL was asked with HEAD before anything else.
+    const probedPages = [...fixture.methods.entries()].filter(
+      ([path]) =>
+        path.startsWith("/product/") ||
+        path.startsWith("/article/") ||
+        path.startsWith("/legacy/")
+    );
+
+    expect(probedPages.length).toBeGreaterThan(0);
+
+    for (const [, verbs] of probedPages) {
+      expect(verbs[0]).toBe("HEAD");
+    }
+
+    expect(enqueued.filter((job) => job.stage === "estimate")).toHaveLength(3);
+  }, 120_000);
+
+  it("writes a claim per outcome, and finds the planted broken family", async () => {
+    for (const job of enqueued.filter((j) => j.stage === "estimate")) {
+      const result = await runEstimate(deps, scope, job.payload);
+
+      expect(result.snapshotsWritten).toBeGreaterThan(0);
+    }
+
+    /**
+     * THE `estimate → finalize` FAN-IN, the hand-off that did not exist at
+     * all before Phase 1's orchestration work — nothing counted "every
+     * pattern's estimate has finished" and closed the loop. By the time every
+     * pattern in `enqueued.filter(estimate)` has run, all three patterns are
+     * in a terminal status (`verify` already set it), so `checkRunCompletion`
+     * enqueues `finalize` on its way out. AT LEAST once — see
+     * `checkRunCompletion`'s own docblock on why more than one is a safe,
+     * anticipated outcome rather than a bug to prevent here.
+     */
+    expect(
+      enqueued.filter((job) => job.stage === "finalize").length
+    ).toBeGreaterThanOrEqual(1);
+
+    const snapshots = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 100
+    });
+
+    expect(snapshots.length).toBeGreaterThan(0);
+
+    const patterns = await listPatternsByPopulation(deps.db, scope, runId, 10);
+    const legacy = patterns.find((p) => p.template === "/legacy/{param}");
+    const legacySnapshots = snapshots.filter(
+      (snapshot) => snapshot.patternId === legacy?.id
+    );
+
+    /**
+     * THE PLANTED DEFECT, found. Every `/legacy/` URL is gone, so its 410
+     * snapshot extrapolates to the whole 40-URL family.
+     *
+     * `estimated`, not `counted`, and that is correct rather than a shortfall:
+     * the min-sample floor draws 30 of the 40, so ten URLs were never looked
+     * at. The point estimate is still the whole family — 30 of 30 came back
+     * gone — but the lower bound stays below it, which is the honest statement
+     * about the ten nobody probed. A `counted` tier here would claim a census
+     * that was not taken.
+     */
+    const gone = legacySnapshots.find(
+      (snapshot) => snapshot.httpStatus === 410
+    );
+
+    expect(gone).toBeDefined();
+    expect(gone?.severityClass).toBe("gone");
+    expect(gone?.evidenceTier).toBe("estimated");
+    expect(gone?.observedCount).toBe(gone?.sampleSize);
+    expect(gone?.pointEstimate).toBe(LEGACY);
+
+    // Uncertainty about the unsampled remainder, not false certainty.
+    expect(gone?.ciLow).toBeLessThan(LEGACY);
+    expect(gone?.ciHigh).toBe(LEGACY);
+
+    // Impact is population x probability x severity, and `gone` weighs 1.0.
+    expect(gone?.impactScore).toBe(LEGACY);
+
+    /**
+     * And the interval never excludes its own point estimate, on any row. This
+     * is the invariant the database also enforces; asserting it here means a
+     * regression is a test failure rather than an insert error in production.
+     */
+    for (const snapshot of snapshots) {
+      expect(snapshot.ciLow).toBeLessThanOrEqual(snapshot.pointEstimate);
+      expect(snapshot.pointEstimate).toBeLessThanOrEqual(snapshot.ciHigh);
+      expect(snapshot.ciHigh).toBeLessThanOrEqual(snapshot.populationCount);
+    }
+  }, 120_000);
+
+  it("persists exactly what the shared measurement composition produces", async () => {
+    /**
+     * THE PIPELINE HALF OF THE EQUIVALENCE PAIR (ADR-0035).
+     *
+     * `apps/api`'s sample-plan tool answers "what would you conclude from n of
+     * N with h hits?", and the only honest answer is the one the pipeline would
+     * reach for the same numbers. Both now go through `measureProportion`, so
+     * the equivalence is structural — but structure is a claim until something
+     * fails when it breaks.
+     *
+     * This pins the PERSISTED ROW, which is independently-computed ground
+     * truth: it came out of a real run against a real HTTP server and a real
+     * Postgres, not out of calling the function under test. The API side pins
+     * the other end against an HTTP response. If either drifts, the shared
+     * function is the only place the fix can go.
+     *
+     * MEASURED, and one of the two neutralisations I expected did not fire —
+     * recorded rather than quietly dropped, because a "confirmed load-bearing"
+     * claim that was never run is the D3c defect repeating.
+     *
+     * Two DO fail, and THE LAYER NEUTRALISED IN EACH IS `buildSnapshot`'S
+     * DELEGATION TO THE SHARED COMPOSITION: hardcoding
+     * `confidenceBand: "confident"` fails here, and perturbing `ciHigh` by one
+     * fails here.
+     *
+     * Hardcoding `evidenceTier: "estimated"` does NOT fail, and that is a fact
+     * about this fixture rather than about the test: no pattern in the corpus
+     * is sampled to completion, so no `counted` row exists to disagree with.
+     * The tier rule is covered instead where a census can be constructed
+     * directly — `measurement.test.ts`'s n = N case, and the API's
+     * `population=40&sampled=40&hits=6`. Adding a census-sized family to this
+     * corpus would close it here too.
+     */
+    const snapshots = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 100
+    });
+
+    // Anti-vacuity first: a `for` over an empty list asserts nothing at all,
+    // which is the shape that has bitten this suite three times.
+    expect(snapshots.length).toBeGreaterThan(0);
+
+    let compared = 0;
+
+    for (const snapshot of snapshots) {
+      if (snapshot.evidenceTier === "blocked") {
+        // A blocked pattern was never measured, so there is no proportion to
+        // reproduce — the stage writes that row without an estimator at all.
+        continue;
+      }
+
+      const expected = measureProportion([
+        {
+          label: "all",
+          population: snapshot.populationCount,
+          sampled: snapshot.sampleSize,
+          hits: snapshot.observedCount
+        }
+      ]);
+
+      expect({
+        evidenceTier: snapshot.evidenceTier,
+        observedCount: snapshot.observedCount,
+        sampleSize: snapshot.sampleSize,
+        populationCount: snapshot.populationCount,
+        pointEstimate: snapshot.pointEstimate,
+        ciLow: snapshot.ciLow,
+        ciHigh: snapshot.ciHigh,
+        confidenceLevel: snapshot.confidenceLevel,
+        confidenceBand: snapshot.confidenceBand,
+        estimatorVersion: snapshot.estimatorVersion
+      }).toEqual(expected);
+
+      compared += 1;
+    }
+
+    expect(compared).toBeGreaterThan(0);
+  }, 120_000);
+
+  it("finalises the run with an honest status", async () => {
+    const result = await runFinalize(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: runId
+    });
+
+    expect(result.patternsTotal).toBe(3);
+    expect(result.patternsMeasured).toBeGreaterThan(0);
+
+    // A run whose files all parsed and whose patterns were measured is
+    // complete; anything less has to say why.
+    if (result.status === "degraded") {
+      expect(result.reason).toBeDefined();
+    } else {
+      expect(result.reason).toBeUndefined();
+    }
+  }, 120_000);
+
+  it("records the requests the origin actually received", async () => {
+    /**
+     * THE PROOF THE ANALYTICS SLICE RESTS ON (ADR-0034).
+     *
+     * `sampling_health.http_requests`, `get_escalations` and `patterns_expanded`
+     * were literal zeros written by `runFinalize` on every real run — visible
+     * only because the demo seed wrote its own figures, which made two shipped
+     * screens look populated while the pipeline reported a platform that sent
+     * no requests at all.
+     *
+     * Ground truth here is the FIXTURE SERVER'S OWN LOG, not another query:
+     * `fixture.requests` records every request the origin received, so this
+     * checks the derivation against reality rather than against itself.
+     */
+    const probeRequests = fixture.requests.filter(
+      (entry) => !entry.includes("/sitemap")
+    );
+    const getProbes = probeRequests.filter((entry) => entry.startsWith("GET "));
+
+    /*
+     * ANTI-VACUITY, ASSERTED FIRST. The fixture serves 200s, so soft-404 sniffs
+     * must have escalated; without these two lines every assertion below could
+     * be 0 === 0 and the whole case would pass with the derivation deleted.
+     * This suite has been bitten by exactly that shape three times.
+     */
+    expect(probeRequests.length).toBeGreaterThan(0);
+    expect(getProbes.length).toBeGreaterThan(0);
+
+    const health = await findRunSamplingHealth(deps.db, scope, runId);
+
+    expect(health).toBeDefined();
+
+    /**
+     * EXACT, not a lower bound, and deliberately so. `summariseRunRequests`
+     * documents itself as a floor because a probe that got no response may have
+     * cost two requests. This fixture has no transport failures, no method
+     * rejections and a single profile-ladder rung, so the floor IS the exact
+     * answer here.
+     *
+     * If a future fixture starts serving errors, extend the fixture or assert
+     * the bound — do NOT loosen this to `toBeLessThanOrEqual`, which would stop
+     * the test noticing the charging rule being dropped altogether.
+     */
+    expect(health?.httpRequests).toBe(probeRequests.length);
+
+    /*
+     * An independent check of the escalation predicate rather than a restatement
+     * of the line above: every escalated probe is a GET and every unescalated
+     * one is a HEAD, so the server's GET count must equal the column.
+     */
+    expect(health?.getEscalations).toBe(getProbes.length);
+
+    /*
+     * And an escalated check really does cost two, so the total must exceed the
+     * number of URLs probed. This is the M5 rule — charging per logical check
+     * is what let a nominal 25 req/s ceiling sustain ~49 req/s.
+     */
+    expect(health?.httpRequests).toBeGreaterThan(getProbes.length);
+
+    /*
+     * A MEASURED zero. No stage records a round above 1, so the honest answer
+     * is 0 — asserted to document the state rather than to bless it, and it
+     * starts failing usefully the day adaptive expansion is wired.
+     */
+    expect(health?.patternsExpanded).toBe(0);
+  }, 120_000);
+
+  it("refuses a second ingest rather than doubling every population", async () => {
+    /**
+     * REGRESSION, from the manual review pass on this milestone.
+     *
+     * `upsertPatterns` is additive — written for a parse that flushes each
+     * file as it goes. This pass writes once at the end, so running it twice
+     * over the same corpus would add every count to itself and report a
+     * population twice the size of the site, with nothing to indicate it.
+     */
+    await expect(
+      runIngest(deps, scope, {
+        siteId: scope.siteId,
+        sitemapRunId: runId,
+        baseUrl: fixture.baseUrl,
+        expectedHost: "127.0.0.1"
+      })
+    ).rejects.toThrow(IngestAlreadyAggregatedError);
+
+    // And the populations are untouched by the refusal.
+    const patterns = await listPatternsByPopulation(deps.db, scope, runId, 10);
+    const byTemplate = new Map(patterns.map((p) => [p.template, p]));
+
+    expect(byTemplate.get("/product/{param}")?.populationCount).toBe(PRODUCTS);
+    expect(byTemplate.get("/legacy/{param}")?.populationCount).toBe(LEGACY);
+  }, 120_000);
+
+  it("re-parses files marked parsed when a previous pass never wrote aggregates", async () => {
+    /**
+     * THE OTHER HALF of the same defect, and the dangerous direction.
+     *
+     * A pass that died after marking files `parsed` but before writing
+     * aggregates would, on retry, skip those files: their URLs missing from
+     * the trie and from every count, the run finishing clean with a smaller
+     * population. Simulated here by starting a fresh run, marking its files
+     * parsed without ever aggregating, and confirming the next ingest reads
+     * the whole corpus anyway.
+     */
+    const secondRun = await startRun(deps.db, scope, { workerId: "e2e-2" });
+
+    await runDiscover(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: secondRun.id,
+      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
+    });
+
+    const files = await listSitemapFiles(deps.db, scope, secondRun.id);
+
+    for (const file of files) {
+      await setFileParseStatus(deps.db, scope, file.id, "parsed", {
+        urlCount: 999
+      });
+    }
+
+    const result = await runIngest(deps, scope, {
+      siteId: scope.siteId,
+      sitemapRunId: secondRun.id,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
+    });
+
+    // Every URL counted, not zero — which is what skipping would have given.
+    expect(result.totalUrls).toBe(PRODUCTS + ARTICLES + LEGACY);
+    expect(result.patternCount).toBe(3);
+
+    const counts = await countPatternsByStatus(deps.db, scope, secondRun.id);
+
+    expect(counts.reduce((sum, entry) => sum + entry.count, 0)).toBe(3);
+  }, 120_000);
+
+  it("redelivering a completed verify job does not re-probe or double-write observations", async () => {
+    /**
+     * REGRESSION for the idempotency gap the original audit found: only
+     * `ingest` was guarded against BullMQ redelivery. A `verify` job handed
+     * out twice — an ack lost right as a worker crashed, a stalled-lock
+     * reclaim — used to send the same real HTTP requests at the origin a
+     * second time.
+     */
+    const verifyJob = enqueued.find((job) => job.stage === "verify");
+
+    if (verifyJob === undefined) {
+      throw new Error("expected at least one verify job from the first run");
+    }
+
+    const payload = verifyJob.payload as { readonly patternSampleId: string };
+    const before = await countObservations(
+      deps.db,
+      scope,
+      payload.patternSampleId
+    );
+
+    expect(before).toBeGreaterThan(0);
+
+    const enqueuedBeforeRedelivery = enqueued.length;
+    const result = await runVerify(deps, scope, verifyJob.payload);
+
+    // Skipped the probe entirely — no new HTTP requests, no new rows.
+    expect(result.probed).toBe(0);
+    expect(result.observationsWritten).toBe(0);
+
+    const after = await countObservations(
+      deps.db,
+      scope,
+      payload.patternSampleId
+    );
+
+    expect(after).toBe(before);
+
+    // Still re-enqueues estimate, belt-and-braces — see the guard's own
+    // docblock for why that is itself a safe no-op.
+    expect(enqueued.length).toBe(enqueuedBeforeRedelivery + 1);
+    expect(enqueued.at(-1)?.stage).toBe("estimate");
+  }, 30_000);
+
+  it("redelivering a completed estimate job does not duplicate audit_snapshot rows", async () => {
+    const estimateJob = enqueued.find((job) => job.stage === "estimate");
+
+    if (estimateJob === undefined) {
+      throw new Error("expected at least one estimate job from the first run");
+    }
+
+    const before = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 200
+    });
+
+    const result = await runEstimate(deps, scope, estimateJob.payload);
+
+    // The upsert still reports success — the claim is there, whether this
+    // call wrote it or a prior one did — but it must not be a NEW row.
+    expect(result.snapshotsWritten).toBeGreaterThan(0);
+
+    const after = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 200
+    });
+
+    expect(after.length).toBe(before.length);
+  }, 30_000);
+
+  it("never made a request per URL in the population", () => {
+    /**
+     * The product's entire claim, asserted as a number.
+     *
+     * 240 URLs in the sitemap. Sampling plus HEAD-first probing has to cost
+     * far fewer than 240 page requests, or none of this architecture was worth
+     * building.
+     */
+    const pageRequests = fixture.requests.filter(
+      (entry) => !entry.includes("/sitemap")
+    ).length;
+
+    expect(pageRequests).toBeLessThan(PRODUCTS + ARTICLES + LEGACY);
+  });
+});

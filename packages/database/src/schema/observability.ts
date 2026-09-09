@@ -98,10 +98,18 @@ export const auditSnapshot = pgTable(
      * analyst's primary query, and computing it at read time means weighting
      * millions of rows on every page load. Frozen with the weight above, so the
      * ordering a report showed is the ordering it can still show later.
+     *
+     * NUMERIC, NOT BIGINT — corrected in migration 0006. The score is a count
+     * of URLs multiplied by a weight in (0, 1], so it is fractional by
+     * construction: three gone URLs at severity 0.9 is 2.7. As a bigint that
+     * insert simply failed, and the obvious patch — rounding — is worse than
+     * the bug. Rounding sends a 3-URL pattern at severity 0.15 to zero, which
+     * ranks a real finding as no finding at all, and small broken families are
+     * precisely what this system exists to stop losing in an average.
      */
-    impactScore: bigint("impact_score", { mode: "number" })
+    impactScore: numeric("impact_score", { precision: 20, scale: 3 })
       .notNull()
-      .default(0),
+      .default("0.000"),
     computedAt: timestamp("computed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -148,6 +156,24 @@ export const auditSnapshot = pgTable(
     // severity reorders them: a small number of gone pages outranks a larger
     // number of single redirects.
     index("idx_audit_snapshot_site_impact").on(t.siteId, t.impactScore.desc()),
+
+    /**
+     * ONE CLAIM PER OUTCOME PER DRAW, and this is what makes a redelivered
+     * `estimate` job a safe no-op rather than a duplicate row.
+     *
+     * `estimate` writes one row per distinct `http_status` tallied from a
+     * draw's observations (the docblock above calls this out: "ONE SNAPSHOT
+     * ROW PER OUTCOME, not per pattern"), so the natural key is the draw plus
+     * the outcome, not the draw alone. `insertAuditSnapshot` upserts on this
+     * key with `ON CONFLICT DO NOTHING` — a retried job re-computes the same
+     * claim and finds it already there, rather than appending a second row
+     * that would double-count in every rollup reading this table.
+     */
+    uniqueIndex("uq_audit_snapshot_sample_status").on(
+      t.siteId,
+      t.patternSampleId,
+      t.httpStatus
+    ),
 
     check(
       "ck_audit_snapshot_counts_sane",

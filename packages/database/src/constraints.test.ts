@@ -95,8 +95,22 @@ async function expectRejectedBy(
   );
 }
 
-/** Insert an audit_snapshot with the given overrides applied to a valid base row. */
+/**
+ * Insert an audit_snapshot with the given overrides applied to a valid base
+ * row.
+ *
+ * `httpStatus` DEFAULTS TO 404 BUT MUST BE OVERRIDDEN BY EVERY CALLER THAT
+ * EXPECTS ITS INSERT TO SUCCEED, if another successful call in this file
+ * already used 404. `uq_audit_snapshot_sample_status` — one claim per outcome
+ * per draw, added so a redelivered `estimate` job upserts rather than
+ * duplicates — means two rows sharing `(site_id, pattern_sample_id,
+ * http_status)` cannot both persist, and every successful insert here shares
+ * the same fixture `sampleId`. A row that this file expects to be REJECTED by
+ * some other constraint never reaches that unique index, so it can keep
+ * reusing 404 freely.
+ */
 async function insertSnapshot(overrides: {
+  httpStatus?: number;
   observedCount?: number;
   sampleSize?: number;
   populationCount?: number;
@@ -109,6 +123,7 @@ async function insertSnapshot(overrides: {
   impactScore?: number;
 }): Promise<void> {
   const v = {
+    httpStatus: 404,
     observedCount: 1,
     sampleSize: 30,
     populationCount: 40_000,
@@ -137,7 +152,7 @@ async function insertSnapshot(overrides: {
        point_estimate, ci_low, ci_high, confidence_band, estimator_version,
        severity_class, severity_weight, impact_score)
     values
-      (${siteScope.siteId}, ${patternId}, ${sampleId}, ${runId}, 404,
+      (${siteScope.siteId}, ${patternId}, ${sampleId}, ${runId}, ${v.httpStatus},
        ${v.evidenceTier}, ${v.observedCount}, ${v.sampleSize}, ${v.populationCount},
        ${v.pointEstimate}, ${v.ciLow}, ${v.ciHigh}, 'approximate', 'test-1',
        ${v.severityClass}, ${v.severityWeight}, ${impactScore})
@@ -178,6 +193,10 @@ describe("the degenerate-interval guard", () => {
   it("allows a zero-width interval when the sample covered the population", async () => {
     await expect(
       insertSnapshot({
+        // A distinct outcome from the file's other successful inserts, all of
+        // which share this fixture's one pattern_sample — see insertSnapshot's
+        // own docblock on why that means distinct http_status values.
+        httpStatus: 200,
         evidenceTier: "counted",
         observedCount: 7,
         sampleSize: 40_000,
@@ -290,6 +309,9 @@ describe("the impact score", () => {
   it("accepts a properly weighted finding", async () => {
     await expect(
       insertSnapshot({
+        // Distinct from this file's other successful inserts — see
+        // insertSnapshot's own docblock.
+        httpStatus: 500,
         severityClass: "server_error",
         severityWeight: "0.800",
         impactScore: 1_066

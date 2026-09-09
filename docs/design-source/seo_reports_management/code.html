@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO Engine - Reporting</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* Geist font as sans fallback */
+        @font-face {
+            font-family: 'Geist';
+            font-style: normal;
+            font-weight: 100 900;
+            font-display: swap;
+            src: url(https://fonts.gstatic.com/s/geist/v1/d6E-kaDk7vLoxK4N764D-H0.woff2) format('woff2');
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#571f00",
+                        "surface-dim": "#13121b",
+                        "on-primary": "#1d00a5",
+                        "inverse-primary": "#4d44e3",
+                        "surface-variant": "#35343e",
+                        "primary-fixed": "#e2dfff",
+                        "surface": "#13121b",
+                        "on-tertiary-fixed": "#351000",
+                        "inverse-on-surface": "#302f39",
+                        "outline": "#918fa1",
+                        "surface-container-lowest": "#0e0d16",
+                        "inverse-surface": "#e4e1ee",
+                        "on-background": "#e4e1ee",
+                        "tertiary-fixed": "#ffdbcc",
+                        "outline-variant": "#464555",
+                        "on-surface": "#e4e1ee",
+                        "error-container": "#93000a",
+                        "on-secondary": "#2a276a",
+                        "surface-container-high": "#2a2933",
+                        "surface-container-low": "#1b1b24",
+                        "on-secondary-container": "#b0aef9",
+                        "primary": "#c3c0ff",
+                        "surface-container-highest": "#35343e",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#413f82",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-secondary-fixed": "#140f54",
+                        "tertiary-container": "#a44100",
+                        "tertiary": "#ffb695",
+                        "surface-container": "#1f1f28",
+                        "on-primary-fixed": "#0f0069",
+                        "on-primary-container": "#dad7ff",
+                        "secondary-fixed": "#e2dfff",
+                        "surface-tint": "#c3c0ff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "background": "#13121b",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "secondary": "#c3c0ff",
+                        "on-tertiary-container": "#ffd2be",
+                        "surface-bright": "#393842",
+                        "secondary-container": "#413f82",
+                        "on-surface-variant": "#c7c4d8",
+                        "error": "#ffb4ab",
+                        "primary-container": "#4f46e5",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#c3c0ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "12px",
+                        "unit": "4px",
+                        "component-padding-x": "12px",
+                        "container-margin": "24px",
+                        "component-padding-y": "6px"
+                    },
+                    "fontFamily": {
+                        "display-sm": ["Geist", "sans-serif"],
+                        "label-xs": ["JetBrains Mono", "monospace"],
+                        "body-md": ["Geist", "sans-serif"],
+                        "headline-sm": ["Geist", "sans-serif"],
+                        "data-mono": ["JetBrains Mono", "monospace"],
+                        "body-sm": ["Geist", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "display-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-xs": ["11px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "450" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #464555;
+            border-radius: 4px;
+        }
+        .table-row-hover:hover {
+            background-color: #1b1b24; /* surface-container-low */
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased overflow-hidden h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<nav class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline-variant flex flex-col py-container-margin z-50">
+<!-- Header -->
+<div class="px-container-margin mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary font-bold text-xl" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface tracking-tight">SEO Engine</h1>
+<p class="font-label-xs text-label-xs text-on-surface-variant">Technical SEO v2.4</p>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar px-component-padding-x">
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">dashboard</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Overview</span>
+</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">folder_open</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Projects</span>
+</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">cloud_download</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Crawls</span>
+</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">error_outline</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Issues</span>
+</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">build</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Tools</span>
+</a>
+<!-- Active State -->
+<a class="text-primary dark:text-primary font-bold border-l-[3px] border-primary pl-[13px] py-2 flex items-center gap-3 bg-surface-container-low/50 rounded-r-DEFAULT cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-body-sm text-body-sm font-semibold">Analytics</span>
+</a>
+<!-- Added Reporting tab specifically for this context, falling under Analytics domain conceptually but distinctly named based on intent if needed, though prompt says "List of existing reports... Sidebar navigation remains consistent". Sticking strictly to provided tabs in JSON, assuming 'Analytics' is the closest semantic match for reporting, but modifying visual to show active on Analytics as it's the 6th tab.  Actually, let's keep Analytics active. -->
+</div>
+<!-- Footer Navigation -->
+<div class="px-component-padding-x mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4 mx-4">
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">settings</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Settings</span>
+</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant pl-4 py-2 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-surface-container-low transition-colors rounded-DEFAULT cursor-pointer active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-on-surface">description</span>
+<span class="font-body-sm text-body-sm group-hover:text-on-surface">Documentation</span>
+</a>
+</div>
+<!-- CTA -->
+<div class="px-container-margin mt-4">
+<button class="w-full bg-surface-container-low border border-outline-variant hover:border-primary/50 text-primary font-body-sm font-medium py-2 rounded-DEFAULT transition-all duration-150 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+                Upgrade Plan
+            </button>
+</div>
+</nav>
+<!-- Main Workspace -->
+<main class="ml-[240px] flex-1 flex flex-col h-full bg-surface">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-[48px] bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-container-margin z-40">
+<!-- Breadcrumbs / Left Nav -->
+<div class="flex items-center gap-4 text-on-surface-variant font-body-sm text-body-sm h-full">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all duration-150 h-full flex items-center" href="#">Projects</a>
+<span class="material-symbols-outlined text-[14px] text-outline-variant">chevron_right</span>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all duration-150 h-full flex items-center" href="#">Date Range</a>
+<span class="material-symbols-outlined text-[14px] text-outline-variant">chevron_right</span>
+<!-- Active Breadcrumb -->
+<span class="text-primary dark:text-primary font-bold border-b-[2px] border-primary pb-1 mt-1 h-full flex items-center text-label-xs uppercase tracking-wider">Reports</span>
+</div>
+<!-- Global Search (Center-ish if layout allowed, but specified 'on_left' in JSON conceptually, though TopNavBar usually puts it right or center. Sticking to a compact right-aligned search for technical look) -->
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block w-64">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-outline-variant">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-DEFAULT h-[32px] pl-8 pr-3 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-0 focus:outline-none transition-colors" placeholder="Search reports..." type="text"/>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-2 border-l border-outline-variant pl-4 ml-2">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-all duration-150">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+</button>
+<!-- Search Icon for mobile/small screens if input is hidden -->
+<button class="w-8 h-8 lg:hidden flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded transition-all duration-150">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</button>
+<button class="ml-2 flex items-center gap-2 hover:bg-surface-container-low p-1 pr-2 rounded transition-all duration-150 group">
+<img class="w-7 h-7 rounded-full object-cover border border-outline-variant group-hover:border-primary/50 transition-colors" data-alt="A small, circular profile avatar showing a stylized, geometric representation of a user in high-contrast neon blue and dark grey tones. Minimalist and technical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVo0vlgKLrP4mIvKjeHMkqwwCAlIIwWC8edaDjTsZ9t1CIQ_-bGstfXtnDjKhC_nSkkCPFoz5KoRiYxeaD8vt4yvhKgeXKof0N24V-XRuswVGi64mOiByRBbglFhkK2y0LBIWRqsrqOcEY8d1K-nAA1av7psbe6qbG8ASwAijAbOvvHxjQLJTy7tc-LJt9WO5zxIalNYxTtw0-Xjw0VyLw4scXf3nCyyLOS3b2-AIhwS3963AD1n0ZxA"/>
+<span class="font-label-xs text-label-xs text-on-surface-variant group-hover:text-on-surface">Profile Settings</span>
+<span class="material-symbols-outlined text-[14px] text-outline-variant">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Page Content Canvas -->
+<div class="flex-1 mt-[48px] overflow-y-auto custom-scrollbar p-container-margin grid grid-cols-1 xl:grid-cols-12 gap-gutter items-start">
+<!-- Header Section (Spans full width) -->
+<div class="xl:col-span-12 flex justify-between items-end mb-4">
+<div>
+<h2 class="font-display-sm text-display-sm text-on-surface tracking-tight mb-1">Automated Reporting</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Configure, schedule, and distribute technical SEO performance reports.</p>
+</div>
+<button class="bg-primary-container hover:bg-primary-container/90 text-white font-body-sm font-medium h-[32px] px-4 rounded-DEFAULT flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                    Create New Report
+                </button>
+</div>
+<!-- Left Column: Reports List (Bento-style tight layout) -->
+<div class="xl:col-span-8 flex flex-col gap-gutter h-full">
+<!-- Filters/Controls Bar -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-DEFAULT p-component-padding-y px-component-padding-x flex justify-between items-center">
+<div class="flex gap-2">
+<button class="bg-surface-container-low border border-outline-variant text-on-surface font-label-xs text-label-xs uppercase px-3 py-1.5 rounded-[2px] flex items-center gap-1 hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-[14px]">filter_list</span> Filter
+                        </button>
+<div class="h-6 w-[1px] bg-outline-variant mx-1 self-center"></div>
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase flex items-center px-2">12 Active Reports</span>
+</div>
+<div class="flex gap-2">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+</button>
+<button class="text-primary bg-surface-container-low p-1 rounded transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">view_list</span>
+</button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="flex-1 bg-surface-container-lowest border border-outline-variant rounded-DEFAULT overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider py-3 px-4 w-2/5">Report Name</th>
+<th class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider py-3 px-4 w-1/6">Type</th>
+<th class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider py-3 px-4 w-1/5">Last Generated</th>
+<th class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider py-3 px-4 w-1/6">Status</th>
+<th class="py-3 px-4 w-12"></th> <!-- Actions -->
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono text-on-surface divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="table-row-hover group transition-colors cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-[2px] bg-surface-container-high border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">health_and_safety</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium text-on-surface">Weekly Technical Health Audit</span>
+<span class="font-label-xs text-on-surface-variant mt-0.5">Project: Alpha Global</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">PDF</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Oct 24, 08:00 UTC</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 bg-[#064e3b]/30 text-[#34d399] px-2 py-1 rounded-[2px] font-label-xs text-[10px] uppercase border border-[#064e3b]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#34d399]"></span> Scheduled
+                                        </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-all p-1">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="table-row-hover group transition-colors cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-[2px] bg-surface-container-high border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">trending_up</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium text-on-surface">Monthly Organic Performance</span>
+<span class="font-label-xs text-on-surface-variant mt-0.5">Project: Beta E-commerce</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex gap-1">
+<span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">PDF</span>
+<span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">CSV</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Oct 01, 12:00 UTC</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 bg-surface-container-high text-on-surface px-2 py-1 rounded-[2px] font-label-xs text-[10px] uppercase border border-outline-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span> Manual
+                                        </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-all p-1">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="table-row-hover group transition-colors cursor-pointer bg-primary/5">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-[2px] bg-primary/20 border border-primary/50 flex items-center justify-center shrink-0 text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">article</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium text-primary">Content Gap Analysis - Q3</span>
+<span class="font-label-xs text-on-surface-variant mt-0.5">Project: Gamma Blog</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">CSV</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Just now</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 bg-primary/20 text-primary px-2 py-1 rounded-[2px] font-label-xs text-[10px] uppercase border border-primary/30">
+<span class="material-symbols-outlined text-[12px] animate-spin">sync</span> Generating
+                                        </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-100 transition-all p-1">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="table-row-hover group transition-colors cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-[2px] bg-surface-container-high border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium text-on-surface">Critical 404 &amp; Redirect Chains</span>
+<span class="font-label-xs text-on-surface-variant mt-0.5">Project: Alpha Global</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">CSV</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Oct 23, 23:45 UTC</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 bg-[#7f1d1d]/30 text-[#fca5a5] px-2 py-1 rounded-[2px] font-label-xs text-[10px] uppercase border border-[#7f1d1d]">
+<span class="material-symbols-outlined text-[12px]">error</span> Failed
+                                        </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-all p-1">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="table-row-hover group transition-colors cursor-pointer">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-[2px] bg-surface-container-high border border-outline-variant flex items-center justify-center shrink-0 text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">speed</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm font-medium text-on-surface">Core Web Vitals Regression</span>
+<span class="font-label-xs text-on-surface-variant mt-0.5">Project: Delta App</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-[2px] text-[10px] uppercase border border-outline-variant">PDF</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Oct 20, 09:00 UTC</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 bg-surface-container-high text-on-surface px-2 py-1 rounded-[2px] font-label-xs text-[10px] uppercase border border-outline-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span> Manual
+                                        </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-all p-1">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination pseudo-footer -->
+<div class="mt-auto border-t border-outline-variant p-3 flex justify-between items-center bg-surface-container-lowest">
+<span class="font-label-xs text-label-xs text-on-surface-variant">Showing 1-5 of 12</span>
+<div class="flex gap-1">
+<button class="w-7 h-7 rounded border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-7 h-7 rounded border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Configuration & Preview Shell (Glassmorphism/Technical panel) -->
+<div class="xl:col-span-4 flex flex-col gap-gutter h-full">
+<!-- Config Panel -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-DEFAULT p-5 relative overflow-hidden">
+<!-- Subtle technical grid background effect -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#c7c4d8 1px, transparent 1px); background-size: 16px 16px;"></div>
+<div class="relative z-10">
+<div class="flex items-center justify-between mb-5 border-b border-outline-variant pb-3">
+<h3 class="font-headline-sm text-[16px] font-semibold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">tune</span>
+                                Report Configuration
+                            </h3>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<form class="flex flex-col gap-4">
+<!-- Project Scope -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Project Scope</label>
+<div class="relative">
+<select class="w-full bg-surface-container-low border border-outline-variant rounded-DEFAULT h-[32px] px-3 font-body-sm text-on-surface appearance-none focus:border-primary focus:ring-0 focus:outline-none cursor-pointer">
+<option>Alpha Global (Production)</option>
+<option>Beta E-commerce</option>
+<option>Gamma Blog</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-outline-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Date Range -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Date Range</label>
+<div class="grid grid-cols-2 gap-2">
+<div class="relative">
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-DEFAULT h-[32px] pl-8 pr-2 font-data-mono text-[12px] text-on-surface focus:border-primary focus:ring-0 focus:outline-none" type="text" value="Oct 17, 2023"/>
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[14px] text-outline-variant">calendar_today</span>
+</div>
+<div class="relative">
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-DEFAULT h-[32px] pl-8 pr-2 font-data-mono text-[12px] text-on-surface focus:border-primary focus:ring-0 focus:outline-none" type="text" value="Oct 24, 2023"/>
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[14px] text-outline-variant">calendar_today</span>
+</div>
+</div>
+</div>
+<!-- Sections to Include -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Sections to Include</label>
+<div class="flex flex-col gap-2 bg-surface border border-outline-variant rounded-[2px] p-2">
+<label class="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1 rounded transition-colors">
+<input checked="" class="w-4 h-4 rounded-[2px] border-outline-variant text-primary bg-surface-container-low focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-on-surface">Technical SEO Overview</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1 rounded transition-colors">
+<input checked="" class="w-4 h-4 rounded-[2px] border-outline-variant text-primary bg-surface-container-low focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-on-surface">Core Web Vitals &amp; Performance</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1 rounded transition-colors">
+<input class="w-4 h-4 rounded-[2px] border-outline-variant text-primary bg-surface-container-low focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-on-surface">Content &amp; Keyword Rankings</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1 rounded transition-colors">
+<input checked="" class="w-4 h-4 rounded-[2px] border-outline-variant text-primary bg-surface-container-low focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-sm text-on-surface">Indexability &amp; Crawl Stats</span>
+</label>
+</div>
+</div>
+<!-- Export Format -->
+<div class="flex flex-col gap-1.5 mt-2">
+<label class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Export Format</label>
+<div class="flex gap-2">
+<label class="flex-1 border border-primary bg-primary/10 rounded-[2px] p-2 flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden transition-colors">
+<input checked="" class="sr-only" name="format" type="radio"/>
+<span class="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
+<span class="font-body-sm font-medium text-primary">PDF Report</span>
+<!-- Active indicator -->
+<div class="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-primary border-r-transparent"></div>
+</label>
+<label class="flex-1 border border-outline-variant bg-surface-container-low hover:border-outline rounded-[2px] p-2 flex items-center justify-center gap-2 cursor-pointer transition-colors text-on-surface-variant hover:text-on-surface">
+<input class="sr-only" name="format" type="radio"/>
+<span class="material-symbols-outlined text-[16px]">data_table</span>
+<span class="font-body-sm font-medium">CSV Export</span>
+</label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-outline-variant">
+<button class="bg-transparent border border-outline-variant hover:border-outline text-on-surface font-body-sm font-medium h-[32px] rounded-DEFAULT transition-colors" type="button">
+                                    Save as Template
+                                </button>
+<button class="bg-primary-container hover:bg-primary-container/90 text-white font-body-sm font-medium h-[32px] rounded-DEFAULT transition-colors flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(79,70,229,0.2)]" type="button">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                                    Generate Now
+                                </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Live Preview Thumbnail -->
+<div class="flex-1 bg-surface-container-lowest border border-outline-variant rounded-DEFAULT p-4 flex flex-col relative overflow-hidden min-h-[250px]">
+<div class="flex justify-between items-center mb-3">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-wider">Live Preview</span>
+<button class="text-primary hover:text-primary-fixed transition-colors font-body-sm text-[12px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">open_in_full</span> Expand
+                        </button>
+</div>
+<!-- Stylized Document Preview -->
+<div class="flex-1 bg-surface border border-outline-variant/50 rounded shadow-[0_4px_24px_rgba(0,0,0,0.5)] flex items-center justify-center relative group overflow-hidden">
+<!-- Abstract document representation -->
+<div class="w-[70%] h-[80%] bg-surface-container-highest border border-outline-variant shadow-lg flex flex-col p-4 relative z-10 transition-transform duration-300 group-hover:scale-105">
+<div class="w-1/3 h-2 bg-primary/50 rounded-sm mb-6"></div>
+<div class="w-full h-1 bg-outline-variant/30 rounded-sm mb-2"></div>
+<div class="w-5/6 h-1 bg-outline-variant/30 rounded-sm mb-6"></div>
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="h-12 border border-outline-variant/50 rounded-sm bg-surface-container-low flex flex-col justify-end p-1">
+<div class="w-full h-[60%] bg-error/30 rounded-xs"></div>
+</div>
+<div class="h-12 border border-outline-variant/50 rounded-sm bg-surface-container-low flex items-end justify-between p-1 gap-1">
+<div class="w-full h-[30%] bg-primary/40 rounded-xs"></div>
+<div class="w-full h-[50%] bg-primary/60 rounded-xs"></div>
+<div class="w-full h-[80%] bg-primary rounded-xs"></div>
+</div>
+</div>
+<div class="w-full h-1 bg-outline-variant/20 rounded-sm mb-2"></div>
+<div class="w-full h-1 bg-outline-variant/20 rounded-sm mb-2"></div>
+<div class="w-2/3 h-1 bg-outline-variant/20 rounded-sm"></div>
+</div>
+<!-- Overlay on hover -->
+<div class="absolute inset-0 bg-surface-container-lowest/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex items-center justify-center">
+<button class="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded font-body-sm flex items-center gap-2 hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                                View Full Report
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

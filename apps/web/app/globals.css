@@ -1,68 +1,74 @@
 @import "tailwindcss";
 
 /*
- * Token layer for the design system in ../../../DESIGN.md.
+ * Token layer for the design system in ../../../docs/DESIGN.md.
  *
  * DESIGN.md is the source of truth for every value here. If the two disagree,
  * DESIGN.md wins and this file is the bug. Do not add a token that is not in
  * that document, and do not hard-code a colour, radius, or type size in a
- * component — the whole point of the spec is that "premium, distinctive, not
- * generic SaaS" is a set of checkable decisions rather than a vibe that drifts
- * back to Inter-and-purple-gradients under deadline pressure.
+ * component.
  *
- * The default Tailwind colour, radius, and font-size namespaces are RESET below
- * rather than merely extended. That is deliberate and load-bearing: DESIGN.md
- * section 9 bans purple/indigo/violet accents and corner radii above 10px, and
- * section 5 says the radius ban is "enforced by simply not having a larger
- * radius token available". Resetting the namespaces means `rounded-2xl` and
- * `bg-indigo-500` do not exist to be typed by accident — the ban is structural,
- * not a review checklist item.
+ * Every value below is transcribed from the Stitch project's generated
+ * `tailwind.config` (ADR-0027), not eyeballed from a screenshot — the design
+ * ships its own token names and this file maps them onto ours one for one.
+ *
+ * The default Tailwind colour, radius, font and font-size namespaces are RESET
+ * below rather than merely extended. The VALUES changed when Stitch superseded
+ * the previous spec; the technique did not, and is the reason the spec stays
+ * true: a colour or size that is not in the design does not exist to be typed
+ * by accident, so drift is a build error rather than something a reviewer has
+ * to notice.
  */
 
-/* --- Palette, per DESIGN.md section 3. Dark is the default, not a toggle. --- */
-:root,
-:root[data-theme="dark"] {
-  --bg-base: #0a0b0d;
-  --bg-surface: #131417;
-  --bg-surface-raised: #1b1d21;
-  --border-subtle: #24262b;
-  --border-strong: #35373e;
-  --text-primary: #f2f3f5;
-  --text-secondary: #9ba0aa;
-  --text-tertiary: #6b707a;
+/*
+ * --- Palette, per DESIGN.md section 3. Dark only. ---
+ *
+ * There is no light block and no `data-theme` switch: the Stitch design ships
+ * a single dark theme (every screen is `html class="dark"`, and its config
+ * carries no light ramp), and the previous spec's light palette was retired
+ * with it (ADR-0027). A future light mode is a new palette to design, not a
+ * switch someone forgot to wire up.
+ */
+:root {
+  color-scheme: dark;
 
-  /* Signal amber. One accent, used meaningfully: primary actions, focus rings,
-     active nav. Never a gradient. */
-  --accent: #d9a441;
-  --accent-foreground: #171208;
+  /* Material-3 surface ladder, dimmest to brightest. */
+  --bg-base: #13121b;
+  /* The nav rail sits BELOW the page, not above it — darker, not lighter. */
+  --bg-rail: #0e0d16;
+  --bg-surface: #1b1b24;
+  --bg-surface-raised: #1f1f28;
+  --bg-surface-high: #2a2933;
 
-  --status-healthy: #3fb67f;
-  /* "Needs attention" IS the caution signal, so warning reuses the accent. */
-  --status-warning: #d9a441;
-  --status-critical: #e5484d;
+  --border-subtle: #464555;
+  --border-strong: #918fa1;
+
+  --text-primary: #e4e1ee;
+  --text-secondary: #c7c4d8;
+  --text-tertiary: #918fa1;
+
+  /*
+   * Indigo, in two roles the design keeps strictly separate.
+   *
+   * `--accent` is a FILL — primary buttons, the active nav rail marker, the
+   * logo tile. At 4.0:1 against the page it is not a text colour, and using it
+   * as one is the mistake this split exists to prevent. `--accent-text` is the
+   * light tint the design uses for accented text and links on dark.
+   */
+  --accent: #4f46e5;
+  --accent-text: #c3c0ff;
+  --accent-foreground: #ffffff;
+
+  /*
+   * Status. Independent of the accent now — under the previous amber accent,
+   * warning and accent were the same colour by design; with an indigo accent
+   * they are not, and warning carries its own amber.
+   */
+  --status-healthy: #10b981;
+  --status-warning: #f59e0b;
+  --status-critical: #ef4444;
   /* Insufficient sampling confidence — an absence of evidence, not bad news. */
-  --status-unknown: #6e7681;
-}
-
-:root[data-theme="light"] {
-  /* Warm off-white, not sterile pure white. */
-  --bg-base: #fafaf8;
-  --bg-surface: #ffffff;
-  --bg-surface-raised: #ffffff;
-  --border-subtle: #e4e4e0;
-  --border-strong: #cfcfc9;
-  --text-primary: #16171a;
-  --text-secondary: #55585f;
-  --text-tertiary: #82858c;
-
-  /* Deepened for AA contrast on light. */
-  --accent: #a6720c;
-  --accent-foreground: #fffbef;
-
-  --status-healthy: #1a8f5a;
-  --status-warning: #a6720c;
-  --status-critical: #c4282e;
-  --status-unknown: #6e7681;
+  --status-unknown: #918fa1;
 }
 
 @theme inline {
@@ -72,14 +78,17 @@
   --color-current: currentColor;
 
   --color-base: var(--bg-base);
+  --color-rail: var(--bg-rail);
   --color-surface: var(--bg-surface);
   --color-surface-raised: var(--bg-surface-raised);
+  --color-surface-high: var(--bg-surface-high);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
   --color-tertiary: var(--text-tertiary);
   --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
   --color-accent-foreground: var(--accent-foreground);
 
   --color-healthy: var(--status-healthy);
@@ -87,37 +96,40 @@
   --color-critical: var(--status-critical);
   --color-unknown: var(--status-unknown);
 
-  /* --- Radius, per section 5. Nothing larger than 10px exists. --- */
+  /* --- Radius, per section 5: 2 / 4 / 8 / 12. Nothing larger. --- */
   --radius-*: initial;
-  /* inputs, buttons, badges, table cells */
+  /* badges, table cells, the active-row marker */
   --radius-xs: 2px;
-  /* cards, panels, popovers, command palette */
-  --radius-sm: 6px;
-  /* modals only */
-  --radius-md: 10px;
+  /* inputs, buttons */
+  --radius-sm: 4px;
+  /* cards, panels, the logo tile */
+  --radius-md: 8px;
+  /* modals and popovers only */
+  --radius-lg: 12px;
 
-  /* --- Typography, per section 2. Two faces only: a UI sans and a data mono. --- */
+  /* --- Typography, per section 2. Two faces: Geist for UI, JetBrains Mono for data. --- */
   --font-*: initial;
-  --font-ui: var(--font-switzer), ui-sans-serif, system-ui, sans-serif;
+  --font-ui: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
+  /*
+   * Six sizes, exactly the six the design defines. The names are Tailwind's
+   * conventional ladder; the values are Stitch's label-xs / data-mono /
+   * body-sm / body-md / headline-sm / display-sm.
+   */
   --text-*: initial;
   --text-2xs: 11px;
-  --text-2xs--line-height: 16px;
-  --text-xs: 12px;
+  --text-2xs--line-height: 12px;
+  --text-xs: 13px;
   --text-xs--line-height: 16px;
   --text-sm: 13px;
-  --text-sm--line-height: 20px;
+  --text-sm--line-height: 18px;
   --text-base: 14px;
   --text-base--line-height: 20px;
-  --text-lg: 16px;
+  --text-lg: 18px;
   --text-lg--line-height: 24px;
-  --text-xl: 20px;
-  --text-xl--line-height: 28px;
-  --text-2xl: 28px;
-  --text-2xl--line-height: 36px;
-  --text-3xl: 40px;
-  --text-3xl--line-height: 48px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
 
   /* --- Spacing, per section 4: 4px base unit. --- */
   --spacing: 4px;
@@ -129,7 +141,7 @@ html {
 }
 
 body {
-  font-family: var(--font-switzer), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   background-color: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -139,7 +151,7 @@ body {
  * Numeric data always uses tabular figures so columns align without per-cell
  * CSS. Section 9 lists non-tabular numerals in a data column as an
  * anti-pattern, so this is applied at the element level rather than left to
- * each table cell to remember.
+ * each table cell to remember. Weight 450 is the design's `data-mono` token.
  */
 code,
 kbd,
@@ -148,15 +160,16 @@ pre,
 [data-numeric] {
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+  font-weight: 450;
 }
 
 /*
- * Focus is always visible and always uses the accent. This is a keyboard-first
- * product (section 6), so a barely-visible focus ring is a defect, not a style
- * nitpick (section 8).
+ * Focus is always visible. It uses `--accent-text`, not `--accent`: the fill
+ * indigo is too dark against the page to read as a ring, which would make the
+ * keyboard path invisible — a defect, not a style nitpick (section 8).
  */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 
