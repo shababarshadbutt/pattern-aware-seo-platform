@@ -11,7 +11,8 @@ export {
   type EnqueueStage,
   type PipelineDeps,
   type SitemapFetcher,
-  type SitemapResponse
+  type SitemapResponse,
+  type VerifyTelemetryEvent
 } from "./deps.js";
 export {
   type AttachRequestPayload,

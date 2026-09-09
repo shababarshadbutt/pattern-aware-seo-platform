@@ -38,6 +38,36 @@ export type EnqueueStage = (
   payload: Record<string, unknown>
 ) => Promise<void>;
 
+/**
+ * One thing worth timing or counting inside the `verify` stage.
+ *
+ * Deliberately does NOT carry a "have we resolved this file before" flag:
+ * "already resolved once" only means something relative to whatever window
+ * the caller considers "the same run" (a whole benchmark process, a single
+ * site's run, etc.), and `runVerify` itself has no such notion — it only
+ * ever sees one pattern's one job. A caller that wants cross-call
+ * repetition (e.g. scripts/benchmark-scale.ts, per
+ * docs/reports/phase-2b-prior-art-analysis.md §11) tracks its own
+ * `Set<fileOrdinal>` across the `resolveCandidates` events it receives.
+ * Keeping that bookkeeping out of this event is what keeps `resolveAll`
+ * stateless.
+ */
+export type VerifyTelemetryEvent =
+  | {
+      readonly kind: "resolveCandidates";
+      readonly fileOrdinal: number;
+      readonly durationMs: number;
+    }
+  | {
+      readonly kind: "verifyProbe";
+      readonly durationMs: number;
+    }
+  | {
+      readonly kind: "candidateFileSpread";
+      readonly patternId: string;
+      readonly distinctFiles: number;
+    };
+
 export interface PipelineDeps {
   readonly db: Database;
   readonly store: SitemapFileStore;
@@ -99,6 +129,18 @@ export interface PipelineDeps {
    * supplies the real configured value at startup.
    */
   readonly oversizeThresholds?: OversizeThresholds;
+  /**
+   * Read-only timing/counting hook for verify-stage instrumentation.
+   *
+   * OPTIONAL and side-effect-only on whatever the caller does with the
+   * events — nothing in `runVerify`/`resolveAll` branches on whether this is
+   * present, and no return value feeds back into pipeline behavior or the
+   * observations written to the database. Built for
+   * scripts/benchmark-scale.ts (see docs/reports/phase-2b-prior-art-analysis.md
+   * §11) to measure candidate-resolution time/repetition separately from
+   * HTTP-probe time; `apps/worker` omits it.
+   */
+  readonly onVerifyTelemetry?: (event: VerifyTelemetryEvent) => void;
 }
 
 /**

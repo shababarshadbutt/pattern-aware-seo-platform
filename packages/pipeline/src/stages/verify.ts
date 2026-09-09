@@ -167,6 +167,8 @@ export async function runVerify(
     };
   }
 
+  const probeStart = performance.now();
+
   const result = await verifyPattern(
     {
       urls: resolved.map((candidate) => candidate.url),
@@ -182,6 +184,11 @@ export async function runVerify(
       ...(deps.probeFetch === undefined ? {} : { fetch: deps.probeFetch })
     }
   );
+
+  deps.onVerifyTelemetry?.({
+    kind: "verifyProbe",
+    durationMs: performance.now() - probeStart
+  });
 
   const observationsWritten = await recordObservations(
     deps,
@@ -263,6 +270,12 @@ async function resolveAll(
     byFile.set(candidate.fileId, [...existing, candidate]);
   }
 
+  deps.onVerifyTelemetry?.({
+    kind: "candidateFileSpread",
+    patternId: payload.patternId,
+    distinctFiles: byFile.size
+  });
+
   const resolved: ResolvedCandidate[] = [];
 
   for (const [fileOrdinal, candidates] of byFile) {
@@ -281,6 +294,8 @@ async function resolveAll(
       continue;
     }
 
+    const resolveStart = performance.now();
+
     try {
       const fromFile = await resolveCandidates(
         deps.store,
@@ -293,8 +308,26 @@ async function resolveAll(
         }
       );
 
+      deps.onVerifyTelemetry?.({
+        kind: "resolveCandidates",
+        fileOrdinal,
+        durationMs: performance.now() - resolveStart
+      });
+
       resolved.push(...fromFile);
     } catch (error) {
+      /**
+       * Reported even though resolution failed: the file was genuinely opened
+       * and streamed (or attempted) before the error surfaced, so the wall
+       * time is real cost the benchmark wants to see, not a call that never
+       * happened.
+       */
+      deps.onVerifyTelemetry?.({
+        kind: "resolveCandidates",
+        fileOrdinal,
+        durationMs: performance.now() - resolveStart
+      });
+
       /**
        * A resolution failure is a data-integrity finding, not a transient one:
        * it means the file's URLs have shifted since ingestion, so retrying will

@@ -1,0 +1,117 @@
+{
+  "startedAt": "2026-09-09T10:47:21.853Z",
+  "urls": 25000000,
+  "urlsPerFile": 50000,
+  "completedAt": "2026-09-09T11:35:38.028Z",
+  "urlsCounted": 25000000,
+  "filesParsed": 500,
+  "filesFailed": 0,
+  "oversizeStopReason": null,
+  "patternCount": 19,
+  "samplesDrawn": 19,
+  "timingsMs": {
+    "discoverMs": 265.4415000000008,
+    "ingestMs": 704282.6218,
+    "verifyEstimateMs": 2109459.9934,
+    "finalizeMs": 61.721299999859184
+  },
+  "totalWallMs": 2814874.7833000002,
+  "ingestThroughputUrlsPerSec": 35497.113269819434,
+  "peakRssBytes": 1482805248,
+  "ingestPeakRssBytes": 1468272640,
+  "cpuUserMicros": 1731360000,
+  "cpuSystemMicros": 204922000,
+  "diskPeakBytes": 1789678135,
+  "finalDiskBytes": 1789678135,
+  "postgres": {
+    "totalBytes": 6578176,
+    "rowsByTable": {
+      "audit_snapshot": 19,
+      "pattern": 19,
+      "pattern_population": 9500,
+      "pattern_sample": 19,
+      "sample_observation": 5605,
+      "sitemap_file": 500
+    }
+  },
+  "httpRequestsServed": 9621,
+  "samplingHealth": {
+    "id": "c29de893-0017-4e08-b562-13a6bec88b23",
+    "siteId": "61777dd7-1b3b-4518-96ed-c78e031ed064",
+    "sitemapRunId": "9a4c89cc-30e3-4859-88a7-cc0189475199",
+    "windowStart": "2026-09-09T10:48:43.159Z",
+    "windowEnd": "2026-09-09T11:35:37.606Z",
+    "patternsTotal": 19,
+    "patternsLowConfidence": 5,
+    "patternsExpanded": 0,
+    "patternsBlocked": 0,
+    "patternsNeedsReview": 0,
+    "samplesDrawn": 19,
+    "httpRequests": 6730,
+    "getEscalations": 1125,
+    "circuitBreaks": 0
+  },
+  "patternStatusCounts": [
+    {
+      "status": "measured",
+      "count": 19,
+      "populationCount": 25000000
+    }
+  ],
+  "topPatterns": [
+    {
+      "template": "/part/{param}",
+      "populationCount": 13746335
+    },
+    {
+      "template": "/{param}/page/{param}",
+      "populationCount": 2500736
+    },
+    {
+      "template": "/search",
+      "populationCount": 2000856
+    },
+    {
+      "template": "/shop/bearings/{param}",
+      "populationCount": 1002254
+    },
+    {
+      "template": "/shop/seals/{param}",
+      "populationCount": 1000131
+    },
+    {
+      "template": "/shop/parts/{param}",
+      "populationCount": 999965
+    },
+    {
+      "template": "/shop/tools/{param}",
+      "populationCount": 999916
+    },
+    {
+      "template": "/shop/fasteners/{param}",
+      "populationCount": 998699
+    },
+    {
+      "template": "/legacy/discontinued/{param}",
+      "populationCount": 499419
+    },
+    {
+      "template": "/catalog/seals/{param}/detail/{param}",
+      "populationCount": 150544
+    }
+  ],
+  "verifyTelemetry": {
+    "resolveCandidatesMs": 1709900.4320000089,
+    "resolveCandidatesCalls": 3885,
+    "resolveCandidatesRepeatFileCalls": 3385,
+    "verifyProbeMs": 388828.62750000006,
+    "verifyProbeCalls": 19,
+    "distinctFilesPerPattern": {
+      "min": 2,
+      "max": 287,
+      "mean": 204.47368421052633,
+      "p50": 274,
+      "p95": 287
+    }
+  }
+}

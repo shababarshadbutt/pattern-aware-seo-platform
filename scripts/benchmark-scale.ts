@@ -22,7 +22,8 @@ import {
   type PipelineStage,
   runDiscover,
   runIngest,
-  runStage
+  runStage,
+  type VerifyTelemetryEvent
 } from "@pattern-aware/pipeline";
 import {
   DEFAULT_SAMPLE_BUDGET,
@@ -103,6 +104,103 @@ function formatMs(ms: number): string {
   }
 
   return `${(ms / 1_000).toFixed(1)} s`;
+}
+
+interface Distribution {
+  readonly min: number;
+  readonly max: number;
+  readonly mean: number;
+  readonly p50: number;
+  readonly p95: number;
+}
+
+/** A small summary rather than a raw per-pattern array, to keep the JSON report readable. */
+function summarize(values: readonly number[]): Distribution | null {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const percentile = (fraction: number): number =>
+    sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))] ??
+    0;
+
+  return {
+    min: sorted[0] ?? 0,
+    max: sorted[sorted.length - 1] ?? 0,
+    mean: values.reduce((sum, value) => sum + value, 0) / values.length,
+    p50: percentile(0.5),
+    p95: percentile(0.95)
+  };
+}
+
+/**
+ * Accumulates `PipelineDeps.onVerifyTelemetry` events for the whole benchmark
+ * run, per docs/reports/phase-2b-prior-art-analysis.md §11: separating
+ * candidate-resolution time from HTTP-probe time inside `verifyEstimateMs`,
+ * and measuring (not estimating) whether a distinct file is opened more than
+ * once across DIFFERENT patterns' verify jobs in this same process.
+ */
+function createVerifyTelemetryCollector(): {
+  readonly onEvent: (event: VerifyTelemetryEvent) => void;
+  readonly report: () => {
+    resolveCandidatesMs: number;
+    resolveCandidatesCalls: number;
+    resolveCandidatesRepeatFileCalls: number;
+    verifyProbeMs: number;
+    verifyProbeCalls: number;
+    distinctFilesPerPattern: Distribution | null;
+  };
+} {
+  const seenFileOrdinals = new Set<number>();
+  const fileSpreadByPattern: number[] = [];
+  let resolveCandidatesMs = 0;
+  let resolveCandidatesCalls = 0;
+  let resolveCandidatesRepeatFileCalls = 0;
+  let verifyProbeMs = 0;
+  let verifyProbeCalls = 0;
+
+  return {
+    onEvent(event) {
+      switch (event.kind) {
+        case "resolveCandidates": {
+          resolveCandidatesMs += event.durationMs;
+          resolveCandidatesCalls += 1;
+
+          if (seenFileOrdinals.has(event.fileOrdinal)) {
+            resolveCandidatesRepeatFileCalls += 1;
+          } else {
+            seenFileOrdinals.add(event.fileOrdinal);
+          }
+
+          break;
+        }
+
+        case "verifyProbe": {
+          verifyProbeMs += event.durationMs;
+          verifyProbeCalls += 1;
+
+          break;
+        }
+
+        case "candidateFileSpread": {
+          fileSpreadByPattern.push(event.distinctFiles);
+
+          break;
+        }
+      }
+    },
+    report() {
+      return {
+        resolveCandidatesMs,
+        resolveCandidatesCalls,
+        resolveCandidatesRepeatFileCalls,
+        verifyProbeMs,
+        verifyProbeCalls,
+        distinctFilesPerPattern: summarize(fileSpreadByPattern)
+      };
+    }
+  };
 }
 
 /**
@@ -400,6 +498,8 @@ async function main(): Promise<void> {
       payload: Record<string, unknown>;
     }[] = [];
 
+    const verifyTelemetry = createVerifyTelemetryCollector();
+
     const deps: PipelineDeps = {
       db,
       store: new LocalDiskFileStore(storeRoot),
@@ -415,6 +515,7 @@ async function main(): Promise<void> {
       }),
       sampleBudget,
       oversizeThresholds,
+      onVerifyTelemetry: verifyTelemetry.onEvent,
       enqueue: async (stage, payload) => {
         pending.push({ stage, payload });
       },
@@ -556,6 +657,23 @@ async function main(): Promise<void> {
       `  ${jobsRun} stage jobs completed in ${formatMs(timings.verifyEstimateMs)}`
     );
 
+    const telemetry = verifyTelemetry.report();
+
+    console.log(
+      `  resolveCandidates   ${telemetry.resolveCandidatesCalls} calls, ${formatMs(telemetry.resolveCandidatesMs)} total (${telemetry.resolveCandidatesRepeatFileCalls} re-opened a file already resolved this run)`
+    );
+    console.log(
+      `  verifyPattern probe ${telemetry.verifyProbeCalls} calls, ${formatMs(telemetry.verifyProbeMs)} total`
+    );
+
+    if (telemetry.distinctFilesPerPattern !== null) {
+      const spread = telemetry.distinctFilesPerPattern;
+
+      console.log(
+        `  distinct files/pattern  min ${spread.min}, p50 ${spread.p50}, p95 ${spread.p95}, max ${spread.max}, mean ${spread.mean.toFixed(1)}`
+      );
+    }
+
     heading("4. finalize");
 
     const finalizeStart = performance.now();
@@ -664,7 +782,8 @@ async function main(): Promise<void> {
       topPatterns: patterns.map((p) => ({
         template: p.template,
         populationCount: p.populationCount
-      }))
+      })),
+      verifyTelemetry: verifyTelemetry.report()
     });
 
     // `import.meta.url`'s directory is already `scripts/`, so the repo root
