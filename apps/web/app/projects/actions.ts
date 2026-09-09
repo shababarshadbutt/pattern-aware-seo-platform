@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError, createProject } from "../../lib/api";
+import { ApiError, createProject, startRun } from "../../lib/api";
 import {
   NewProjectError,
   type NewProjectInput,
@@ -78,6 +78,60 @@ export async function createProjectAction(
        * The API's own message, as written. Its 409 names the host already
        * monitored, which is the only part of the failure a reader can act on —
        * "could not create project" throws that away.
+       */
+      return { status: "error", message: error.message };
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Start a real audit against a project's own sitemap.
+ *
+ * A SERVER ACTION for the same reason `createProjectAction` is: `WEB_API_URL`
+ * is server-only, and the two outcomes a reader must be able to tell apart —
+ * "started" vs. "already running" vs. "this deployment can't dispatch runs" —
+ * are not expressible from a plain `<Link>`.
+ *
+ * This sends real HTTP traffic at the site's host once the worker picks up
+ * the attach request (see `apps/api/src/routes/sites.ts`'s
+ * `POST /sites/:siteId/runs`). It does not make the write authenticated —
+ * ADR-0026 still defers auth — it only decides which process calls it.
+ */
+export interface RunState {
+  readonly status: "idle" | "started" | "error";
+  readonly message?: string;
+  /** The started run, so the caller can link straight to its progress. */
+  readonly runId?: string;
+}
+
+export async function startRunAction(
+  _previous: RunState,
+  formData: FormData
+): Promise<RunState> {
+  const siteId = String(formData.get("siteId") ?? "");
+
+  try {
+    const run = await startRun(siteId);
+
+    // The portfolio's status column and Overview both read the site's
+    // latest run, so both need to reflect "running" immediately rather than
+    // waiting for whatever next navigates there.
+    revalidatePath("/projects");
+    revalidatePath("/");
+
+    return {
+      status: "started",
+      message: `Run ${run.id.slice(0, 8)} is now running.`,
+      runId: run.id
+    };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      /*
+       * The API's own message, as written — a 409 names the run already in
+       * flight, a 503 says this deployment has no Redis configured, and
+       * "could not start" would throw both away.
        */
       return { status: "error", message: error.message };
     }

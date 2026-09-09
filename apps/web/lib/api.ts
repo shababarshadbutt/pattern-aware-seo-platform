@@ -339,6 +339,58 @@ export async function createProject(input: {
   return (await response.json()) as SiteSummary;
 }
 
+/**
+ * Start a real audit against this site's own sitemap.
+ *
+ * POSTs to `/sites/:siteId/runs` (`registerSiteRoutes` in `apps/api`) — the
+ * route that posts an attach-and-start request onto `ATTACH_REQUESTS_QUEUE`,
+ * which the worker's own listener picks up. This sends real HTTP traffic at
+ * the site's host once the worker processes it.
+ *
+ * The API's own error message is surfaced on failure, the same as
+ * `patchSite`: a 409 names the run already in flight, and a 503 means this
+ * deployment has no `REDIS_URL` configured to dispatch the request through.
+ */
+export async function startRun(
+  siteId: string,
+  sitemapUrl?: string
+): Promise<SitemapRunSummary> {
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_URL}/sites/${encodeURIComponent(siteId)}/runs`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...authHeaders()
+        },
+        body: JSON.stringify(sitemapUrl === undefined ? {} : { sitemapUrl }),
+        cache: "no-store"
+      }
+    );
+  } catch (error) {
+    throw new ApiError(
+      0,
+      `Could not reach the API at ${API_URL}. Is "pnpm dev" running the api workspace? (${(error as Error).message})`
+    );
+  }
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      readonly error?: { readonly message?: string };
+    } | null;
+
+    throw new ApiError(
+      response.status,
+      body?.error?.message ?? `${response.status} ${response.statusText}`
+    );
+  }
+
+  return (await response.json()) as SitemapRunSummary;
+}
+
 export interface SiteDetail {
   readonly site: SiteSummary;
   readonly latestRun?: SitemapRunSummary;
