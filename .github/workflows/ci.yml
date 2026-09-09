@@ -38,9 +38,25 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      # apps/worker's site-pipeline tests self-chain through real BullMQ, not
+      # a mock — the point of that suite is proving the worker's actual queue
+      # wiring, which no in-memory stand-in reproduces. Without this, every
+      # such test hangs on ECONNREFUSED until its own timeout instead of
+      # failing fast, and does so deterministically on every run, not
+      # flakily (found when this workflow first ran against that suite).
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     env:
       DATABASE_URL: postgresql://seo_platform:password@localhost:5432/seo_platform
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - uses: actions/checkout@v4
