@@ -2916,3 +2916,217 @@ across five call sites with no reader-visible effect.
 
 Three references to "Crawls" survive in comments, all of them deliberately
 naming the DESIGN's label in order to explain why the app does not use it.
+
+## ADR-0040 — The pipeline is made self-driving through BullMQ, and the queue namespace's separator turns out to have never worked
+
+**Date:** 2026-09-08
+**Status:** Accepted.
+
+### Context
+
+An architecture audit found that, despite `packages/pipeline`'s five stages and
+`apps/worker`'s per-site `SitePipeline` being well-built and individually
+tested, nothing had ever driven a run through them end to end in production.
+Two hand-offs were missing outright — `discover` never enqueued `ingest`, and
+nothing enqueued `finalize` after the last pattern's `estimate` completed — and
+`attachSite()` had no caller anywhere, so a worker process started and idled
+forever. The only thing that could run all five stages was `scripts/live-run.ts`,
+a manual script that deliberately bypasses Redis and BullMQ and says so in its
+own header comment. Separately, `verify` and `estimate` had no guard against
+BullMQ's at-least-once redelivery (only `ingest` did), and the schema's
+`heartbeat_at`/`idx_sitemap_run_heartbeat` stale-run recovery path had never been
+implemented — `heartbeatRun()` existed, exported, and uncalled.
+
+Closing these gaps required building the first real integration test of
+`SitePipeline` against an actual Redis — a test that had never existed. It
+failed immediately, on `Queue` construction, for a reason unrelated to anything
+this session set out to fix: **BullMQ throws `"Queue name cannot contain :"`,
+because `:` is the delimiter BullMQ's own Redis keys use internally**
+(`bull:{queueName}:wait`, etc.). This project's queue namespace has been
+documented as `{tier}:{siteId}:{stage}` since M5, praised repeatedly in the
+milestone log as real and well-tested, and asserted by pure-string unit tests
+in `queue-names.test.ts` — none of which could have caught this, because none
+of them ever constructed a real BullMQ `Queue`. `packages/pipeline`'s own e2e
+suite is deliberately Redis-free by design. As far as this audit could
+determine, no `SitePipeline` had ever been attached to a real Redis before this
+session's test did it, and the entire namespacing scheme would have failed on
+the very first site any real deployment ever tried to attach.
+
+### Decision
+
+**The queue-name separator changes from `:` to `.`.** `queueName()` and
+`parseQueueName()` in `packages/pipeline/src/queue-names.ts` now join
+`{tier}.{siteId}.{stage}`; `queue-names.test.ts` gained a regression asserting
+no name this function produces can contain `:`, so this cannot silently
+regress back to the delimiter BullMQ forbids. UUIDs cannot contain `.`, so the
+same collision-freedom argument the original design made for `:` still holds.
+Every prose description of the `:`-separated scheme elsewhere in this codebase
+(`CLAUDE.md`, milestone-log entries, docblocks not touched by this change) is
+left as the historical record it now is rather than rewritten.
+
+**Stage self-chaining is completed using the existing injected-`enqueue`
+pattern, not a new mechanism.** `discover` now calls `deps.enqueue("ingest",
+...)` on success and `finishRun(..., "degraded")` directly when a parsed index
+names no children — moving `scripts/live-run.ts`'s manual decision into the
+stage itself, so the script and the queue-driven path are one code path, not
+two that can drift. The `estimate → finalize` hand-off is a genuine fan-in, not
+a 1:1 hand-off: a new `checkRunCompletion` helper
+(`packages/pipeline/src/stages/finalize-trigger.ts`) compares a live count of
+patterns in a terminal status (`measured`/`blocked`/`needs_review`) against
+`sitemap_run.total_patterns`, and enqueues `finalize` once they match. It is
+called from `estimate`'s own success path (the common case) and from
+`verify`'s fully-unresolvable early return, which is the one way a pattern can
+reach a terminal status without ever enqueuing `estimate`. `ingest` itself
+enqueues `finalize` directly when it draws zero samples at all, since no
+downstream job would otherwise exist to notice completion. The comparison is
+safe without a distributed lock only because `estimate`'s `Worker` runs at
+concurrency 1 per site (`SitePipeline.start()` now throws if that is ever
+raised without a matching change to the completion check) — recorded as a
+load-bearing invariant, not merely a resource limit.
+
+**Idempotency is enforced by making redelivery a safe no-op, following the
+pattern `ingest`'s `IngestAlreadyAggregatedError` guard already established,**
+not by trying to prevent redelivery. `verify` now checks
+`countObservations(patternSampleId)` before probing and skips straight to
+re-enqueuing `estimate` if a prior attempt already wrote observations — the
+real cost redelivery risks here is sending the same HTTP requests at the
+client's origin a second time, not a database inconsistency.
+`audit_snapshot` gained `uq_audit_snapshot_sample_status`, a unique index on
+`(site_id, pattern_sample_id, http_status)` — the natural key `estimate`
+already writes one row per, per its own docblock ("ONE SNAPSHOT ROW PER
+OUTCOME") — and `insertAuditSnapshot` upserts on it with `ON CONFLICT DO
+NOTHING`, reading back the existing row on conflict rather than treating it as
+an error, mirroring `recordPatternSample`'s existing shape.
+
+**A site is attached and a run started through one new queue,
+`ATTACH_REQUESTS_QUEUE`, not through a fleet-wide poll.** `attachSite()`'s own
+docblock had already named the correct shape: "a run is attached explicitly,
+which is what the API will call." Building that required deciding how "the
+API" reaches into a separate worker process, and the answer is a small control
+message — `{organizationId, siteId, tier, sitemapRunId, sitemapUrl, baseUrl,
+expectedHost}` — posted by the new `POST /sites/:siteId/runs` route and
+consumed by a single `Worker` the worker process runs alongside its per-site
+pipelines. Its handler calls `attachSite()` (a no-op if already attached) and
+then `SitePipeline.startRun()`, in that order, which is what guarantees a
+`discover` job is never enqueued before something is listening for it.
+Deliberately NOT a periodic `listSites()` sweep: `CLAUDE.md`'s own
+non-negotiable rules flag fleet-wide auto-attach as needing a cross-organization
+read that has been repeatedly, deliberately left undecided, and every message
+on this queue already names the one site it is about — no enumeration, no new
+scope, nothing for the worker to decide on its own. `startRun` itself still
+runs synchronously in the API request, ahead of the queue message, so
+`uq_sitemap_run_one_active_per_site` arbitrates a race between two requests
+rather than two attach messages both trying to start a run.
+
+**`POST /sites/:siteId/runs`'s dependency on Redis is injected as its own
+parameter, `runTrigger?: RunTrigger`, not folded into `SettingsConfig`.**
+`REDIS_URL` has no default, and `api-config.ts`'s docblock already records
+twice why widening the config every route receives to require it would force
+every existing test building that config to also hold a Redis URL — the same
+§1.13 shape recurring a third time, caught before it landed rather than after.
+`buildApp` gained a fourth, optional parameter instead; omitted, the route
+answers 503 `RUN_TRIGGER_NOT_CONFIGURED` rather than crashing or silently doing
+nothing, and the existing test suite's zero-Redis invariant survives unchanged.
+
+**A stale-run sweeper now exists, and it is deliberately separate from the
+event-driven failure path.** `SitePipeline`'s `worker.on("failed", ...)`
+handler now calls `finishRun(..., "failed")` once a job's BullMQ retries are
+exhausted — an immediate, clean signal — but cannot catch the case where the
+*worker process itself* dies, since nothing survives to fire the event. A new
+`apps/worker/src/stale-run-sweeper.ts` polls on an interval
+(`HEARTBEAT_SWEEP_INTERVAL_MS`) for `running` rows whose heartbeat has gone
+quiet past `HEARTBEAT_STALE_THRESHOLD_MS` and fails them — a fleet-wide read
+with no `SiteScope`, deliberately, matching `organizationSiteIds`' precedent
+for a package-internal exception, and narrow: it returns ids only, never site
+content, and its only write is failing a run by id. `finishRun` itself gained
+a `WHERE status = 'running'` guard so a run that finished by some other path
+between a sweep's read and its write cannot be overwritten back to `failed` —
+harmless for every existing caller, since all of them already only call it
+while a run is running.
+
+### Consequences
+
+`apps/worker` has real test coverage for the first time — `apps/worker/test/`,
+against a real Redis, a real Postgres and a real local HTTP server, not the
+Redis-free stage-level testing `packages/pipeline` deliberately keeps. The
+first version of the self-chaining test caught the `:`-separator defect on its
+first run; a second fixture-sizing mistake (too few URLs per family to clear
+the pattern-trie's collapse threshold) and a missing `baseUrl`/`expectedHost`
+propagation gap through `AttachRequestPayload` → `SitePipeline.startRun` →
+`discover`'s payload were both found the same way, by the test failing for a
+real reason rather than by inspection. `packages/pipeline`'s own e2e suite
+gained matching idempotency regressions for `verify` and `estimate`
+(`pipeline.e2e.test.ts`), a dedicated `gzip-sniff.test.ts`, and a real gzip
+reproduction (`discover-gzip.e2e.test.ts`) for a related, independently-found
+bug — see the gzip fix below.
+
+`scripts/live-run.ts` is unchanged and still works: it drives the same stage
+functions directly, which now happen to also self-chain when given the
+chance (its own `enqueue` stub still just collects rather than executing, so
+this is inert for that script specifically), and it remains the only thing
+that has ever exercised a real run's discover→ingest→verify→estimate→finalize
+sequence against a genuinely large corpus.
+
+Not addressed here, and not silently resolved: the cross-organization
+fleet-wide auto-attach question `CLAUDE.md` and `attachSite()`'s own docblock
+both flag as open. This work makes single-site, explicitly-triggered
+attachment real; scaling to 650 sites' worth of concurrent, unattended
+attachment is a separate decision this ADR deliberately does not make.
+
+## ADR-0041 — A gzip-compressing server can make ingest fail on an already-decompressed file, fixed by sniffing bytes instead of trusting a header
+
+**Date:** 2026-09-08
+**Status:** Accepted.
+
+### Context
+
+A runbook for a new script, `scripts/live-run.ts` (the first thing able to
+drive a real run against a real site — see ADR-0040), surfaced a real,
+reproduced, pre-existing bug: `packages/pipeline/src/stages/discover.ts`'s
+`isGzip()` decided whether a stored sitemap file was gzip-compressed by
+checking `url.endsWith(".gz") || response.headers.get("content-encoding")`.
+Undici's `fetch` transparently decompresses a gzip response body before a
+`SitemapResponse`'s bytes are ever read, but leaves `content-encoding: gzip` on
+the response object regardless — so a server that genuinely, correctly
+compresses its XML on the wire (IIS and nginx both do this by default,
+independent of the URL's extension) left the pipeline believing the STORED
+bytes were still gzip. The next stage's `gunzip` then failed with
+`Z_DATA_ERROR: incorrect header check` on a perfectly good sitemap. Reproduced
+against `https://www.sitemaps.org/sitemap.xml`, which IIS serves this way.
+
+### Decision
+
+Trust the bytes actually on disk, not a header describing a transformation
+undici already reversed. A new helper, `packages/pipeline/src/gzip-sniff.ts`,
+reads the smallest possible prefix of a stream and checks for the gzip magic
+number (`1f 8b`). `discover.ts` sniffs the entry document immediately after
+`deps.store.put` writes it — before ever deciding `is_gzip` for the
+single-`urlset` case, and before re-opening the same bytes to detect the root
+element or list an index's children, both of which used to repeat the same
+`.gz`-suffix-or-nothing guess independently. `ingest.ts`'s `ingestOneFile`
+sniffs a freshly-downloaded child file the same way and corrects
+`sitemap_file.is_gzip` via a new optional field on `markFileDownloaded` — a
+child is only a named URL at discovery time, with no bytes yet to sniff, so
+this is the first point a caller can correct that registration-time guess from
+what was actually written.
+
+The `.gz`-URL-suffix fast path is kept everywhere it already existed; sniffing
+only replaces the `content-encoding` half of the check, which was the only
+half that could be wrong in the direction that matters (marking gzip bytes as
+plain is comparatively harmless — `streamLocs` would simply fail to parse XML
+it received as still-compressed noise — while marking already-plain bytes as
+gzip is what broke a working sitemap).
+
+### Consequences
+
+`packages/pipeline/src/gzip-sniff.test.ts` covers the sniff function directly
+(real gzip bytes, plain XML, an empty stream, and the prefix-only detection
+boundary). `discover-gzip.e2e.test.ts` reproduces the exact bug end to end
+against a real local HTTP server that genuinely gzips a response with an
+accurate header on a non-`.gz` URL, and asserts `discover`+`ingest` succeed
+where the old code threw. Neither test existed before, and neither of the
+existing gzip-adjacent tests in `packages/sitemap` could have caught this: they
+either pass `isGzip: true` by hand (testing the downstream gunzip-when-told-to
+path, not detection) or use `.gz`-suffixed synthetic fixtures — this codebase
+had no test anywhere of the specific header-vs-bytes mismatch a real
+compressing server produces.

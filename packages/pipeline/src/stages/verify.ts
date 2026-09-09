@@ -1,5 +1,6 @@
 import {
   appendSampleObservations,
+  countObservations,
   listSitemapFiles,
   type SampleObservationInsert,
   type SiteScope,
@@ -21,6 +22,7 @@ import {
   type VerifyPayload,
   verifyPayloadSchema
 } from "../payloads.js";
+import { checkRunCompletion } from "./finalize-trigger.js";
 
 /**
  * Stage 3: resolve one pattern's sample to real URLs and probe them.
@@ -43,7 +45,10 @@ import {
  */
 export type PatternOutcome =
   | PatternVerdict
-  | { readonly kind: "unresolvable"; readonly reason: "SAMPLE_UNRESOLVABLE" };
+  | {
+      readonly kind: "unresolvable";
+      readonly reason: "SAMPLE_UNRESOLVABLE" | "ALREADY_VERIFIED";
+    };
 
 export interface VerifyResult {
   readonly verdict: PatternOutcome;
@@ -65,6 +70,51 @@ export async function runVerify(
   );
 
   assertScopeMatchesPayload(scope, payload, "verify");
+
+  /**
+   * REDELIVERY GUARD. BullMQ is at-least-once, not exactly-once: a `verify`
+   * job can be handed to a worker again after it already ran to completion —
+   * an ack lost right as a process crashed, a stalled-lock reclaim. Re-probing
+   * would send the same real HTTP requests at the client's origin a second
+   * time, which is exactly the cost this platform's whole design exists to
+   * bound. Observations already existing for this draw means a previous
+   * attempt already probed and wrote them, so this attempt skips straight to
+   * making sure `estimate` still gets enqueued — which is itself a safe
+   * no-op if that attempt already did it too (see `insertAuditSnapshot`'s
+   * upsert).
+   */
+  const alreadyObserved = await countObservations(
+    deps.db,
+    scope,
+    payload.patternSampleId
+  );
+
+  if (alreadyObserved > 0) {
+    deps.logger.info(
+      {
+        sitemapRunId: payload.sitemapRunId,
+        patternId: payload.patternId,
+        patternSampleId: payload.patternSampleId,
+        alreadyObserved
+      },
+      "verify job redelivered after observations were already recorded; skipping re-probe"
+    );
+
+    await deps.enqueue("estimate", {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId,
+      patternId: payload.patternId,
+      patternSampleId: payload.patternSampleId
+    });
+
+    return {
+      verdict: { kind: "unresolvable", reason: "ALREADY_VERIFIED" },
+      probed: 0,
+      escalated: 0,
+      requestCount: 0,
+      observationsWritten: 0
+    };
+  }
 
   const files = await listSitemapFiles(deps.db, scope, payload.sitemapRunId);
   const fileByOrdinal = new Map(
@@ -95,6 +145,18 @@ export async function runVerify(
       "needs_review",
       "SAMPLE_UNRESOLVABLE"
     );
+
+    /**
+     * THE ONE PATH THAT REACHES A TERMINAL STATUS WITHOUT EVER ENQUEUING
+     * `estimate`. Every other way a pattern finishes goes through `estimate`,
+     * which runs this same check on its own way out — but this branch returns
+     * before that would ever happen, so if this happens to be the run's last
+     * unfinished pattern, nothing else would ever notice completion.
+     */
+    await checkRunCompletion(deps, scope, {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId
+    });
 
     return {
       verdict: { kind: "unresolvable", reason: "SAMPLE_UNRESOLVABLE" },

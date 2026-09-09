@@ -1,20 +1,31 @@
 import { Readable } from "node:stream";
 
 import { createDatabase } from "@pattern-aware/database";
-import type { SitemapResponse, SiteTier } from "@pattern-aware/pipeline";
+import {
+  ATTACH_REQUESTS_QUEUE,
+  attachRequestPayloadSchema,
+  parsePayload,
+  type SitemapResponse,
+  type SiteTier
+} from "@pattern-aware/pipeline";
 import {
   DEFAULT_SAMPLE_BUDGET,
   type SampleBudget
 } from "@pattern-aware/sampling";
 import { createLogger, getConfig } from "@pattern-aware/shared";
-import { LocalDiskFileStore } from "@pattern-aware/sitemap";
+import {
+  LocalDiskFileStore,
+  type OversizeThresholds
+} from "@pattern-aware/sitemap";
 import {
   HostCircuitBreaker,
   HostRateLimiter
 } from "@pattern-aware/verification";
+import { type Job, Worker } from "bullmq";
 import { Redis } from "ioredis";
 
 import { SitePipeline } from "./site-pipeline.js";
+import { sweepStaleRuns } from "./stale-run-sweeper.js";
 
 /**
  * The worker process: attaches pipeline queues for the sites with work in
@@ -93,6 +104,19 @@ const sampleBudget: SampleBudget = {
   minPerStratum: config.SAMPLE_MIN_PER_STRATUM
 };
 
+/**
+ * Phase 2A wires only the file-count hard limit through — the soft limit and
+ * the URL-based hard limit stay at `Infinity` so they cannot fire yet, even
+ * though `POPULATION_SOFT_LIMIT_URLS`/`POPULATION_HARD_LIMIT_URLS` are
+ * already validated config. Wiring those is scoped as a fast-follow, not
+ * dropped silently.
+ */
+const oversizeThresholds: OversizeThresholds = {
+  softLimitUrls: Number.POSITIVE_INFINITY,
+  hardLimitUrls: Number.POSITIVE_INFINITY,
+  hardLimitFiles: config.POPULATION_HARD_LIMIT_FILES
+};
+
 /** Fetch a sitemap. The one place the pipeline reaches the open internet. */
 async function fetchSitemap(url: string): Promise<SitemapResponse> {
   const response = await fetch(url, {
@@ -152,7 +176,8 @@ export async function attachSite(input: {
     fetchSitemap,
     rateLimiter,
     circuitBreaker,
-    sampleBudget
+    sampleBudget,
+    oversizeThresholds
   });
 
   pipeline.start();
@@ -161,12 +186,76 @@ export async function attachSite(input: {
   return pipeline;
 }
 
+/**
+ * The one thing that lets this worker start any work at all: a listener on
+ * the single well-known queue a caller posts to when it wants a specific
+ * site attached and a specific run started. See `ATTACH_REQUESTS_QUEUE`'s
+ * own docblock for why this is a queue message rather than a fleet-wide poll
+ * — the short version is that attaching needs no enumeration when the caller
+ * already knows exactly which site it means.
+ */
+const attachRequestsWorker = new Worker(
+  ATTACH_REQUESTS_QUEUE,
+  async (job: Job) => {
+    const request = parsePayload(
+      attachRequestPayloadSchema,
+      "attach-request",
+      job.data
+    );
+
+    const pipeline = await attachSite({
+      organizationId: request.organizationId,
+      siteId: request.siteId,
+      tier: request.tier
+    });
+
+    await pipeline.startRun({
+      sitemapRunId: request.sitemapRunId,
+      sitemapUrl: request.sitemapUrl,
+      baseUrl: request.baseUrl,
+      expectedHost: request.expectedHost
+    });
+
+    logger.info(
+      { siteId: request.siteId, sitemapRunId: request.sitemapRunId },
+      "site attached and run started"
+    );
+  },
+  {
+    connection,
+    // Attach requests are rare and cheap; nothing here benefits from
+    // parallelism, and serializing them avoids two requests for the same new
+    // site racing attachSite's own idempotent-but-not-atomic Map check.
+    concurrency: 1
+  }
+);
+
+attachRequestsWorker.on("failed", (job, error) => {
+  logger.error({ jobId: job?.id, err: error }, "attach request failed");
+});
+
+/**
+ * The stale-run sweeper: the backstop for a worker PROCESS dying mid-run,
+ * where no BullMQ "failed" event ever fires because nothing survives to fire
+ * it. See `sweepStaleRuns`'s own docblock for why this needs no `SiteScope`.
+ */
+const sweepInterval = setInterval(() => {
+  sweepStaleRuns(
+    database.db,
+    logger,
+    config.HEARTBEAT_STALE_THRESHOLD_MS
+  ).catch((error: unknown) => {
+    logger.error({ err: error }, "stale-run sweep failed");
+  });
+}, config.HEARTBEAT_SWEEP_INTERVAL_MS);
+
 logger.info(
   {
     perHostRps: config.HTTP_PER_HOST_REQUESTS_PER_SECOND,
-    perHostConcurrency: config.HTTP_PER_HOST_CONCURRENCY
+    perHostConcurrency: config.HTTP_PER_HOST_CONCURRENCY,
+    heartbeatStaleThresholdMs: config.HEARTBEAT_STALE_THRESHOLD_MS
   },
-  "worker started; awaiting site attachments"
+  "worker started; listening for attach requests"
 );
 
 /**
@@ -178,7 +267,12 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.on(signal, () => {
     logger.info({ signal }, "shutdown signal received, detaching sites");
 
-    Promise.all([...attached.values()].map(async (p) => p.stop()))
+    clearInterval(sweepInterval);
+
+    Promise.all([
+      attachRequestsWorker.close(),
+      ...[...attached.values()].map(async (p) => p.stop())
+    ])
       .then(async () => {
         await database.close();
         await connection.quit();

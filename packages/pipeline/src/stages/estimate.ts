@@ -23,6 +23,7 @@ import {
   estimatePayloadSchema,
   parsePayload
 } from "../payloads.js";
+import { checkRunCompletion } from "./finalize-trigger.js";
 
 /**
  * Stage 4: turn one pattern's observations into publishable claims.
@@ -123,6 +124,11 @@ export async function runEstimate(
       "pattern has no observations; recorded as blocked rather than as healthy"
     );
 
+    await checkRunCompletion(deps, scope, {
+      siteId: payload.siteId,
+      sitemapRunId: payload.sitemapRunId
+    });
+
     return { snapshotsWritten: 1, lowConfidenceCount: 0, unmeasured: true };
   }
 
@@ -157,6 +163,18 @@ export async function runEstimate(
     },
     "pattern estimated"
   );
+
+  /**
+   * THE FAN-IN'S COMMON CASE. Every pattern that reaches a real measurement
+   * ends here, so this is where a run notices it is done — see
+   * `checkRunCompletion`'s own docblock for why a count comparison is safe
+   * here without a lock, and why `verify`'s unresolvable path also has to
+   * call this.
+   */
+  await checkRunCompletion(deps, scope, {
+    siteId: payload.siteId,
+    sitemapRunId: payload.sitemapRunId
+  });
 
   return { snapshotsWritten, lowConfidenceCount, unmeasured: false };
 }

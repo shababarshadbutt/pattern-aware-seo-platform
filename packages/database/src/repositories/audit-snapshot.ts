@@ -143,6 +143,13 @@ export class ImpossibleClaimError extends Error {
  * Translates a CHECK violation into {@link ImpossibleClaimError} rather than
  * letting a raw SQLSTATE escape, so the failure names what actually went wrong
  * instead of arriving as an opaque driver error four layers up.
+ *
+ * Upserts on `(site_id, pattern_sample_id, http_status)` — one claim per
+ * outcome per draw — and does nothing on conflict. This is what makes a
+ * redelivered `estimate` job (BullMQ is at-least-once, not exactly-once) a
+ * safe no-op instead of a second row: the row already there is byte-for-byte
+ * what a re-run of `buildSnapshot` would write again, since both are pure
+ * functions of the same tallied observations.
  */
 /**
  * Coerce the numeric columns the driver hands back as strings.
@@ -205,13 +212,43 @@ export async function insertAuditSnapshot(
         impactScore: input.impactScore.toFixed(3),
         ...(input.strata === undefined ? {} : { strata: input.strata })
       })
+      .onConflictDoNothing({
+        target: [
+          auditSnapshot.siteId,
+          auditSnapshot.patternSampleId,
+          auditSnapshot.httpStatus
+        ]
+      })
       .returning(COLUMNS);
 
-    if (row === undefined) {
-      throw new Error("audit_snapshot insert returned no row");
+    if (row !== undefined) {
+      return toRow(row);
     }
 
-    return toRow(row);
+    /**
+     * Conflicted: this exact (draw, outcome) claim already exists, which is
+     * either a redelivered `estimate` job or a genuine second caller. Read it
+     * back rather than treat the conflict as an error — see the function's
+     * docblock on why this is a safe no-op rather than a defect.
+     */
+    const existing = await findSnapshotBySampleAndStatus(
+      db,
+      scope,
+      input.patternSampleId,
+      input.httpStatus
+    );
+
+    if (existing === undefined) {
+      // The insert conflicted, so a row exists — but it is not visible in this
+      // scope, which means the caller is holding a scope for a different site
+      // than the sample belongs to. The same shape `recordPatternSample`
+      // guards against.
+      throw new Error(
+        `audit_snapshot for pattern_sample ${input.patternSampleId} status ${input.httpStatus} conflicted on insert but is not visible in scope ${scope.siteId}`
+      );
+    }
+
+    return existing;
   } catch (error) {
     if (isCheckViolation(error)) {
       throw new ImpossibleClaimError(pgConstraintName(error), error);
@@ -219,6 +256,28 @@ export async function insertAuditSnapshot(
 
     throw error;
   }
+}
+
+/** One claim, by the natural key `insertAuditSnapshot` upserts on. */
+async function findSnapshotBySampleAndStatus(
+  db: Database,
+  scope: SiteScope,
+  patternSampleId: string,
+  httpStatus: number
+): Promise<AuditSnapshotRow | undefined> {
+  const [row] = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(auditSnapshot)
+    .where(
+      and(
+        eq(auditSnapshot.siteId, scope.siteId),
+        eq(auditSnapshot.patternSampleId, patternSampleId),
+        eq(auditSnapshot.httpStatus, httpStatus)
+      )
+    )
+    .limit(1);
+
+  return row === undefined ? undefined : toRow(row);
 }
 
 /**

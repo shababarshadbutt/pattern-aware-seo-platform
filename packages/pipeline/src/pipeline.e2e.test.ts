@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  countObservations,
   countPatternsByStatus,
   createOrganization,
   createSite,
@@ -283,7 +284,9 @@ describe("the pipeline end to end", () => {
     const result = await runDiscover(deps, scope, {
       siteId: scope.siteId,
       sitemapRunId: runId,
-      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`
+      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
     });
 
     expect(result.rootElement).toBe("sitemapindex");
@@ -294,6 +297,15 @@ describe("the pipeline end to end", () => {
 
     // Ordinal 0 is reserved for the index itself, so children start at 1.
     expect(files.map((file) => file.fileOrdinal)).toEqual([1, 2]);
+
+    /**
+     * THE `discover → ingest` HAND-OFF, self-chained rather than left for a
+     * caller to notice — the gap the Phase 1 orchestration work closed.
+     * `deps.enqueue` here just collects rather than running the job (the
+     * test drives `ingest` explicitly below with its own payload), but the
+     * enqueue call itself is the thing under test.
+     */
+    expect(enqueued.filter((job) => job.stage === "ingest")).toHaveLength(1);
   });
 
   it("ingests every file in one pass and draws a sample per pattern", async () => {
@@ -372,6 +384,20 @@ describe("the pipeline end to end", () => {
 
       expect(result.snapshotsWritten).toBeGreaterThan(0);
     }
+
+    /**
+     * THE `estimate → finalize` FAN-IN, the hand-off that did not exist at
+     * all before Phase 1's orchestration work — nothing counted "every
+     * pattern's estimate has finished" and closed the loop. By the time every
+     * pattern in `enqueued.filter(estimate)` has run, all three patterns are
+     * in a terminal status (`verify` already set it), so `checkRunCompletion`
+     * enqueues `finalize` on its way out. AT LEAST once — see
+     * `checkRunCompletion`'s own docblock on why more than one is a safe,
+     * anticipated outcome rather than a bug to prevent here.
+     */
+    expect(
+      enqueued.filter((job) => job.stage === "finalize").length
+    ).toBeGreaterThanOrEqual(1);
 
     const snapshots = await listSnapshotsByImpact(deps.db, scope, {
       sitemapRunId: runId,
@@ -632,7 +658,9 @@ describe("the pipeline end to end", () => {
     await runDiscover(deps, scope, {
       siteId: scope.siteId,
       sitemapRunId: secondRun.id,
-      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`
+      sitemapUrl: `${fixture.baseUrl}/sitemap.xml`,
+      baseUrl: fixture.baseUrl,
+      expectedHost: "127.0.0.1"
     });
 
     const files = await listSitemapFiles(deps.db, scope, secondRun.id);
@@ -658,6 +686,76 @@ describe("the pipeline end to end", () => {
 
     expect(counts.reduce((sum, entry) => sum + entry.count, 0)).toBe(3);
   }, 120_000);
+
+  it("redelivering a completed verify job does not re-probe or double-write observations", async () => {
+    /**
+     * REGRESSION for the idempotency gap the original audit found: only
+     * `ingest` was guarded against BullMQ redelivery. A `verify` job handed
+     * out twice — an ack lost right as a worker crashed, a stalled-lock
+     * reclaim — used to send the same real HTTP requests at the origin a
+     * second time.
+     */
+    const verifyJob = enqueued.find((job) => job.stage === "verify");
+
+    if (verifyJob === undefined) {
+      throw new Error("expected at least one verify job from the first run");
+    }
+
+    const payload = verifyJob.payload as { readonly patternSampleId: string };
+    const before = await countObservations(
+      deps.db,
+      scope,
+      payload.patternSampleId
+    );
+
+    expect(before).toBeGreaterThan(0);
+
+    const enqueuedBeforeRedelivery = enqueued.length;
+    const result = await runVerify(deps, scope, verifyJob.payload);
+
+    // Skipped the probe entirely — no new HTTP requests, no new rows.
+    expect(result.probed).toBe(0);
+    expect(result.observationsWritten).toBe(0);
+
+    const after = await countObservations(
+      deps.db,
+      scope,
+      payload.patternSampleId
+    );
+
+    expect(after).toBe(before);
+
+    // Still re-enqueues estimate, belt-and-braces — see the guard's own
+    // docblock for why that is itself a safe no-op.
+    expect(enqueued.length).toBe(enqueuedBeforeRedelivery + 1);
+    expect(enqueued.at(-1)?.stage).toBe("estimate");
+  }, 30_000);
+
+  it("redelivering a completed estimate job does not duplicate audit_snapshot rows", async () => {
+    const estimateJob = enqueued.find((job) => job.stage === "estimate");
+
+    if (estimateJob === undefined) {
+      throw new Error("expected at least one estimate job from the first run");
+    }
+
+    const before = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 200
+    });
+
+    const result = await runEstimate(deps, scope, estimateJob.payload);
+
+    // The upsert still reports success — the claim is there, whether this
+    // call wrote it or a prior one did — but it must not be a NEW row.
+    expect(result.snapshotsWritten).toBeGreaterThan(0);
+
+    const after = await listSnapshotsByImpact(deps.db, scope, {
+      sitemapRunId: runId,
+      limit: 200
+    });
+
+    expect(after.length).toBe(before.length);
+  }, 30_000);
 
   it("never made a request per URL in the population", () => {
     /**

@@ -1,9 +1,16 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
+import { chunkRows } from "../chunk.js";
 import { type Database, internalDatabase } from "../client.js";
 import { auditSnapshot } from "../schema/observability.js";
 import { pattern } from "../schema/pattern.js";
 import type { SiteScope } from "../scope.js";
+
+/**
+ * `siteId, sitemapRunId, template, segmentCount, populationCount, fileCount` —
+ * one bind parameter each. See `chunk.ts`.
+ */
+const COLUMNS_PER_ROW = 6;
 
 export type PatternStatus =
   | "unsampled"
@@ -63,6 +70,17 @@ export interface PatternUpsert {
  *
  * Batch rather than row-at-a-time because a large site produces thousands of
  * patterns and a round trip each would dominate the parse.
+ *
+ * CHUNKED, AND THE CHUNKS SHARE ONE TRANSACTION — not two independent
+ * decisions. `runIngest`'s `IngestAlreadyAggregatedError` guard treats "any
+ * pattern row exists for this run" as proof aggregation already completed
+ * (see the comment there), which was true when this was one `INSERT`
+ * statement. Splitting a large site's patterns into several statements
+ * without a shared transaction would let a crash between chunk 2 and chunk 3
+ * leave a partial aggregation that the guard would then mistake for a
+ * complete one on retry — silently reintroducing the exact durability bug
+ * fixed at M6, just one layer down. Wrapping every chunk in one transaction
+ * keeps "some pattern rows exist" and "aggregation completed" the same fact.
  */
 export async function upsertPatterns(
   db: Database,
@@ -74,29 +92,42 @@ export async function upsertPatterns(
     return 0;
   }
 
-  const rows = await internalDatabase(db)
-    .insert(pattern)
-    .values(
-      patterns.map((p) => ({
-        siteId: scope.siteId,
-        sitemapRunId,
-        template: p.template,
-        segmentCount: p.segmentCount,
-        populationCount: p.populationCount,
-        fileCount: p.fileCount
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [pattern.siteId, pattern.sitemapRunId, pattern.template],
-      set: {
-        populationCount: sql`${pattern.populationCount} + excluded.population_count`,
-        fileCount: sql`${pattern.fileCount} + excluded.file_count`,
-        updatedAt: sql`now()`
-      }
-    })
-    .returning({ id: pattern.id });
+  const values = patterns.map((p) => ({
+    siteId: scope.siteId,
+    sitemapRunId,
+    template: p.template,
+    segmentCount: p.segmentCount,
+    populationCount: p.populationCount,
+    fileCount: p.fileCount
+  }));
 
-  return rows.length;
+  const chunks = chunkRows(values, COLUMNS_PER_ROW);
+  const conn = internalDatabase(db);
+
+  const written = await conn.transaction(async (tx) => {
+    let count = 0;
+
+    for (const chunk of chunks) {
+      const rows = await tx
+        .insert(pattern)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: [pattern.siteId, pattern.sitemapRunId, pattern.template],
+          set: {
+            populationCount: sql`${pattern.populationCount} + excluded.population_count`,
+            fileCount: sql`${pattern.fileCount} + excluded.file_count`,
+            updatedAt: sql`now()`
+          }
+        })
+        .returning({ id: pattern.id });
+
+      count += rows.length;
+    }
+
+    return count;
+  });
+
+  return written;
 }
 
 /**

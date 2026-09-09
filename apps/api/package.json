@@ -13,11 +13,14 @@
   "dependencies": {
     "@fastify/cors": "^10.1.0",
     "@pattern-aware/database": "workspace:*",
+    "@pattern-aware/pipeline": "workspace:*",
     "@pattern-aware/sampling": "workspace:*",
     "@pattern-aware/shared": "workspace:*",
     "@pattern-aware/sitemap": "workspace:*",
+    "bullmq": "^5.28.0",
     "fastify": "^5.1.0",
     "fastify-type-provider-zod": "^7.0.0",
+    "ioredis": "^5.4.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {

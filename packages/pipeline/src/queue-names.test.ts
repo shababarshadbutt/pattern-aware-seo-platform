@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ATTACH_REQUESTS_QUEUE,
   InvalidQueueNameError,
   isPipelineStage,
   isSiteTier,
@@ -16,8 +17,27 @@ const OTHER = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 describe("queue namespacing", () => {
   it("names a queue by tier, site and stage", () => {
     expect(queueName({ tier: "standard", siteId: SITE, stage: "ingest" })).toBe(
-      `standard:${SITE}:ingest`
+      `standard.${SITE}.ingest`
     );
+  });
+
+  it("never produces a name BullMQ itself would refuse", () => {
+    /**
+     * THE REGRESSION THIS GUARDS. BullMQ's own `Queue`/`Worker` constructors
+     * throw on any name containing `:` — it is the delimiter their OWN Redis
+     * keys use — and this scheme's separator used to be `:` until the first
+     * real `SitePipeline` test against a real Redis failed on construction
+     * for every site. A pure-string assertion cannot re-derive that BullMQ
+     * fact on its own, so it is asserted directly here rather than trusted to
+     * stay true.
+     */
+    for (const stage of PIPELINE_STAGES) {
+      expect(
+        queueName({ tier: "standard", siteId: SITE, stage })
+      ).not.toContain(":");
+    }
+
+    expect(ATTACH_REQUESTS_QUEUE).not.toContain(":");
   });
 
   it("gives two sites disjoint queue names for every stage", () => {
@@ -59,12 +79,19 @@ describe("queue namespacing", () => {
 
   it("refuses a site id that is not a UUID", () => {
     /**
-     * The name is also a Redis key prefix, and `:` is the separator. A site id
-     * containing a colon would split into a different namespace than intended
-     * — and two sites could then land in the same one, which is the single
-     * failure this whole scheme exists to prevent.
+     * The name is also a Redis key prefix, and `.` is the separator. A site id
+     * containing the separator (or the `:` BullMQ itself forbids) would split
+     * into a different namespace than intended — and two sites could then
+     * land in the same one, which is the single failure this whole scheme
+     * exists to prevent.
      */
-    for (const bad of ["standard:evil", "", "not-a-uuid", `${SITE}:extra`]) {
+    for (const bad of [
+      "standard.evil",
+      "standard:evil",
+      "",
+      `${SITE}.extra`,
+      `${SITE}:extra`
+    ]) {
       expect(() =>
         queueName({ tier: "standard", siteId: bad, stage: "verify" })
       ).toThrow(InvalidQueueNameError);
@@ -73,11 +100,11 @@ describe("queue namespacing", () => {
 
   it("rejects a malformed queue name rather than guessing at it", () => {
     for (const bad of [
-      "standard:ingest",
-      `standard:${SITE}:not-a-stage`,
-      `nosuchtier:${SITE}:ingest`,
-      `standard:not-a-uuid:ingest`,
-      `standard:${SITE}:ingest:extra`
+      "standard.ingest",
+      `standard.${SITE}.not-a-stage`,
+      `nosuchtier.${SITE}.ingest`,
+      `standard.not-a-uuid.ingest`,
+      `standard.${SITE}.ingest.extra`
     ]) {
       expect(() => parseQueueName(bad)).toThrow(InvalidQueueNameError);
     }

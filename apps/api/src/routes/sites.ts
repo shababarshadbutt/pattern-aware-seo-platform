@@ -1,4 +1,5 @@
 import {
+  ActiveRunExistsError,
   countPatternsByStatus,
   createSite,
   type Database,
@@ -11,9 +12,11 @@ import {
   listSites,
   listSnapshotsByImpact,
   SiteHostConflictError,
+  type SitemapRunRow,
   type SiteRow,
   type SiteScope,
   siteScopeWithin,
+  startRun,
   updateSite
 } from "@pattern-aware/database";
 
@@ -22,9 +25,12 @@ import type { ApiInstance } from "../app.js";
 import { ApiProblem } from "../errors.js";
 import { withImpactBounds } from "../findings.js";
 import { resolveDefaultOrgScope } from "../org-scope.js";
+import type { RunTrigger } from "../run-trigger.js";
 import {
   analyticsQuery,
   errorResponse,
+  runSummary,
+  runTriggerBody,
   siteAnalyticsResponse,
   siteCreateBody,
   siteDetailResponse,
@@ -84,7 +90,8 @@ async function resolveSiteScope(
 export function registerSiteRoutes(
   app: ApiInstance,
   db: Database,
-  config: ApiConfig
+  config: ApiConfig,
+  runTrigger?: RunTrigger
 ): void {
   app.get(
     "/sites",
@@ -313,6 +320,104 @@ export function registerSiteRoutes(
 
         throw error;
       }
+    }
+  );
+
+  /**
+   * Start a run. THE FIRST THING IN THIS PLATFORM THAT ACTUALLY STARTS
+   * MEASURED WORK over HTTP — every route before this one only read or wrote
+   * rows. Before this route existed, nothing could: `scripts/live-run.ts`
+   * (a manual, out-of-process script) was the only way to drive a run at
+   * all, because nothing called `attachSite` and nothing enqueued `discover`.
+   *
+   * DOES NOT ENQUEUE `discover` DIRECTLY. Posting to that site's queue would
+   * be pointless if nothing is listening on it yet — a newly onboarded site
+   * has no `Worker` attached until something calls `attachSite`, which lives
+   * in the WORKER process, not this one. So this route posts a small message
+   * to `ATTACH_REQUESTS_QUEUE` instead: the worker's own listener attaches
+   * the site (a no-op if already attached) and only then starts the run,
+   * which is what guarantees the `discover` job always has something
+   * listening before it is ever enqueued.
+   *
+   * `startRun` IS CALLED HERE, SYNCHRONOUSLY, not by the worker. The
+   * `sitemap_run` row — and therefore `uq_sitemap_run_one_active_per_site`'s
+   * exclusion — has to exist before this responds, so a second call racing
+   * the first is rejected by the database rather than by two attach
+   * requests both trying to start a run for the same site.
+   *
+   * STILL NO AUTH (ADR-0026), and this is the route where that matters most
+   * so far: anyone who can reach this port can point real HTTP traffic at
+   * any site in the configured organization's origin.
+   *
+   * `runTrigger` MAY BE UNDEFINED. Widening every route's config to require
+   * `REDIS_URL` would undo the exact fix `api-config.ts`'s docblock records
+   * twice already, so this is injected as its own optional dependency
+   * instead (see `run-trigger.ts`) — omitted, a test simply gets a 503
+   * rather than needing a live Redis to build the app at all.
+   */
+  app.post(
+    "/sites/:siteId/runs",
+    {
+      schema: {
+        params: siteParams,
+        // NULLISH, not just every field within it optional: the ordinary
+        // call needs no input at all ("audit this site's own sitemap"), and
+        // Fastify's JSON body parser hands a bodyless POST to the validator
+        // as `null` rather than `{}` or `undefined` — an all-optional object
+        // schema still rejects `null` unless the schema itself allows it.
+        body: runTriggerBody.nullish(),
+        response: {
+          201: runSummary,
+          400: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          503: errorResponse
+        }
+      }
+    },
+    async (request, reply) => {
+      if (runTrigger === undefined) {
+        throw new ApiProblem(
+          503,
+          "RUN_TRIGGER_NOT_CONFIGURED",
+          "This deployment has no Redis connection configured for starting runs."
+        );
+      }
+
+      const { siteScope, site } = await resolveSiteScope(
+        db,
+        config,
+        request.params.siteId
+      );
+
+      let run: SitemapRunRow;
+
+      try {
+        run = await startRun(db, siteScope, { workerId: "api" });
+      } catch (error) {
+        if (error instanceof ActiveRunExistsError) {
+          throw ApiProblem.conflict(
+            "RUN_IN_FLIGHT",
+            `Site ${site.id} already has a run in flight.`
+          );
+        }
+
+        throw error;
+      }
+
+      await runTrigger.requestRun({
+        organizationId: site.organizationId,
+        siteId: site.id,
+        tier: site.tier,
+        sitemapRunId: run.id,
+        sitemapUrl:
+          request.body?.sitemapUrl ??
+          new URL("/sitemap.xml", site.baseUrl).href,
+        baseUrl: site.baseUrl,
+        expectedHost: site.host
+      });
+
+      return await reply.code(201).send(run);
     }
   );
 

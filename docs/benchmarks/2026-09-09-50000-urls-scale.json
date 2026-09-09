@@ -1,0 +1,103 @@
+{
+  "startedAt": "2026-09-09T06:18:09.629Z",
+  "urls": 50000,
+  "urlsPerFile": 10000,
+  "completedAt": "2026-09-09T06:18:58.241Z",
+  "urlsCounted": 50000,
+  "filesParsed": 5,
+  "filesFailed": 0,
+  "oversizeStopReason": null,
+  "patternCount": 19,
+  "samplesDrawn": 19,
+  "timingsMs": {
+    "discoverMs": 68.82899999999972,
+    "ingestMs": 1202.2572,
+    "verifyEstimateMs": 46617.9676,
+    "finalizeMs": 19.308799999998882
+  },
+  "totalWallMs": 47911.407699999996,
+  "ingestThroughputUrlsPerSec": 41588.43881325892,
+  "peakRssBytes": 278097920,
+  "ingestPeakRssBytes": 271372288,
+  "cpuUserMicros": 9453000,
+  "cpuSystemMicros": 2703000,
+  "diskPeakBytes": 1990314,
+  "finalDiskBytes": 1990314,
+  "postgres": {
+    "totalBytes": 876544,
+    "rowsByTable": {
+      "audit_snapshot": 19,
+      "pattern": 19,
+      "pattern_population": 95,
+      "pattern_sample": 19,
+      "sample_observation": 700,
+      "sitemap_file": 5
+    }
+  },
+  "httpRequestsServed": 1021,
+  "samplingHealth": {
+    "id": "8065dd3d-24bc-4fa5-90c8-6f41149cd428",
+    "siteId": "9d99af88-4d42-4811-a93b-6372397038bc",
+    "sitemapRunId": "b8ee6e94-de80-49a2-b72b-55cd411ff402",
+    "windowStart": "2026-09-09T06:18:10.295Z",
+    "windowEnd": "2026-09-09T06:18:58.139Z",
+    "patternsTotal": 19,
+    "patternsLowConfidence": 5,
+    "patternsExpanded": 0,
+    "patternsBlocked": 0,
+    "patternsNeedsReview": 0,
+    "samplesDrawn": 19,
+    "httpRequests": 845,
+    "getEscalations": 145,
+    "circuitBreaks": 0
+  },
+  "patternStatusCounts": [
+    {
+      "status": "measured",
+      "count": 19,
+      "populationCount": 50000
+    }
+  ],
+  "topPatterns": [
+    {
+      "template": "/part/{param}",
+      "populationCount": 27485
+    },
+    {
+      "template": "/{param}/page/{param}",
+      "populationCount": 5050
+    },
+    {
+      "template": "/search",
+      "populationCount": 3943
+    },
+    {
+      "template": "/shop/seals/{param}",
+      "populationCount": 2048
+    },
+    {
+      "template": "/shop/tools/{param}",
+      "populationCount": 2001
+    },
+    {
+      "template": "/shop/parts/{param}",
+      "populationCount": 1983
+    },
+    {
+      "template": "/shop/fasteners/{param}",
+      "populationCount": 1980
+    },
+    {
+      "template": "/shop/bearings/{param}",
+      "populationCount": 1967
+    },
+    {
+      "template": "/legacy/discontinued/{param}",
+      "populationCount": 1043
+    },
+    {
+      "template": "/catalog/parts/{param}/detail/{param}",
+      "populationCount": 332
+    }
+  ]
+}

@@ -24,6 +24,7 @@ import { registerRunRoutes } from "./routes/runs.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerSiteRoutes } from "./routes/sites.js";
 import { registerToolRoutes } from "./routes/tools.js";
+import type { RunTrigger } from "./run-trigger.js";
 
 export type { ApiConfig, SettingsConfig } from "./api-config.js";
 
@@ -54,11 +55,19 @@ export type ApiInstance = FastifyInstance<
  * Takes `db` as a parameter for the same reason: a test can hand this a
  * scoped test-harness database instead of the real pool, and nothing here
  * reaches for global state to find one.
+ *
+ * `runTrigger` is OPTIONAL and separate from `config` for the reason
+ * `run-trigger.ts` documents: `REDIS_URL` has no default, so folding it into
+ * `SettingsConfig` would force every existing caller of `buildApp` — this
+ * suite included — to also hold a Redis URL. Omitted, `POST
+ * /sites/:siteId/runs` answers 503 instead of requiring Redis to exist for a
+ * process that has never needed it.
  */
 export function buildApp(
   config: SettingsConfig,
   logger: Logger,
-  db: Database
+  db: Database,
+  runTrigger?: RunTrigger
 ): ApiInstance {
   const app = Fastify({
     loggerInstance: logger
@@ -111,7 +120,7 @@ export function buildApp(
   }
 
   registerHealthRoutes(app, config);
-  registerSiteRoutes(app, db, config);
+  registerSiteRoutes(app, db, config, runTrigger);
   registerPatternRoutes(app, db, config);
   // Fleet-wide, organization-scoped reads — see ADR-0028.
   registerIssueRoutes(app, db, config);

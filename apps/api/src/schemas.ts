@@ -815,6 +815,19 @@ export const siteCreateBody = z
   })
   .strict();
 
+/**
+ * Start a run. `sitemapUrl` is optional because the ordinary case — audit
+ * this site's own sitemap — needs no input at all; the route defaults to
+ * `{baseUrl}/sitemap.xml`. Present only for the case where a site's sitemap
+ * genuinely lives somewhere else (a CDN-served sitemap next to an
+ * apex-domain site, for one).
+ */
+export const runTriggerBody = z
+  .object({
+    sitemapUrl: z.url().max(2048).optional()
+  })
+  .strict();
+
 // --- Tools (pure computation, no database) --------------------------------
 
 /**

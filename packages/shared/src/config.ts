@@ -83,6 +83,29 @@ const configSchema = z.object({
   // changing, since they take the store as an interface.
   SITEMAP_STORE_ROOT: z.string().min(1).default(".sitemaps"),
 
+  // --- Stale-run recovery ---
+  // The heartbeat sweeper's backstop for a worker PROCESS dying mid-run, where
+  // no BullMQ "failed" event ever fires because nothing is left running to
+  // fire it. Generous by design: the sweeper cannot distinguish "the worker
+  // died" from "a job is legitimately still working" any other way, so this
+  // has to comfortably exceed the slowest single stage a real run takes.
+  HEARTBEAT_STALE_THRESHOLD_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .default(900_000),
+  // How often the sweep itself runs. Independent of the threshold above: a
+  // short interval checking against a long threshold costs one cheap query
+  // per tick and catches a stale run soon after it actually goes stale.
+  HEARTBEAT_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(10_000)
+    .default(120_000),
+  // How often the worker re-lists attached sites is NOT here — attaching is
+  // per-request (see ATTACH_REQUESTS_QUEUE), not a poll. There is nothing to
+  // configure for a mechanism that does not exist.
+
   // --- Parse budgets: memory and concurrency ---
   // Piscina threads for the streaming SAX pass. Four is the legacy
   // POPULATION_MAX_WORKERS, chosen against heap arithmetic for a box also

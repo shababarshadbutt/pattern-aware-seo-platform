@@ -23,12 +23,14 @@ import {
   createTestDatabase,
   type TestDatabase
 } from "@pattern-aware/database/testing";
+import type { AttachRequestPayload } from "@pattern-aware/pipeline";
 import { createLogger, loadPolicyConfig } from "@pattern-aware/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
 import { resetOrgScopeCacheForTesting } from "../src/org-scope.js";
 import { POLICY_LIMITS } from "../src/policy-manifest.js";
+import type { RunTrigger } from "../src/run-trigger.js";
 
 /**
  * The API against a real migrated Postgres, driven through `app.inject()`.
@@ -1740,5 +1742,192 @@ describe("onboarding a project", () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+/** A `RunTrigger` that records calls instead of touching Redis. */
+function fakeRunTrigger(): RunTrigger & {
+  readonly calls: AttachRequestPayload[];
+} {
+  const calls: AttachRequestPayload[] = [];
+
+  return {
+    calls,
+    async requestRun(payload) {
+      calls.push(payload);
+    },
+    async close() {
+      // Nothing to close.
+    }
+  };
+}
+
+describe("POST /sites/:siteId/runs", () => {
+  it("answers 503 when no run trigger is configured", async () => {
+    /**
+     * `app` (built once for this whole file) never received a `runTrigger` —
+     * deliberately, the same reason the rest of this suite holds no Redis
+     * URL. This is what a deployment with `REDIS_URL` unset, or a test
+     * building `buildApp` the ordinary 3-argument way, actually gets: a clear
+     * 503, not a route that silently does nothing or crashes reaching for a
+     * connection that was never made.
+     */
+    const response = await app.inject({
+      method: "POST",
+      url: `/sites/${ownSite.siteId}/runs`
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      error: { code: "RUN_TRIGGER_NOT_CONFIGURED" }
+    });
+  });
+
+  it("starts a run and posts an attach request, defaulting the sitemap URL", async () => {
+    const trigger = fakeRunTrigger();
+    const withTrigger = buildApp(
+      {
+        NODE_ENV: "test",
+        DEFAULT_ORGANIZATION_SLUG: DEMO_SLUG,
+        ...loadPolicyConfig({})
+      },
+      createLogger({ service: "api-test", level: "silent", pretty: false }),
+      db,
+      trigger
+    );
+
+    await withTrigger.ready();
+
+    const site = await createSite(db, ownScope, {
+      name: "Triggerable Site",
+      baseUrl: "https://triggerable.example"
+    });
+
+    const response = await withTrigger.inject({
+      method: "POST",
+      url: `/sites/${site.row.id}/runs`
+    });
+
+    expect(response.statusCode).toBe(201);
+
+    const body = response.json() as {
+      readonly id: string;
+      readonly status: string;
+    };
+
+    expect(body.status).toBe("running");
+
+    expect(trigger.calls).toHaveLength(1);
+    expect(trigger.calls[0]).toMatchObject({
+      organizationId: ownScope.organizationId,
+      siteId: site.row.id,
+      tier: "standard",
+      sitemapRunId: body.id,
+      // Defaulted from the site's own base URL, since none was given.
+      sitemapUrl: "https://triggerable.example/sitemap.xml"
+    });
+
+    await withTrigger.close();
+  });
+
+  it("accepts an explicit sitemap URL instead of the default", async () => {
+    const trigger = fakeRunTrigger();
+    const withTrigger = buildApp(
+      {
+        NODE_ENV: "test",
+        DEFAULT_ORGANIZATION_SLUG: DEMO_SLUG,
+        ...loadPolicyConfig({})
+      },
+      createLogger({ service: "api-test", level: "silent", pretty: false }),
+      db,
+      trigger
+    );
+
+    await withTrigger.ready();
+
+    const site = await createSite(db, ownScope, {
+      name: "Custom Sitemap Site",
+      baseUrl: "https://custom-sitemap.example"
+    });
+
+    const response = await withTrigger.inject({
+      method: "POST",
+      url: `/sites/${site.row.id}/runs`,
+      payload: { sitemapUrl: "https://cdn.custom-sitemap.example/sitemap.xml" }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(trigger.calls[0]?.sitemapUrl).toBe(
+      "https://cdn.custom-sitemap.example/sitemap.xml"
+    );
+
+    await withTrigger.close();
+  });
+
+  it("refuses a second run while one is already in flight", async () => {
+    const trigger = fakeRunTrigger();
+    const withTrigger = buildApp(
+      {
+        NODE_ENV: "test",
+        DEFAULT_ORGANIZATION_SLUG: DEMO_SLUG,
+        ...loadPolicyConfig({})
+      },
+      createLogger({ service: "api-test", level: "silent", pretty: false }),
+      db,
+      trigger
+    );
+
+    await withTrigger.ready();
+
+    const site = await createSite(db, ownScope, {
+      name: "Busy Site",
+      baseUrl: "https://busy.example"
+    });
+
+    const first = await withTrigger.inject({
+      method: "POST",
+      url: `/sites/${site.row.id}/runs`
+    });
+
+    expect(first.statusCode).toBe(201);
+
+    const second = await withTrigger.inject({
+      method: "POST",
+      url: `/sites/${site.row.id}/runs`
+    });
+
+    expect(second.statusCode).toBe(409);
+    expect(second.json()).toMatchObject({ error: { code: "RUN_IN_FLIGHT" } });
+
+    // The database, not a duplicated attach request, is what refused it.
+    expect(trigger.calls).toHaveLength(1);
+
+    await withTrigger.close();
+  });
+
+  it("404s for a site outside this organization", async () => {
+    const trigger = fakeRunTrigger();
+    const withTrigger = buildApp(
+      {
+        NODE_ENV: "test",
+        DEFAULT_ORGANIZATION_SLUG: DEMO_SLUG,
+        ...loadPolicyConfig({})
+      },
+      createLogger({ service: "api-test", level: "silent", pretty: false }),
+      db,
+      trigger
+    );
+
+    await withTrigger.ready();
+
+    const response = await withTrigger.inject({
+      method: "POST",
+      url: "/sites/00000000-0000-0000-0000-000000000000/runs"
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(trigger.calls).toHaveLength(0);
+
+    await withTrigger.close();
   });
 });

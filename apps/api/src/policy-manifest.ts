@@ -60,7 +60,14 @@ export const POLICY_LIMITS: {
   POPULATION_HARD_LIMIT_FILES: {
     label: "Population hard limit (files)",
     unit: "count",
-    enforcedAt: null
+    // Phase 2A: threaded into `PipelineDeps.oversizeThresholds` at the worker
+    // edge, the same way `sampleBudget` composes `SAMPLE_*` — and from there
+    // into `assessSize` inside `packages/pipeline/src/stages/ingest.ts`,
+    // which now actually stops a run past this many files rather than
+    // continuing indefinitely. The soft URL limit and hard URL limit remain
+    // unenforced (both still `Infinity` at the worker edge) — a scoped-down
+    // fast-follow, not silently dropped.
+    enforcedAt: WORKER_ENTRY
   },
 
   // --- Sampling bounds. Composed into a SampleBudget at the worker edge. ---

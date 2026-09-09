@@ -1,8 +1,15 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
+import { chunkRows } from "../chunk.js";
 import { type Database, internalDatabase } from "../client.js";
 import { sitemapFile } from "../schema/ingestion.js";
 import type { SiteScope } from "../scope.js";
+
+/**
+ * `siteId, sitemapRunId, url, fileOrdinal, filename, isGzip` — one bind
+ * parameter each. See `chunk.ts`.
+ */
+const COLUMNS_PER_ROW = 6;
 
 /**
  * The per-file record that makes a run resumable.
@@ -84,21 +91,29 @@ export async function upsertSitemapFiles(
     return [];
   }
 
-  await internalDatabase(db)
-    .insert(sitemapFile)
-    .values(
-      files.map((file) => ({
-        siteId: scope.siteId,
-        sitemapRunId,
-        url: file.url,
-        fileOrdinal: file.fileOrdinal,
-        filename: file.filename ?? null,
-        isGzip: file.isGzip ?? false
-      }))
-    )
-    .onConflictDoNothing({
-      target: [sitemapFile.siteId, sitemapFile.sitemapRunId, sitemapFile.url]
-    });
+  const values = files.map((file) => ({
+    siteId: scope.siteId,
+    sitemapRunId,
+    url: file.url,
+    fileOrdinal: file.fileOrdinal,
+    filename: file.filename ?? null,
+    isGzip: file.isGzip ?? false
+  }));
+
+  const conn = internalDatabase(db);
+
+  // Each row is independently idempotent (`onConflictDoNothing` on its own
+  // key), so unlike `upsertPatterns` these chunks need no shared transaction —
+  // a crash mid-write just leaves some files registered and the rest to
+  // register on retry, which is already how discovery is meant to resume.
+  for (const chunk of chunkRows(values, COLUMNS_PER_ROW)) {
+    await conn
+      .insert(sitemapFile)
+      .values(chunk)
+      .onConflictDoNothing({
+        target: [sitemapFile.siteId, sitemapFile.sitemapRunId, sitemapFile.url]
+      });
+  }
 
   return listSitemapFiles(db, scope, sitemapRunId);
 }
@@ -170,6 +185,12 @@ export async function countSitemapFiles(
  * The digest is not a checksum for its own sake — it answers "has this site's
  * sitemap changed since last run?" without re-parsing, and it is the only way
  * to tell a genuinely shrunken sitemap from a truncated download.
+ *
+ * `isGzip`, when given, OVERWRITES whatever `upsertSitemapFiles` guessed from
+ * the URL's suffix. A child file is only a named URL until this call — there
+ * are no bytes to sniff before it — so the registration guess is exactly that,
+ * a guess, and this is the first point a caller can correct it from what was
+ * actually written to disk.
  */
 export async function markFileDownloaded(
   db: Database,
@@ -179,6 +200,7 @@ export async function markFileDownloaded(
     readonly storageKey: string;
     readonly contentDigest: string;
     readonly byteSize: number;
+    readonly isGzip?: boolean;
   }
 ): Promise<void> {
   await internalDatabase(db)
@@ -188,6 +210,7 @@ export async function markFileDownloaded(
       storageKey: stored.storageKey,
       contentDigest: stored.contentDigest,
       byteSize: stored.byteSize,
+      ...(stored.isGzip === undefined ? {} : { isGzip: stored.isGzip }),
       updatedAt: sql`now()`
     })
     .where(

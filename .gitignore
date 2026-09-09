@@ -61,3 +61,9 @@ tmp/
 # Downloaded sitemap files between pipeline stages (SITEMAP_STORE_ROOT).
 # Real client sitemaps land here on a live run and must never be committed.
 .sitemaps/
+
+# Copied prior-art excerpts from a different codebase, used only as
+# investigation input for docs/reports/phase-2b-prior-art-analysis.md — not
+# this product's source, of uncertain provenance/licensing, and already known
+# to fail this repo's own lint rules.
+docs/Refrence/

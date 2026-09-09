@@ -45,6 +45,7 @@ export {
 } from "./ingest/resolve-candidates.js";
 export {
   assessSize,
+  DEFAULT_OVERSIZE_THRESHOLDS,
   type OversizeThresholds,
   type OversizeVerdict,
   sampleRateMultiplierFor

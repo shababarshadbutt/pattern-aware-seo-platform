@@ -1,9 +1,19 @@
 import { and, eq, sql } from "drizzle-orm";
 
+import { chunkRows } from "../chunk.js";
 import { type Database, internalDatabase } from "../client.js";
 import { sitemapFile } from "../schema/ingestion.js";
 import { patternPopulation } from "../schema/pattern.js";
 import type { SiteScope } from "../scope.js";
+
+/**
+ * `siteId, patternId, sitemapFileId, urlCount` — one bind parameter each.
+ * A run with thousands of patterns spread across thousands of files produces
+ * far more than 16,383 rows (the point at which 4 columns hits Postgres's
+ * 65,535-parameter ceiling), so this is chunked rather than a single
+ * `.values(entireArray)` call. See `chunk.ts`.
+ */
+const COLUMNS_PER_ROW = 4;
 
 /**
  * Which files hold a pattern's URLs, and how many each holds.
@@ -62,27 +72,43 @@ export async function upsertPatternPopulations(
     return 0;
   }
 
-  await internalDatabase(db)
-    .insert(patternPopulation)
-    .values(
-      rows.map((population) => ({
-        siteId: scope.siteId,
-        patternId: population.patternId,
-        sitemapFileId: population.sitemapFileId,
-        urlCount: population.urlCount
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [
-        patternPopulation.siteId,
-        patternPopulation.patternId,
-        patternPopulation.sitemapFileId
-      ],
-      set: {
-        urlCount: sql`excluded.url_count`,
-        updatedAt: sql`now()`
-      }
-    });
+  const values = rows.map((population) => ({
+    siteId: scope.siteId,
+    patternId: population.patternId,
+    sitemapFileId: population.sitemapFileId,
+    urlCount: population.urlCount
+  }));
+
+  const chunks = chunkRows(values, COLUMNS_PER_ROW);
+  const conn = internalDatabase(db);
+
+  /**
+   * One transaction across every chunk, not because a partial write here is
+   * unsafe to resume from (each row is independently idempotent via
+   * `onConflictDoUpdate` on its own key), but so a crash mid-write leaves
+   * either the old figures or the new ones, never a torn mix of both for a
+   * single ingest pass — the same "no half-written aggregate" property
+   * `upsertPatterns` needs for its own correctness (see there), applied here
+   * for consistency rather than because a bug was found without it.
+   */
+  await conn.transaction(async (tx) => {
+    for (const chunk of chunks) {
+      await tx
+        .insert(patternPopulation)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: [
+            patternPopulation.siteId,
+            patternPopulation.patternId,
+            patternPopulation.sitemapFileId
+          ],
+          set: {
+            urlCount: sql`excluded.url_count`,
+            updatedAt: sql`now()`
+          }
+        });
+    }
+  });
 
   return rows.length;
 }

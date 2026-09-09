@@ -8,9 +8,24 @@
  * legacy tool had, and it is not visible in testing because it needs a large
  * site and a small one at the same time.
  *
- * The namespace is `{tier}:{siteId}:{stage}`, so a worker can be pointed at one
+ * The namespace is `{tier}.{siteId}.{stage}`, so a worker can be pointed at one
  * tier, one site, or one stage without touching the others, and Redis keys for
  * two sites can never collide.
+ *
+ * THE SEPARATOR IS `.`, NOT `:` — corrected here rather than left as
+ * originally designed. `:` was the separator this scheme was documented with
+ * from M5 onward, and every prose description of it elsewhere in this
+ * codebase still says so; that documentation is a historical record now, not
+ * a spec to re-derive from. BullMQ's own `Queue`/`Worker` constructors THROW
+ * on any name containing `:` — it is the delimiter BullMQ's own Redis keys use
+ * internally (`bull:{queueName}:wait`, etc.), so a queue name containing one
+ * would corrupt BullMQ's own key parsing. This was never caught because
+ * nothing before the Phase 1 orchestration work ever constructed a real
+ * BullMQ `Queue` or `Worker` with a name this function produced — the
+ * pure-string tests here could not have found it, and `packages/pipeline`'s
+ * own e2e suite is deliberately Redis-free by design (see `deps.ts`). The
+ * first real `SitePipeline` test against a real Redis failed on construction,
+ * immediately, for every site.
  */
 
 export const PIPELINE_STAGES = [
@@ -33,6 +48,22 @@ export const PIPELINE_STAGES = [
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
+/**
+ * The one queue that is NOT per-site.
+ *
+ * Every stage queue needs a `Worker` already listening before a job on it can
+ * run, which means something has to attach a site's five queues before the
+ * first `discover` job can be enqueued onto any of them. `apps/worker` has no
+ * fleet-wide read to decide which sites need attaching on its own — that read
+ * is deliberately not built (see `attachSite`'s own docblock) — so instead
+ * the caller who already knows a specific site's `organizationId`/`tier`
+ * (the API, handling a request for that one site) posts a small message here,
+ * and the worker's own listener on this single well-known queue attaches that
+ * one site and starts its run. No enumeration, no cross-tenant read: every
+ * message names exactly the site it is about.
+ */
+export const ATTACH_REQUESTS_QUEUE = "attach-requests";
+
 export const SITE_TIERS = ["standard", "priority", "bulk"] as const;
 
 export type SiteTier = (typeof SITE_TIERS)[number];
@@ -43,11 +74,13 @@ export class InvalidQueueNameError extends Error {
 }
 
 /**
- * A site id is a UUID everywhere in this system, and the separator is `:`.
+ * A site id is a UUID everywhere in this system, and the separator is `.`.
  *
  * Checked rather than assumed because the name is also a Redis key prefix: a
- * site id containing a colon would silently split into a different namespace,
- * and two sites could then share one. Cheap check, unrecoverable failure.
+ * site id containing the separator would silently split into a different
+ * namespace, and two sites could then share one. A UUID cannot contain `.`,
+ * so this check alone is what makes that structurally impossible rather than
+ * merely unlikely. Cheap check, unrecoverable failure.
  */
 const SITE_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -73,7 +106,7 @@ export function queueName(address: QueueAddress): string {
     );
   }
 
-  return `${address.tier}:${address.siteId}:${address.stage}`;
+  return `${address.tier}.${address.siteId}.${address.stage}`;
 }
 
 /**
@@ -83,11 +116,11 @@ export function queueName(address: QueueAddress): string {
  * listing, which is otherwise a wall of opaque strings.
  */
 export function parseQueueName(name: string): QueueAddress {
-  const parts = name.split(":");
+  const parts = name.split(".");
 
   if (parts.length !== 3) {
     throw new InvalidQueueNameError(
-      `expected "{tier}:{siteId}:{stage}", got "${name}"`
+      `expected "{tier}.{siteId}.{stage}", got "${name}"`
     );
   }
 

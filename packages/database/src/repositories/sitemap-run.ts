@@ -163,6 +163,14 @@ export async function updateRunProgress(
  * can see which threshold it hit — a degraded run with no explanation is
  * indistinguishable from a healthy one at a glance, which is the failure mode
  * the status exists to prevent.
+ *
+ * GUARDED ON `status = 'running'`, not unconditional. Every existing caller
+ * already only calls this while a run is running, so the guard changes
+ * nothing for them — but it is what makes it safe for a BullMQ job's
+ * exhausted-retries handler to call this too: a job belonging to a run that
+ * some OTHER path already finished (finalize completing it normally, a
+ * concurrent failure racing this one) finds no matching row and quietly does
+ * nothing, rather than stamping `failed` over a `complete` run.
  */
 export async function finishRun(
   db: Database,
@@ -180,7 +188,13 @@ export async function finishRun(
       completedAt: sql`now()`,
       updatedAt: sql`now()`
     })
-    .where(and(eq(sitemapRun.id, runId), eq(sitemapRun.siteId, scope.siteId)))
+    .where(
+      and(
+        eq(sitemapRun.id, runId),
+        eq(sitemapRun.siteId, scope.siteId),
+        eq(sitemapRun.status, "running")
+      )
+    )
     .returning(COLUMNS);
 
   return row;
@@ -203,6 +217,91 @@ export async function findActiveRun(
     .limit(1);
 
   return row;
+}
+
+/**
+ * One run by id, within a known site.
+ *
+ * `verify`'s unresolvable path and `estimate`'s completion check both need
+ * `total_patterns` — the fan-in's denominator, since every pattern for a run
+ * ends up in a terminal status one way or another (`measured`/`blocked`/
+ * `needs_review`, the last of which `ingest` also assigns immediately to a
+ * pattern with no resolvable candidates) — and neither is handed the whole
+ * row on its job payload, only `patternSampleId`/`patternId`. This is the one
+ * place that reads it back.
+ */
+export async function findRunById(
+  db: Database,
+  scope: SiteScope,
+  runId: string
+): Promise<SitemapRunRow | undefined> {
+  const [row] = await internalDatabase(db)
+    .select(COLUMNS)
+    .from(sitemapRun)
+    .where(and(eq(sitemapRun.id, runId), eq(sitemapRun.siteId, scope.siteId)))
+    .limit(1);
+
+  return row;
+}
+
+export interface StaleRun {
+  readonly id: string;
+  readonly siteId: string;
+}
+
+/**
+ * Every run whose heartbeat has gone quiet.
+ *
+ * `idx_sitemap_run_heartbeat` is this query's only shape — `running` rows
+ * ordered by nothing, filtered by a heartbeat older than the threshold. Not
+ * scoped to one site: this is the sweeper's own read, run by the worker
+ * process rather than in response to any caller's request, and it is
+ * deliberately narrow — it returns ids only, not full rows, so it cannot
+ * become a second way to read another tenant's data. See
+ * `systemOrganizationScope`'s docblock for why a fleet-wide read like this
+ * needs to stand out rather than blend in.
+ */
+export async function findStaleRuns(
+  db: Database,
+  thresholdMs: number
+): Promise<readonly StaleRun[]> {
+  return internalDatabase(db)
+    .select({ id: sitemapRun.id, siteId: sitemapRun.siteId })
+    .from(sitemapRun)
+    .where(
+      and(
+        eq(sitemapRun.status, "running"),
+        sql`${sitemapRun.heartbeatAt} < now() - (${thresholdMs}::text || ' milliseconds')::interval`
+      )
+    );
+}
+
+/**
+ * Fail one stale run, without a `SiteScope` — the sweeper finds these
+ * fleet-wide and has no per-site authority to narrow to.
+ *
+ * Guarded on `status = 'running'` in the `WHERE` clause rather than trusted
+ * from the caller's read: a run that completed in the gap between
+ * {@link findStaleRuns} and this call must not be overwritten back to
+ * `failed`.
+ */
+export async function failStaleRun(
+  db: Database,
+  runId: string,
+  reason: string
+): Promise<boolean> {
+  const rows = await internalDatabase(db)
+    .update(sitemapRun)
+    .set({
+      status: "failed",
+      statusReason: reason,
+      completedAt: sql`now()`,
+      updatedAt: sql`now()`
+    })
+    .where(and(eq(sitemapRun.id, runId), eq(sitemapRun.status, "running")))
+    .returning({ id: sitemapRun.id });
+
+  return rows.length > 0;
 }
 
 /** Recent runs for this site, newest first — the run-history view. */

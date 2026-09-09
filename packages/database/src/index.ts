@@ -136,8 +136,11 @@ export {
 export {
   ACTIVE_RUN_STATUSES,
   ActiveRunExistsError,
+  failStaleRun,
   findActiveRun,
   findOrganizationRunById,
+  findRunById,
+  findStaleRuns,
   finishRun,
   heartbeatRun,
   latestRunPerSite,
@@ -146,6 +149,7 @@ export {
   type OrganizationRunRow,
   type RunStatus,
   type SitemapRunRow,
+  type StaleRun,
   startRun,
   updateRunProgress
 } from "./repositories/sitemap-run.js";
