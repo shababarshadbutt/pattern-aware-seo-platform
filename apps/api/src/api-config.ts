@@ -23,6 +23,7 @@ export type ApiConfig = Pick<
   | "DEFAULT_ORGANIZATION_SLUG"
   | "BASIC_AUTH_USER"
   | "BASIC_AUTH_PASSWORD"
+  | "APP_VERSION"
 >;
 
 /**

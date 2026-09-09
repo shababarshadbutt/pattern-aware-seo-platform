@@ -47,8 +47,20 @@ services:
       DATABASE_URL: postgresql://seo_platform:password@postgres:5432/seo_platform
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
-      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+      # Shown in the nav rail and served back from GET /health — see
+      # ADR-0043. Defaults to the version this compose file shipped with if
+      # `.env` doesn't override it.
+      APP_VERSION: ${APP_VERSION:-1.0.0}
+      # Bare keys (no `${...:-}` default) so an unset var is OMITTED from the
+      # container's environment rather than passed through as an explicit
+      # empty string. packages/shared's config schema validates these with
+      # `z.string().min(1).optional()` — undefined is fine, but a *present*
+      # empty string fails validation and crashes the API at startup. An
+      # `${BASIC_AUTH_USER:-}` default here used to manufacture exactly that
+      # empty string whenever `.env` left both unset, so "leave them unset for
+      # an unprotected deployment" silently meant "the API won't start."
+      BASIC_AUTH_USER:
+      BASIC_AUTH_PASSWORD:
 
   worker:
     profiles: ["full"]
@@ -63,6 +75,12 @@ services:
       DATABASE_URL: postgresql://seo_platform:password@postgres:5432/seo_platform
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      # The image's own /app is not writable by the non-root worker user (see
+      # apps/worker/Dockerfile) — stage sitemap files on a dedicated writable
+      # volume instead of the config schema's host-relative `.sitemaps` default.
+      SITEMAP_STORE_ROOT: /data/sitemaps
+    volumes:
+      - worker_sitemaps:/data/sitemaps
 
   web:
     profiles: ["full"]
@@ -76,9 +94,16 @@ services:
       - "${WEB_PORT:-3000}:3000"
     environment:
       WEB_API_URL: http://api:3001
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
-      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+      # Shown in the nav rail under the logo — see ADR-0043.
+      APP_VERSION: ${APP_VERSION:-1.0.0}
+      # See the comment on the `api` service above — bare keys forward from
+      # `.env` only when actually set, instead of manufacturing an explicit
+      # empty string that `apps/web/middleware.ts`'s `=== undefined` check
+      # would treat as "configured" and lock every request out.
+      BASIC_AUTH_USER:
+      BASIC_AUTH_PASSWORD:
 
 volumes:
   postgres_data:
   redis_data:
+  worker_sitemaps:
