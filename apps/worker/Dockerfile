@@ -28,5 +28,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 workeruser
 COPY --from=installer --chown=workeruser:nodejs /app .
+# `--chown` above only sets ownership on the files it copies in, not on `/app`
+# itself (created by `WORKDIR` as root a few lines up) — so `workeruser` can
+# read everything the image shipped but cannot create a NEW entry directly
+# under `/app`. The discover stage does exactly that (`mkdir '.sitemaps'`),
+# which failed with EACCES on every containerized real run. Stage sitemap
+# files under a directory made writable on purpose instead.
+RUN mkdir -p /data/sitemaps && chown workeruser:nodejs /data/sitemaps
 USER workeruser
 CMD ["node", "apps/worker/dist/index.js"]

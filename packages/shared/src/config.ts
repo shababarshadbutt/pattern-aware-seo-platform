@@ -83,6 +83,16 @@ const configSchema = z.object({
   // changing, since they take the store as an interface.
   SITEMAP_STORE_ROOT: z.string().min(1).default(".sitemaps"),
 
+  // --- Release identification ---
+  // Baked in at deploy time (see docker-compose.yml). Optional rather than
+  // defaulted, matching BASIC_AUTH_USER/PASSWORD above: never fail-fast on
+  // this one, since a missing version shouldn't take an otherwise-healthy
+  // process down, and a required-with-default field would force every literal
+  // ApiConfig/SettingsConfig test fixture to name it. Surfaced on GET /health
+  // and in the web nav rail — see ADR-0043; callers fall back to a literal
+  // "0.0.0-dev" when unset.
+  APP_VERSION: z.string().min(1).optional(),
+
   // --- Stale-run recovery ---
   // The heartbeat sweeper's backstop for a worker PROCESS dying mid-run, where
   // no BullMQ "failed" event ever fires because nothing is left running to

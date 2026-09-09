@@ -29,6 +29,15 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
               Pattern-Aware
             </p>
             <p className="font-mono text-2xs text-secondary">SEO Platform</p>
+            {/*
+              Reads process.env directly rather than through packages/shared's
+              schema, matching how this app already reads WEB_API_URL and
+              BASIC_AUTH_* — apps/web isn't a consumer of that zod config.
+              Numbers/versions are always mono per docs/DESIGN.md.
+            */}
+            <p className="font-mono text-2xs text-tertiary">
+              v{process.env.APP_VERSION ?? "0.0.0-dev"}
+            </p>
           </div>
         </div>
 
