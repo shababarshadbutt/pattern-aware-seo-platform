@@ -130,10 +130,11 @@ export function NewProjectForm() {
 
             <p className="text-2xs leading-relaxed text-tertiary">
               Onboarding creates this site&rsquo;s table partitions, in the same
-              transaction as the row. Nothing starts running: there is no
-              scheduler and no way to trigger a run from this interface, so the
-              project sits at <span className="font-mono">never run</span> until
-              a worker picks it up.
+              transaction as the row. Nothing starts running automatically —
+              there is still no scheduler — so the project sits at{" "}
+              <span className="font-mono">never run</span> until someone clicks{" "}
+              <span className="font-mono">Run now</span> on its row in the
+              portfolio.
             </p>
 
             <div className="flex items-center justify-end gap-3">

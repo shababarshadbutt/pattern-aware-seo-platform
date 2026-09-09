@@ -4,7 +4,6 @@ import { ApiErrorPanel } from "../../components/api-error";
 import { PageBody, TopBar } from "../../components/app-shell";
 import {
   AnalyticsIcon,
-  CrawlIcon,
   GlobeIcon,
   IssuesIcon,
   LayersIcon,
@@ -43,6 +42,7 @@ import {
   siteActiveTone
 } from "../../lib/status";
 import { NewProjectForm } from "./new-project-form";
+import { RunNowAction } from "./run-now-action";
 
 /**
  * The fleet portfolio — the Stitch design's "Projects Portfolio" screen.
@@ -377,7 +377,7 @@ export default async function ProjectsPortfolioPage({
           }
           facts={[
             "No health score — a site's state is the findings it holds",
-            "No scheduler, so no run can be started from here",
+            "No scheduler — a run only starts when someone clicks Run now",
             "URLs are discovered from sitemaps and sampled, never all requested"
           ]}
         />
@@ -505,19 +505,15 @@ function ProjectRow({ project }: { readonly project: ProjectSummary }) {
       </td>
 
       {/*
-        THE DESIGN'S QUICK ACTIONS: play, gear, kebab. The gear is real and the
-        play is not — there is no endpoint that starts a run and no scheduler
-        behind it, so it renders inert with its reason rather than as a control
-        that silently does nothing. The kebab is dropped: a menu of unbuilt
-        items is worse than no menu.
+        THE DESIGN'S QUICK ACTIONS: play, gear, kebab. The play button now
+        posts to `POST /sites/:siteId/runs` (`RunNowAction`) — a real,
+        one-off run, not the design's recurring cadence, which still has no
+        scheduler behind it. The kebab is dropped: a menu of unbuilt items is
+        worse than no menu.
       */}
       <td className="px-3 py-3">
         <div className="flex items-center justify-end gap-1">
-          <RowAction
-            disabledReason="Nothing in this interface can start a run: the API exposes no job dispatch and there is no scheduler (ADR-0026)."
-            icon={CrawlIcon}
-            label="Run now"
-          />
+          <RunNowAction siteId={site.id} />
           <RowAction
             href={`/analytics?site=${site.id}`}
             icon={AnalyticsIcon}
