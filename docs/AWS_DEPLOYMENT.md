@@ -45,11 +45,24 @@ benefit while there's no auth story beyond the Basic Auth stopgap below.
   `full` Compose profile. Plain `docker compose up -d` is **unchanged** —
   still just Postgres + Redis, exactly what `LIVE_RUN_GUIDE.md` and local dev
   already assume.
+- The `worker` service stages downloaded sitemap files at `/data/sitemaps`, a
+  named Docker volume (`worker_sitemaps`), rather than the config schema's
+  host-relative `.sitemaps` default — `apps/worker/Dockerfile`'s non-root user
+  cannot create a new directory directly under `/app` (see ADR-0042), and a
+  named volume also means staged files survive a container restart.
+- Both `api` and `web` read `APP_VERSION` (see `.env`, default `1.0.0`),
+  surfaced in the web nav rail and on `GET /health` — see ADR-0043.
 
 ## Step 1 — test the full stack locally in Docker
 
 Do this before touching AWS. It's the same images either place runs, and
 it's much faster to debug on your own machine.
+
+This assumes your machine already has Node.js 22 and pnpm installed, and
+that you've run `pnpm install` at the repo root (see `README.md`'s Getting
+started) — the migration and seed commands below are plain Node scripts
+that run on your host, not inside a container, so they need that setup
+regardless of Docker.
 
 ```bash
 # Copy .env.example if you haven't, and set BOTH BASIC_AUTH_USER and
@@ -70,9 +83,12 @@ DATABASE_URL="postgresql://seo_platform:password@localhost:${POSTGRES_PORT:-5432
 Then:
 
 - `curl -u "$BASIC_AUTH_USER:$BASIC_AUTH_PASSWORD" http://localhost:3001/health`
-  → `{"status":"ok",...}`. Without `-u`, confirm you get a `401`.
-- Open `http://localhost:3000` in a browser — it should prompt for the same
-  credentials before showing anything.
+  → `{"status":"ok","version":"1.0.0",...}`. Without `-u`, confirm you get a
+  `401`. The `version` field (and the same number in the web nav rail) is the
+  way to confirm which build is actually live on a box — see ADR-0043.
+- Open `http://localhost:3000` (the default `WEB_PORT`; check `.env` if you
+  overrode it) in a browser — it should prompt for the same credentials
+  before showing anything.
 - `pnpm seed:demo` (against the same `DATABASE_URL`) or `pnpm live:run` (see
   `docs/LIVE_RUN_GUIDE.md`) to put real data behind the screens, then click
   through Overview/Projects/Runs/Analytics to confirm the containerized `web`
@@ -122,14 +138,14 @@ OS: **Ubuntu Server 24.04 LTS** — the steps below assume it.
   auth yet, only the Basic Auth stopgap:
   - `22/tcp` (SSH) from **your own IP only**, not `0.0.0.0/0`.
   - `80/tcp` and `443/tcp` (HTTP/HTTPS) from anywhere, once you set up the
-    reverse proxy in step 7 below.
+    reverse proxy in step 8 below.
   - **Do not open `3001` (api), `5432` (postgres) or `6379` (redis) to the
     internet at all.** Nothing external needs to reach them directly — `web`
     reaches `api` over the Docker-internal network regardless of what's
     published to the host, and Postgres/Redis should never be reachable from
     outside the box.
 - Allocate and associate an **Elastic IP** so the address doesn't change on
-  a stop/start (mention it to whoever sets up DNS in step 7).
+  a stop/start (mention it to whoever sets up DNS in step 8).
 - Create or reuse a key pair for SSH.
 
 ### 2. Install Docker
@@ -148,17 +164,39 @@ sudo usermod -aG docker "$USER"
 # log out and back in for the group change to take effect
 ```
 
-### 3. Get the code onto the box
+### 3. Install Node.js and pnpm
+
+Migrations, `pnpm seed:demo`, and `pnpm live:run` are plain Node scripts, not
+part of any Docker image — `turbo prune` only carries `web`/`api`/`worker`'s
+own dependency subset into their respective containers, not the root
+`scripts/` directory or `packages/database`'s standalone `db:migrate`
+entry point. And Postgres isn't reachable from outside the box (see the
+security group rule above), so pointing a local `DATABASE_URL` at the
+instance from your own machine isn't an option either — these run on the
+instance itself, over SSH:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo corepack enable
+corepack prepare pnpm@8.15.0 --activate   # matches this repo's packageManager pin
+```
+
+### 4. Get the code onto the box
 
 ```bash
 git clone https://github.com/<your-org>/<this-repo>.git
 cd <this-repo>
+pnpm install --frozen-lockfile
 ```
 
 Use a deploy key or a fine-scoped personal access token for a private repo —
-don't put a broadly-scoped token in a file that lands on a server.
+don't put a broadly-scoped token in a file that lands on a server. No
+`pnpm build` needed here: `db:migrate`, `seed:demo`, and `live:run` all run
+directly from TypeScript source via `tsx`. Docker's own build (step 6) is a
+separate thing and unaffected by this.
 
-### 4. Configure environment
+### 5. Configure environment
 
 ```bash
 cp .env.example .env
@@ -171,14 +209,32 @@ else in `.env.example` can stay at its default for a testing deployment;
 `docker-compose.yml`'s `full` profile already wires `DATABASE_URL`/`REDIS_URL`
 to the containerized Postgres/Redis for you.
 
-### 5. Bring up the stack
+**Already deployed without setting these?** Edit `.env` on the instance now
+(SSH in, `cd` to the repo, edit the two values), then re-apply:
+
+```bash
+docker compose --profile full up -d
+docker compose --profile full logs api --tail=20   # confirm no startup error
+```
+
+Compose only recreates the containers whose config actually changed, so this
+won't touch `postgres`/`redis`'s data. If you're on a checkout from before
+this file's `BASIC_AUTH_USER`/`BASIC_AUTH_PASSWORD` lines were bare keys
+(`git pull` first if unsure), `docker compose --profile full logs api` would
+have shown a `ZodError` naming `BASIC_AUTH_USER` — the old
+`${BASIC_AUTH_USER:-}` default passed an explicit empty string into the
+container whenever `.env` left it unset, and `apps/api`'s config schema
+rejects a present-but-empty value rather than treating it as absent, so the
+API would crash-loop instead of starting up unprotected as intended.
+
+### 6. Bring up the stack
 
 ```bash
 docker compose --profile full up -d --build
 docker compose --profile full ps        # postgres, redis, api, worker, web all "Up"
 ```
 
-### 6. Run migrations once
+### 7. Run migrations once
 
 ```bash
 docker compose exec postgres psql -U seo_platform -d seo_platform -c "select 1;"   # sanity check it's up
@@ -186,7 +242,7 @@ DATABASE_URL="postgresql://seo_platform:password@localhost:${POSTGRES_PORT:-5432
   pnpm --filter @pattern-aware/database db:migrate
 ```
 
-### 7. Put a reverse proxy in front (recommended, not optional)
+### 8. Put a reverse proxy in front (recommended, not optional)
 
 Basic Auth sends credentials that decode to plain text with one line of
 code — **over plain HTTP that's no protection at all.** If you have a domain
@@ -218,15 +274,19 @@ No domain yet? Skip this step for now, but treat the deployment as
 security group's `3000/tcp` to specific IPs — rather than exposing Basic
 Auth over plain HTTP to the open internet.
 
-### 8. Verify
+### 9. Verify
 
-- `https://your-domain.example` (or `http://<elastic-ip>:3000` if you
-  skipped step 7) prompts for Basic Auth before showing anything.
-- `pnpm live:run` or `pnpm seed:demo` against the box's `DATABASE_URL` to put
-  real data behind the screens (run these from your own machine with
-  `DATABASE_URL` pointed at the instance, or SSH in and run them there).
+- `https://your-domain.example` (or `http://<elastic-ip>:3000` — the default
+  `WEB_PORT` — if you skipped step 8) prompts for Basic Auth before showing
+  anything.
+- SSH into the instance and run `pnpm seed:demo` or `pnpm live:run` (see
+  `docs/LIVE_RUN_GUIDE.md`) there directly, against the `.env` already on the
+  box, to put real data behind the screens. Node.js and pnpm were installed
+  in step 3 for exactly this — there's no need to point a `DATABASE_URL` at
+  the instance from your own machine, which would mean opening Postgres's
+  `5432` to the internet, the opposite of the security group rule above.
 
-### 9. Keep it running across reboots
+### 10. Keep it running across reboots
 
 Docker itself restarts on boot once enabled, and every service in
 `docker-compose.yml` already has `restart: unless-stopped` — but the `full`

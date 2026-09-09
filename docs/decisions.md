@@ -3130,3 +3130,115 @@ either pass `isGzip: true` by hand (testing the downstream gunzip-when-told-to
 path, not detection) or use `.gz`-suffixed synthetic fixtures — this codebase
 had no test anywhere of the specific header-vs-bytes mismatch a real
 compressing server produces.
+
+## ADR-0042 — A run failure gets a plain-English summary; the exact machine string stays alongside it
+
+**Date:** 2026-09-09
+**Status:** Accepted.
+
+### Context
+
+A real-site run on the deployed EC2 instance failed with the run detail screen's
+only explanation being the raw, uppercased `sitemap_run.status_reason` string:
+`STAGE_EXHAUSTED_RETRIES:DISCOVER:EACCES: PERMISSION DENIED, MKDIR '.SITEMAPS'`.
+Tracing it found two separate problems, not one.
+
+First, a real, reproducible bug: `SITEMAP_STORE_ROOT` defaults to a relative
+path (`.sitemaps`), and inside the containerized `worker`, `WORKDIR /app` is
+created by root before `COPY --chown=workeruser:nodejs /app .` copies the
+build output in. `--chown` sets ownership on the copied files, not on the
+pre-existing `/app` directory itself, so the non-root `workeruser` could read
+everything the image shipped but could not create a NEW entry (`.sitemaps/`)
+directly under `/app`. Every containerized real run hit this.
+
+Second, even once that's fixed, any future stage failure would still surface
+as a raw `Error.message` with no distinction between "this platform's fault"
+and "a fact about the target site."
+
+### Decision
+
+Fix the permission bug at its source rather than only rewording the message:
+`apps/worker/Dockerfile` now creates and chowns a dedicated `/data/sitemaps`
+directory to the app user before switching off root, and
+`docker-compose.yml`'s `worker` service points `SITEMAP_STORE_ROOT` at that
+path, backed by a named volume so staged files survive a container restart.
+The host-relative `.sitemaps` default in `packages/shared/src/config.ts`
+is unchanged — it's correct for local `pnpm dev`/`pnpm live:run`, where cwd is
+the repo root and always writable; only the container needed the override.
+
+Separately, add a read-side translation layer rather than changing what
+`apps/worker/src/site-pipeline.ts` writes to `status_reason`. That string is
+relied on for an exact-format test
+(`apps/worker/test/site-pipeline.test.ts`) and is a precise, grep-able
+diagnostic on its own terms — changing its shape would cost that without
+buying anything a reader-facing translation can't already provide. A new
+`apps/web/lib/run-failure.ts` parses the `STAGE_EXHAUSTED_RETRIES:<STAGE>:
+<message>` shape, maps the stage to a plain phrase and known Node error codes
+(`EACCES`, `ENOENT`, `ECONNREFUSED`, `ENOTFOUND`, `ETIMEDOUT`, `ECONNRESET`)
+to a one-sentence cause — distinguishing a deployment/configuration defect
+from the target site's server being unreachable, the same distinction
+`packages/shared/src/errors.ts`'s `isExpected` already draws between a bug
+and a fact about the world. The run detail screen renders the friendly
+sentence as the primary text and keeps the exact raw string visible beneath
+it in monospace — the raw value is never replaced, matching this codebase's
+existing rule (`lib/status.ts`'s tone mappings, the D3i run-state banners)
+that a friendly label is never the only channel.
+
+### Cost / trade-off
+
+The stage-phrase and error-code dictionaries in `run-failure.ts` are a second
+place (alongside the worker's own error handling) that needs a new entry
+whenever a genuinely new failure mode is added — an unrecognized code still
+degrades gracefully to a generic-but-honest "this run failed during the
+`<stage>` step, see the technical detail below," so nothing is ever hidden,
+just sometimes less specific than it could be.
+
+## ADR-0043 — A visible, manually-bumped semver version
+
+**Date:** 2026-09-09
+**Status:** Accepted.
+
+### Context
+
+There was no way to tell which build of the platform was actually running on
+a deployed box — no version in the UI, none in `GET /health`, and the 11
+workspace `package.json` files were independently stuck at `0.1.0` by inertia
+with no release history, changesets, or ADR on the topic.
+
+### Decision
+
+The root `package.json`'s `version` field is the single source of truth for
+the platform's release version, following standard semver
+(`major.minor.patch`) mapped onto the Conventional Commits already in use
+(`feat:` → minor, `fix:` → patch, a breaking change → major). It is bumped by
+hand on every real release — deliberately no new tooling (changesets or
+similar) for this, matching the size of the actual need. All 11 workspace
+`package.json` files are bumped together as one coordinated version rather
+than left to drift independently, since nothing distinguishes them for
+release purposes today (all are `private: true`, none are published).
+
+The version is a new optional `APP_VERSION` field in
+`packages/shared/src/config.ts`'s schema (`z.string().min(1).optional()`,
+not `.default(...)` — a defaulted field is required in every literal
+`ApiConfig`/`SettingsConfig` test fixture, which would have forced updating
+every existing test in `apps/api/test/` for a display-only field; callers
+fall back to a literal `"0.0.0-dev"` instead). `docker-compose.yml` sets it
+as a plain runtime environment variable (`APP_VERSION: ${APP_VERSION:-1.0.0}`)
+on the `api` and `web` services, sourced from `.env`'s new `APP_VERSION` line.
+`GET /health` returns it; the web nav rail (`apps/web/components/app-shell.tsx`)
+renders it under the logo, reading `process.env.APP_VERSION` directly rather
+than through `packages/shared` — apps/web already reads its handful of env
+vars (`WEB_API_URL`, `BASIC_AUTH_*`) this way, since it isn't a consumer of
+that package's zod-validated `Config`.
+
+This platform is now versioned `1.0.0` — the first release version, set as
+part of this change now that real-site testing has started.
+
+### Cost / trade-off
+
+Nothing enforces that `.env`'s `APP_VERSION` (or docker-compose's fallback)
+actually matches the `package.json` files' version at any given moment — this
+was a deliberate choice (manual convention, not automation) recorded in
+`docs/CODING_STANDARDS.md`'s workflow section rather than a guard test. A
+mismatch is possible if a release is cut without updating both places; it is
+a documentation/discipline gap, not a compile-time one.

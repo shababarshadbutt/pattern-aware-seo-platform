@@ -41,6 +41,7 @@ import {
   pageWindow,
   trendPercent
 } from "../../../lib/run-analysis";
+import { describeRunFailure } from "../../../lib/run-failure";
 import {
   httpStatusTone,
   patternStatusTone,
@@ -218,6 +219,7 @@ export default async function RunDetailPage({
 
   const { run, files, fileCount, patternStatus, samplingHealth } = detail;
   const tone = runStatusTone(run.status);
+  const failure = describeRunFailure(run.statusReason);
   const buckets = depthBuckets(detail.depthDistribution);
   const window = pageWindow(offset, PAGE_SIZE, explorer.total);
   const largest = detail.topPatterns[0]?.populationCount ?? 0;
@@ -312,13 +314,17 @@ export default async function RunDetailPage({
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <StatusBadge tone={tone} label={run.status} />
           {run.isDryRun && <StatusBadge tone="unknown" label="dry run" />}
-          {run.statusReason && (
-            <span className="font-mono text-2xs uppercase tracking-wider text-tertiary">
-              {run.statusReason.replace(/_/g, " ")}
-            </span>
-          )}
           <span className="font-mono text-2xs text-tertiary">run {run.id}</span>
         </div>
+
+        {failure.detail !== null && (
+          <div className="mt-4 max-w-prose">
+            <p className="text-sm text-primary">{failure.summary}</p>
+            <p className="mt-1 font-mono text-2xs text-tertiary">
+              {failure.detail}
+            </p>
+          </div>
+        )}
 
         <div className="mt-6">
           <StatCards stats={statsFor(detail)} />

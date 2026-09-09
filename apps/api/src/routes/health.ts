@@ -17,6 +17,7 @@ export function registerHealthRoutes(
   app.get("/health", () => ({
     status: "ok",
     service: "api",
-    environment: config.NODE_ENV
+    environment: config.NODE_ENV,
+    version: config.APP_VERSION ?? "0.0.0-dev"
   }));
 }
