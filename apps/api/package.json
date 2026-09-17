@@ -24,7 +24,9 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@pattern-aware/verification": "workspace:*",
     "tsx": "^4.19.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "worker": "workspace:*"
   }
 }

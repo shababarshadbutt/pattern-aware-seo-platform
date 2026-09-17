@@ -1,13 +1,7 @@
 import { Readable } from "node:stream";
 
 import { createDatabase } from "@pattern-aware/database";
-import {
-  ATTACH_REQUESTS_QUEUE,
-  attachRequestPayloadSchema,
-  parsePayload,
-  type SitemapResponse,
-  type SiteTier
-} from "@pattern-aware/pipeline";
+import type { SitemapResponse } from "@pattern-aware/pipeline";
 import {
   DEFAULT_SAMPLE_BUDGET,
   type SampleBudget
@@ -21,10 +15,12 @@ import {
   HostCircuitBreaker,
   HostRateLimiter
 } from "@pattern-aware/verification";
-import { type Job, Worker } from "bullmq";
 import { Redis } from "ioredis";
 
-import { SitePipeline } from "./site-pipeline.js";
+import {
+  createAttachRequestsWorker,
+  createSiteAttacher
+} from "./attach-requests-worker.js";
 import { sweepStaleRuns } from "./stale-run-sweeper.js";
 
 /**
@@ -32,8 +28,9 @@ import { sweepStaleRuns } from "./stale-run-sweeper.js";
  * flight, and detaches when they finish.
  *
  * Per-site queues mean there is no single queue to sit on, so this supervises
- * a set of {@link SitePipeline}s instead. See that file for why the set is
- * bounded by runs in flight rather than by the whole fleet.
+ * a set of `SitePipeline`s instead, via `createSiteAttacher`
+ * (`attach-requests-worker.ts`). See that file for why the set is bounded by
+ * runs in flight rather than by the whole fleet.
  */
 
 // Fail fast and loudly on bad configuration, before anything connects.
@@ -137,101 +134,31 @@ async function fetchSitemap(url: string): Promise<SitemapResponse> {
   };
 }
 
-const attached = new Map<string, SitePipeline>();
-
 /**
  * FLEET-WIDE AUTO-ATTACH IS NOT WIRED, and is left as a stated gap.
  *
- * Attaching needs to enumerate sites across every organization, and every
- * repository read is organization- or site-scoped by construction (ADR-0004) —
- * correctly, since that is what makes a cross-tenant query a compile error.
- * A worker legitimately needs a fleet-wide read, which is a new scope origin
- * (`systemOrganizationScope` exists for exactly this shape) plus a repository
- * that answers "which sites have a run in flight". Adding it is small; deciding
- * that the worker may read across tenants is not, and it is the kind of hole
- * that gets punched casually and never closed.
- *
- * Until then a run is attached explicitly, which is what the API will call and
- * what the end-to-end test exercises directly.
+ * See `createSiteAttacher`'s own docblock in `attach-requests-worker.ts` for
+ * the full reasoning; this process just supplies the real dependencies.
  */
-export async function attachSite(input: {
-  readonly organizationId: string;
-  readonly siteId: string;
-  readonly tier: SiteTier;
-}): Promise<SitePipeline> {
-  const existing = attached.get(input.siteId);
+const attacher = createSiteAttacher({
+  connection,
+  db: database.db,
+  store,
+  logger,
+  fetchSitemap,
+  rateLimiter,
+  circuitBreaker,
+  sampleBudget,
+  oversizeThresholds
+});
 
-  if (existing !== undefined) {
-    return existing;
-  }
+/** Kept as a named export for parity with the pre-extraction API. */
+export const attachSite = attacher.attachSite;
 
-  const pipeline = new SitePipeline({
-    connection,
-    db: database.db,
-    store,
-    logger,
-    organizationId: input.organizationId,
-    siteId: input.siteId,
-    tier: input.tier,
-    fetchSitemap,
-    rateLimiter,
-    circuitBreaker,
-    sampleBudget,
-    oversizeThresholds
-  });
-
-  pipeline.start();
-  attached.set(input.siteId, pipeline);
-
-  return pipeline;
-}
-
-/**
- * The one thing that lets this worker start any work at all: a listener on
- * the single well-known queue a caller posts to when it wants a specific
- * site attached and a specific run started. See `ATTACH_REQUESTS_QUEUE`'s
- * own docblock for why this is a queue message rather than a fleet-wide poll
- * — the short version is that attaching needs no enumeration when the caller
- * already knows exactly which site it means.
- */
-const attachRequestsWorker = new Worker(
-  ATTACH_REQUESTS_QUEUE,
-  async (job: Job) => {
-    const request = parsePayload(
-      attachRequestPayloadSchema,
-      "attach-request",
-      job.data
-    );
-
-    const pipeline = await attachSite({
-      organizationId: request.organizationId,
-      siteId: request.siteId,
-      tier: request.tier
-    });
-
-    await pipeline.startRun({
-      sitemapRunId: request.sitemapRunId,
-      sitemapUrl: request.sitemapUrl,
-      baseUrl: request.baseUrl,
-      expectedHost: request.expectedHost
-    });
-
-    logger.info(
-      { siteId: request.siteId, sitemapRunId: request.sitemapRunId },
-      "site attached and run started"
-    );
-  },
-  {
-    connection,
-    // Attach requests are rare and cheap; nothing here benefits from
-    // parallelism, and serializing them avoids two requests for the same new
-    // site racing attachSite's own idempotent-but-not-atomic Map check.
-    concurrency: 1
-  }
-);
-
-attachRequestsWorker.on("failed", (job, error) => {
-  logger.error({ jobId: job?.id, err: error }, "attach request failed");
+const attachRequestsWorker = createAttachRequestsWorker({
+  connection,
+  logger,
+  attacher
 });
 
 /**
@@ -269,10 +196,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
 
     clearInterval(sweepInterval);
 
-    Promise.all([
-      attachRequestsWorker.close(),
-      ...[...attached.values()].map(async (p) => p.stop())
-    ])
+    Promise.all([attachRequestsWorker.close(), attacher.stopAll()])
       .then(async () => {
         await database.close();
         await connection.quit();

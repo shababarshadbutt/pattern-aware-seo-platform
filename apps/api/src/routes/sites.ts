@@ -414,7 +414,24 @@ export function registerSiteRoutes(
           request.body?.sitemapUrl ??
           new URL("/sitemap.xml", site.baseUrl).href,
         baseUrl: site.baseUrl,
-        expectedHost: site.host
+        /**
+         * `new URL(site.baseUrl).hostname`, NOT `site.host`. `site.host` is
+         * `URL#host` — hostname AND PORT (`hostFrom` in
+         * `packages/database/src/repositories/site.ts` says so explicitly) —
+         * which is the right key for the rate-limiter/circuit-breaker bucket
+         * and the `uq_site_organization_host` uniqueness check, but every
+         * `<loc>` is matched against `expectedHost` via
+         * `isSameHost(url.hostname, expectedHost)`
+         * (`packages/sitemap/src/extraction/url-path.ts`), which compares
+         * `URL#hostname` — no port, ever. Passing `site.host` here made every
+         * single `<loc>` on a site whose `baseUrl` carries an explicit port
+         * (any local/dev target, and any real site fronted on a non-default
+         * port) resolve as `"foreign"` instead of `"matched"` — a real
+         * sitemap silently ingesting to zero patterns and the run finishing
+         * `degraded: NO_PATTERNS_FOUND`, not because anything about the site
+         * was actually empty.
+         */
+        expectedHost: new URL(site.baseUrl).hostname
       });
 
       return await reply.code(201).send(run);

@@ -260,6 +260,22 @@ export interface StaleRun {
  * become a second way to read another tenant's data. See
  * `systemOrganizationScope`'s docblock for why a fleet-wide read like this
  * needs to stand out rather than blend in.
+ *
+ * A `running` ROW WITH A NULL HEARTBEAT IS TREATED AS STALE IMMEDIATELY, not
+ * left to age past the threshold — and that needed deciding rather than
+ * following from the SQL alone. `NULL < x` evaluates to `NULL` in Postgres,
+ * which a `WHERE` clause treats as "exclude", so the naive comparison alone
+ * would never select a `running` row whose heartbeat is `NULL` no matter how
+ * long it sat that way — a permanently-stuck state with no timeout, which is
+ * exactly what the sweeper exists to prevent. `startRun` is the only path
+ * that ever sets a row to `running`, and it stamps `heartbeat_at = now()` in
+ * that same insert, so a `running` row with a null heartbeat is not a state
+ * today's application code can produce — it can only mean something outside
+ * the ordinary lifecycle (manual data surgery, or a future insert path that
+ * forgets the stamp). Treating it as immediately stale cannot misfire against
+ * a legitimate fresh run, since there is no such run today, and it forecloses
+ * the one way a future bug could wedge a run in `running` forever with
+ * nothing ever sweeping it.
  */
 export async function findStaleRuns(
   db: Database,
@@ -271,7 +287,7 @@ export async function findStaleRuns(
     .where(
       and(
         eq(sitemapRun.status, "running"),
-        sql`${sitemapRun.heartbeatAt} < now() - (${thresholdMs}::text || ' milliseconds')::interval`
+        sql`(${sitemapRun.heartbeatAt} is null or ${sitemapRun.heartbeatAt} < now() - (${thresholdMs}::text || ' milliseconds')::interval)`
       )
     );
 }

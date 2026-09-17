@@ -30,7 +30,27 @@ export function createRunTrigger(redisUrl: string): RunTrigger {
 
   return {
     async requestRun(payload) {
-      await queue.add("attach-request", payload);
+      await queue.add("attach-request", payload, {
+        /**
+         * THE SAME RETRY/BACKOFF POLICY AS EVERY STAGE QUEUE (see
+         * `SitePipeline#enqueue`), and for the same reason: `startRun` has
+         * already reserved this run's row as `running` — that is what makes a
+         * concurrent second call answer 409 — before this message is ever
+         * sent. If the attach request itself were lost (a Redis blip between
+         * the API and the broker, the worker process restarting mid-delivery)
+         * with no retry, the run would sit `running` forever with nothing
+         * ever having attached a `Worker` to consume it: no BullMQ job ever
+         * fails, so `SitePipeline`'s own exhausted-retries handler never
+         * fires, and the run would wait out the stale-run sweeper's full
+         * heartbeat threshold before anything noticed — minutes of silent
+         * "running" for a run that was never actually started. Retrying this
+         * one message is far cheaper than that wait.
+         */
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5_000 },
+        removeOnComplete: { count: 1_000 },
+        removeOnFail: { count: 5_000 }
+      });
     },
     async close() {
       await queue.close();
